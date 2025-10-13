@@ -5,24 +5,36 @@ import { Label } from "@/components/ui/label";
 import { Plane } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
+  const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login attempt:", { email, password });
-    // TODO: remove mock functionality - implement Supabase auth
+    setLoading(true);
     
-    // Mock login - redirect based on email
-    if (email.includes("admin")) {
-      setLocation("/admin");
-    } else if (email.includes("cfi")) {
-      setLocation("/cfi");
-    } else {
+    try {
+      await signIn(email, password);
+      toast({
+        title: "Welcome back!",
+        description: "Successfully signed in to Freedom Aviation",
+      });
       setLocation("/dashboard");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Authentication failed",
+        description: error.message || "Invalid email or password",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,13 +73,10 @@ export default function Login() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" data-testid="button-login">
-              Sign In
+            <Button type="submit" className="w-full" data-testid="button-login" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-          <p className="text-xs text-center text-muted-foreground mt-4">
-            Demo: Use admin@test.com, cfi@test.com, or any other email
-          </p>
         </CardContent>
       </Card>
     </div>
