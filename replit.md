@@ -22,6 +22,8 @@ Freedom Aviation is a production-ready web application for premium aircraft mana
 ├── client/src/                 # Frontend application
 │   ├── components/            # Reusable UI components
 │   │   ├── ui/               # shadcn/ui primitives
+│   │   ├── owner/            # Owner-specific components
+│   │   │   └── CreditsOverview.tsx
 │   │   ├── hero-section.tsx  # Marketing components
 │   │   ├── features-grid.tsx
 │   │   ├── membership-tiers.tsx
@@ -31,6 +33,14 @@ Freedom Aviation is a production-ready web application for premium aircraft mana
 │   │   ├── kanban-board.tsx
 │   │   ├── aircraft-table.tsx
 │   │   └── protected-route.tsx     # Auth guard
+│   ├── features/             # Feature modules
+│   │   └── owner/
+│   │       ├── components/   # Owner dashboard components
+│   │       │   ├── QuickActions.tsx       # Service request forms
+│   │       │   ├── ServiceTimeline.tsx    # Tasks & requests timeline
+│   │       │   ├── BillingCard.tsx        # Invoice display
+│   │       │   └── DocsCard.tsx           # Document management
+│   │       └── types.ts      # TypeScript type definitions
 │   ├── pages/                # Route pages
 │   │   ├── home.tsx          # Marketing landing page (/)
 │   │   ├── login.tsx         # Authentication (/login)
@@ -42,6 +52,7 @@ Freedom Aviation is a production-ready web application for premium aircraft mana
 │   │   ├── supabase.ts       # Supabase client
 │   │   ├── auth-context.tsx  # Auth provider & hooks
 │   │   ├── queryClient.ts    # React Query setup
+│   │   ├── creditCalculator.ts    # Credit tier utilities
 │   │   └── utils.ts          # Helper functions
 │   ├── hooks/                # Custom React hooks
 │   ├── App.tsx               # Root component with routing
@@ -49,6 +60,7 @@ Freedom Aviation is a production-ready web application for premium aircraft mana
 ├── server/                    # Express backend (if needed)
 ├── shared/                    # Shared types & schemas
 ├── attached_assets/          # Images & media
+│   └── extracted2/           # Uploaded dashboard code (analyzed)
 └── design_guidelines.md      # Design system documentation
 ```
 
