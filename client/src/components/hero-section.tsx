@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Plane } from "lucide-react";
+import { useLocation } from "wouter";
 import heroImage from "@assets/stock_images/premium_cirrus_sr22t_b2f4f8b8.jpg";
 
 export function HeroSection() {
+  const [, setLocation] = useLocation();
+  
   const handleOpenPortal = () => {
-    console.log("Open Owner Portal clicked");
-    // TODO: remove mock functionality - navigate to /login
+    setLocation("/login");
   };
 
   return (
