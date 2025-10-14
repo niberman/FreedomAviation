@@ -105,9 +105,10 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
         fuelDescription = "Fuel: Fill to Full";
       }
 
-      // Build description with all details
+      // Build description with all details including departure time
       const descriptionParts = [
         `Pre-Flight Concierge Request - ${prepForm.airport}`,
+        prepForm.requested_departure ? `Departure: ${new Date(prepForm.requested_departure).toLocaleString()}` : null,
         fuelDescription,
         prepForm.o2_topoff ? "O₂ Top-off" : null,
         prepForm.tks_topoff ? "TKS Top-off" : null,
@@ -122,9 +123,8 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
         priority: "high",
         status: "pending",
         user_id: userId,
-        aircraft_id: prepForm.aircraft_id || null,
+        aircraft_id: prepForm.aircraft_id,
         description: descriptionParts,
-        notes: prepForm.requested_departure ? `Requested departure: ${new Date(prepForm.requested_departure).toLocaleString()}` : null,
       };
       
       const { error } = await supabase.from("service_requests").insert(payload);
