@@ -24,7 +24,7 @@ export default function Pricing() {
   }, [locationParam]);
 
   const selectedLocation = locationsQuery.data?.find((loc) => loc.slug === selectedLocationSlug);
-  const hangarCost = selectedLocation?.default_hangar_cost || 0;
+  const hangarCost = selectedLocation?.hangar_cost_monthly || 0;
 
   if (snapshotQuery.isLoading || locationsQuery.isLoading) {
     return (
@@ -73,7 +73,7 @@ export default function Pricing() {
                   {locations.map((loc) => (
                     <SelectItem key={loc.id} value={loc.slug} data-testid={`location-option-${loc.slug}`}>
                       {loc.name}
-                      {loc.default_hangar_cost ? ` ($${loc.default_hangar_cost}/mo)` : ''}
+                      {loc.hangar_cost_monthly ? ` ($${loc.hangar_cost_monthly}/mo)` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -106,32 +106,44 @@ export default function Pricing() {
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {classes.map((cls: any) => {
-                  const basePrice = cls.default_price;
+                  const basePrice = cls.base_monthly;
                   const estimatedTotal = basePrice + hangarCost;
 
                   return (
-                    <Card key={cls.id} className="relative" data-testid={`pricing-card-${cls.id}`}>
+                    <Card key={cls.id} className="relative hover-elevate" data-testid={`pricing-card-${cls.id}`}>
                       <CardHeader>
                         <CardTitle>{cls.name}</CardTitle>
                         <CardDescription>
-                          {cls.labor_hours}hr labor • ${cls.consumables} consumables
+                          {cls.description || 'Premium aircraft management service'}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <div className="flex justify-between items-center py-2 border-b">
-                          <span className="text-sm text-muted-foreground">Base (class default)</span>
-                          <span className="font-medium">${basePrice}</span>
+                          <span className="text-sm text-muted-foreground">Base Service</span>
+                          <span className="font-medium">${basePrice.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b">
                           <span className="text-sm text-muted-foreground">+ Hangar ({selectedLocation?.name || 'None'})</span>
-                          <span className="font-medium">${hangarCost}</span>
+                          <span className="font-medium">${hangarCost.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center py-3 bg-muted/50 rounded-lg px-3">
-                          <span className="font-semibold">Estimated Total</span>
-                          <span className="text-2xl font-bold">${estimatedTotal}</span>
+                          <span className="font-semibold">Total Package</span>
+                          <span className="text-2xl font-bold">${estimatedTotal.toFixed(2)}</span>
                         </div>
+                        {cls.features?.benefits && (
+                          <div className="pt-3">
+                            <ul className="space-y-1 text-sm">
+                              {cls.features.benefits.slice(0, 3).map((benefit: string, idx: number) => (
+                                <li key={idx} className="flex items-start gap-2">
+                                  <span className="text-primary mt-0.5">✓</span>
+                                  <span className="text-muted-foreground">{benefit}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                         <p className="text-xs text-muted-foreground pt-2">
-                          Per month. Representative pricing; specific aircraft may have overrides.
+                          Per month. Specific aircraft may have custom pricing.
                         </p>
                       </CardContent>
                     </Card>

@@ -5,22 +5,21 @@ import { z } from 'zod';
 
 // Zod Schemas
 const assumptionsSchema = z.object({
-  id: z.number(),
-  labor_rate: z.number(),
-  card_fee_pct: z.number(),
-  cfi_allocation: z.number(),
-  cleaning_supplies: z.number(),
-  overhead_per_ac: z.number(),
-  avionics_db_per_ac: z.number(),
-  status: z.string(),
-  version: z.number(),
+  id: z.string().optional(), // UUID
+  labor_rate: z.coerce.number(),
+  card_fee_pct: z.coerce.number(),
+  cfi_allocation: z.coerce.number(),
+  cleaning_supplies: z.coerce.number(),
+  overhead_per_ac: z.coerce.number(),
+  avionics_db_per_ac: z.coerce.number(),
+  updated_at: z.string().optional(),
 });
 
 const locationSchema = z.object({
   id: z.string(),
   name: z.string(),
   slug: z.string(),
-  hangar_cost_monthly: z.number(),
+  hangar_cost_monthly: z.coerce.number(),
   description: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   features: z.any().nullable().optional(),
@@ -33,21 +32,24 @@ const classSchema = z.object({
   id: z.string(),
   name: z.string(),
   slug: z.string(),
-  base_monthly: z.number(),
+  base_monthly: z.coerce.number(),
   description: z.string().nullable().optional(),
   features: z.any().nullable().optional(),
-  sort_order: z.number().optional(),
+  sort_order: z.coerce.number().optional(),
   active: z.boolean(),
   created_at: z.string().optional(),
 });
 
 const overrideSchema = z.object({
+  id: z.string().optional(),
   aircraft_id: z.string(),
   location_id: z.string().nullable(),
-  class_name: z.string(),
-  custom_price: z.number().nullable(),
-  hangar_cost: z.number().nullable(),
-  start_month: z.number().nullable(),
+  class_id: z.string().nullable(),
+  override_monthly: z.coerce.number().nullable(),
+  override_hangar_cost: z.coerce.number().nullable(),
+  notes: z.string().nullable().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
 });
 
 export type Assumptions = z.infer<typeof assumptionsSchema>;
@@ -63,10 +65,10 @@ export function useAssumptions() {
       const { data, error } = await supabase
         .from('settings_pricing_assumptions')
         .select('*')
-        .eq('id', 1)
+        .limit(1)
         .single();
       
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') throw error;
       return data ? assumptionsSchema.parse(data) : null;
     },
   });
@@ -77,9 +79,26 @@ export function useSaveAssumptions() {
   
   return useMutation({
     mutationFn: async (assumptions: Partial<Assumptions>) => {
+      // First, try to get existing record
+      const { data: existing, error: fetchError } = await supabase
+        .from('settings_pricing_assumptions')
+        .select('id')
+        .limit(1)
+        .single();
+      
+      // Ignore PGRST116 (no rows) error - we'll insert new record
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+      
+      // Prepare payload - only include id if updating existing record
+      const payload = existing?.id 
+        ? { id: existing.id, ...assumptions }
+        : assumptions; // Let Supabase generate UUID for new record
+      
       const { data, error } = await supabase
         .from('settings_pricing_assumptions')
-        .upsert({ id: 1, ...assumptions })
+        .upsert(payload)
         .select()
         .single();
       
@@ -237,7 +256,7 @@ export function useLatestSnapshot() {
       const { data, error } = await supabase
         .from('pricing_snapshots')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('published_at', { ascending: false })
         .limit(1)
         .single();
       
