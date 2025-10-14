@@ -25,6 +25,72 @@ The application includes public marketing pages (`/`, `/login`) and protected da
 ### System Design Choices
 The project uses a component-based architecture for the frontend, organizing code into reusable UI components, feature modules, and pages. Utilities and infrastructure are separated into a `lib/` directory. Supabase Row Level Security (RLS) is extensively used to ensure data privacy and access control, with policies ensuring users only access their relevant data (owners their aircraft, CFIs their clients, admins full access). Environment variables are validated on startup to prevent silent failures. Auth state is managed globally and persists across sessions.
 
+## Brand Transformation (October 2025)
+
+### Overview
+Transformed Freedom Aviation into a premium, Colorado-based brand with comprehensive SEO infrastructure and transparent pricing model.
+
+### Brand & Copy
+**Brand Manifest** (`client/src/brand/manifest.ts`):
+- Centralized company information (phone, email, addresses)
+- Partner facility details (Sky Harbour, Freedom Aviation Hangar)
+- Tagline: "Colorado-Based. Front Range Focused."
+
+**Homepage Hero** - Updated Copy:
+- Primary: "Just fly. We do the rest."
+- Subtext: Premium aircraft management, detailing, and pilot development for owner-operators across the Front Range
+- CTAs: "See Plans & Start" (primary) → "/pricing", "Owner Portal" (secondary) → "/login"
+
+### SEO Infrastructure
+
+**Seo Component** (`client/src/components/Seo.tsx`):
+- Dynamic meta tags (title, description, keywords)
+- Open Graph and Twitter Card support
+- JSON-LD structured data (LocalBusiness, Service schemas)
+- Canonical URLs and geo-targeting
+- Integrated with react-helmet-async
+
+**Keywords System** (`client/src/seo/keywords.ts`):
+- Services: aircraft management, detailing, flight instruction, etc.
+- Modifiers: premium, Colorado, Front Range, transparent pricing
+- Airports: KAPA, KBJC, KFTG, KDEN, KCOS, KBDU, KFNL, KGXY
+- Partners: Sky Harbour, Freedom Aviation Hangar
+- Location and airport-specific keyword helpers
+
+**SEO Files**:
+- `public/robots.txt` - Search engine directives, sitemap reference
+- `public/sitemap.xml` - Complete site structure for crawlers
+
+**Page SEO Implementation**:
+- **Homepage** (`/`): LocalBusiness JSON-LD, comprehensive keywords, screen reader airport coverage
+- **Pricing** (`/pricing`): Location-aware meta tags, dynamic descriptions based on selected hangar
+
+### Pricing Enhancements
+- Location toggle with hangar cost display
+- SEO meta tags adapt to selected location
+- Representative pricing disclaimer:
+  > "Prices shown are representative class packages including selected hangar costs. Actual pricing may vary based on aircraft-specific requirements, travel costs, and facility availability. Hangar costs confirmed during onboarding. Facility availability subject to final confirmation."
+
+### Technical Implementation
+- HelmetProvider added to App.tsx for SEO support
+- react-helmet-async for SSR compatibility
+- Screen reader accessible keyword blocks on homepage
+- Location-specific SEO keywords on pricing page
+
+### Files Created/Modified
+**New Files:**
+- `client/src/brand/manifest.ts`
+- `client/src/seo/keywords.ts`
+- `client/src/components/Seo.tsx`
+- `public/robots.txt`
+- `public/sitemap.xml`
+
+**Modified Files:**
+- `client/src/components/hero-section.tsx` - Updated hero copy and CTAs
+- `client/src/pages/home.tsx` - Added SEO and keyword blocks
+- `client/src/pages/Pricing.tsx` - Added SEO and enhanced disclaimer
+- `client/src/App.tsx` - Added HelmetProvider
+
 ## Development Tools
 
 ### Dev Toolbar (Development Mode Only)
