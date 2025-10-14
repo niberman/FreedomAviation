@@ -90,13 +90,19 @@ export function useLocations() {
   return useQuery({
     queryKey: ['pricing-locations'],
     queryFn: async (): Promise<Location[]> => {
+      console.log('[useLocations] Fetching...');
       const { data, error } = await supabase
         .from('pricing_locations')
         .select('*')
         .eq('is_active', true)
         .order('name');
       
-      if (error) throw error;
+      console.log('[useLocations] Result:', { data, error, count: data?.length });
+      
+      if (error) {
+        console.error('[useLocations] Error:', error);
+        throw error;
+      }
       return data.map((d: any) => locationSchema.parse(d));
     },
   });
@@ -220,6 +226,7 @@ export function useLatestSnapshot() {
   return useQuery({
     queryKey: ['pricing-snapshots', 'latest'],
     queryFn: async () => {
+      console.log('[useLatestSnapshot] Fetching...');
       const { data, error } = await supabase
         .from('pricing_snapshots')
         .select('*')
@@ -227,7 +234,12 @@ export function useLatestSnapshot() {
         .limit(1)
         .single();
       
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+      console.log('[useLatestSnapshot] Result:', { data, error, code: error?.code });
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('[useLatestSnapshot] Error:', error);
+        throw error;
+      }
       return data;
     },
   });
