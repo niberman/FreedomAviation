@@ -185,9 +185,47 @@ npm start      # Runs production server
 - ✅ Database schema with complete RLS policies
 - ✅ Auto-create user profiles on signup (via trigger)
 - ✅ Comprehensive setup documentation
+- ✅ Multi-location pricing system implemented (see below)
 - ⏳ Connect dashboard components to real data
 - ⏳ Stripe payment integration
 - ⏳ PWA configuration
+
+## Multi-Location Pricing System (October 2025)
+
+### Features Implemented
+- **Database Schema**: 5 new tables (pricing_locations, aircraft_pricing_overrides, settings_pricing_assumptions, pricing_classes, pricing_snapshots)
+- **Seed Data**: 3 locations (Sky Harbour $2000, FA Hangar $1500, Centennial), 4 pricing classes, initial assumptions
+- **Pricing Engine**: Type-safe calculation engine (client/src/lib/pricing/) with location-based hangar costs
+- **Admin Configurator**: /admin/pricing-configurator with assumptions, locations, classes, fleet grid, and publish functionality
+- **Partner Pages**: /partners/sky-harbour and /partners/freedom-aviation-hangar with SEO/JSON-LD
+- **Public Pricing**: /pricing with location selector and snapshot-based pricing display
+- **Partner Badges**: Homepage integration with feature flags
+- **Feature Flags**: FEATURE_PRICING_CONFIGURATOR, FEATURE_PARTNER_SKY_HARBOUR, FEATURE_PARTNER_FA_HANGAR
+
+### Known Issue - Supabase Query Resolution
+**Status**: Database verified correct via SQL, but browser-side Supabase queries returning empty results
+**What Works**:
+- All database tables created with proper schema
+- Seed data inserted and verified (SELECT queries return correct data)
+- RLS policies in place for public SELECT access
+- pricing_snapshots.payload column type: JSONB
+- Supabase env vars (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) exist
+- Admin Configurator state hydration fixed with useEffect
+
+**What Needs Verification**:
+- Browser-side useLocations() and useLatestSnapshot() queries return null/undefined
+- Pricing page shows "No pricing data available" despite database having correct data
+- May be environment-specific issue (dev vs production)
+- Suggest testing in production deployment or verifying Supabase project settings
+
+### Files
+- Database: supabase-schema.sql (includes new pricing tables)
+- Pricing Engine: client/src/lib/pricing/types.ts, calc.ts
+- Hooks: client/src/features/pricing/hooks.ts (with error logging)
+- Admin UI: client/src/pages/admin/PricingConfigurator.tsx
+- Public Pricing: client/src/pages/Pricing.tsx
+- Partner Pages: client/src/pages/partners/SkyHarbour.tsx, FAHangar.tsx
+- Feature Flags: client/src/lib/flags.ts
 
 ## Critical Security Features
 

@@ -4,7 +4,7 @@ import { useLatestSnapshot, useLocations } from "../features/pricing/hooks";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, MapPinned } from "lucide-react";
 
 export default function Pricing() {
   const [, navigate] = useLocation();
@@ -29,12 +29,13 @@ export default function Pricing() {
   if (snapshotQuery.isLoading || locationsQuery.isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin" data-testid="loading-spinner" />
       </div>
     );
   }
 
   const classes = snapshotQuery.data?.payload?.classes || [];
+  const locations = locationsQuery.data || [];
 
   const handleLocationChange = (slug: string) => {
     setSelectedLocationSlug(slug);
@@ -69,10 +70,10 @@ export default function Pricing() {
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  {locationsQuery.data?.map((loc) => (
+                  {locations.map((loc) => (
                     <SelectItem key={loc.id} value={loc.slug} data-testid={`location-option-${loc.slug}`}>
                       {loc.name}
-                      {loc.default_hangar_cost && ` ($${loc.default_hangar_cost}/mo)`}
+                      {loc.default_hangar_cost ? ` ($${loc.default_hangar_cost}/mo)` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -86,8 +87,9 @@ export default function Pricing() {
 
             {selectedLocation && selectedLocation.slug !== 'none' && (
               <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  📍 You're viewing prices with <strong>{selectedLocation.name}</strong> hangar costs applied.
+                <p className="text-sm text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                  <MapPinned className="h-4 w-4" />
+                  <span>You're viewing prices with <strong>{selectedLocation.name}</strong> hangar costs applied.</span>
                 </p>
               </div>
             )}

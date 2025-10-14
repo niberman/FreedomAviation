@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAircraft } from "../../lib/hooks/useAircraft";
 import {
   useAssumptions,
@@ -40,6 +40,13 @@ export default function PricingConfigurator() {
     overhead_per_ac: 106,
     avionics_db_per_ac: 0,
   });
+
+  // Hydrate state when query data loads
+  useEffect(() => {
+    if (assumptionsQuery.data) {
+      setAssumptions(assumptionsQuery.data);
+    }
+  }, [assumptionsQuery.data]);
 
   const handleSaveAssumptions = async () => {
     try {
