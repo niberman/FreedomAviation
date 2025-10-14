@@ -1,0 +1,162 @@
+You are working on the Freedom Aviation monorepo. Deliver the Sky Harbour partnership + Freedom Aviation Hangar (Fox 9) branding end-to-end:
+- Pricing model & engine support (location default hangar costs + overrides)
+- Admin Configurator updates
+- Marketing pages & homepage surfacing
+- Feature flags, seeds, and tests
+
+=====================================================
+A) DATA MODEL & PRICING ENGINE (Hangar as 1st-class)
+=====================================================
+
+1) DB schema (Supabase SQL – idempotent)
+-- Add/ensure default hangar cost on locations
+alter table public.pricing_locations
+  add column if not exists default_hangar_cost numeric;
+
+-- Per-aircraft overrides already support hangar_cost; keep it nullable
+-- aircraft_pricing_overrides(hangar_cost numeric)
+
+2) Pricing Engine (@freedom/pricing-engine)
+- Update calc.ts to accept optional `location` with `default_hangar_cost`.
+- Logic:
+  const hangar = (row.hangar_cost ?? location?.default_hangar_cost ?? 0);
+  (keep other terms identical)
+- Export new helper:
+  export function calcRowWithRefs(a, cls, row, location) { ...same as calcRow but with location-based hangar... }
+
+3) Zod contracts
+- Update `pricing_locations` schema to include `default_hangar_cost: number|null`.
+- Update fleet row schema to allow `hangar_cost?: number|null`.
+
+========================================
+B) SEEDS (Sky Harbour + Freedom Hangar)
+========================================
+-- Create / update locations and default hangar costs
+insert into public.pricing_locations (name, default_hangar_cost, is_active)
+values ('Sky Harbour', 2000, true)
+on conflict (name) do update set default_hangar_cost=excluded.default_hangar_cost, is_active=true;
+
+insert into public.pricing_locations (name, default_hangar_cost, is_active)
+values ('Freedom Aviation Hangar', 1500, true)  -- Fox 9 rebranded
+on conflict (name) do update set default_hangar_cost=excluded.default_hangar_cost, is_active=true;
+
+-- (Optional) Keep 'None' as a selectable location with no default hangar cost
+insert into public.pricing_locations (name, default_hangar_cost, is_active)
+values ('None', null, true)
+on conflict (name) do update set default_hangar_cost=null, is_active=true;
+
+-- If any aircraft previously pointed to 'Fox 9', relabel:
+update public.pricing_locations set name='Freedom Aviation Hangar'
+where lower(name) in ('fox 9','fox9');
+
+-- Example per-aircraft overrides (leave null to use location default)
+-- update public.aircraft_pricing_overrides set hangar_cost=null where aircraft_id=...;
+
+====================================
+C) CONFIGURATOR UI (Admin Console)
+====================================
+In /apps/console/src/features/pricing-configurator:
+
+1) LocationsTable.tsx
+- Add editable `default_hangar_cost` (currency input, >=0).
+- Show a badge on each row:
+  - Sky Harbour — “Preferred Partner”
+  - Freedom Aviation Hangar — “FA Home Base”
+
+2) FleetGrid.tsx
+- Compute hangar as `override ?? location.default_hangar_cost ?? 0`.
+- Show a “Hangar (derived)” column with a small hint:
+  - If override present → chip “Override”
+  - Else → “From Location”
+- When selecting Location, display helper text under the select:
+  - “Sky Harbour default hangar: $2,000”
+  - “Freedom Aviation Hangar default hangar: $1,500”
+- In totals panel, list Hangar explicitly as a line item.
+
+3) Publish flow
+- Snapshot payload MUST include: assumptions, class configs, locations with default_hangar_cost, and **computed rows (including chosen hangar source)**.
+
+=======================================
+D) MARKETING: Pages, Badges, & Pricing
+=======================================
+
+1) Partner pages (apps/marketing)
+- Create `/partners/sky-harbour`
+  - Hero: “Freedom Aviation × Sky Harbour”
+  - Copy: “Purpose-built private hangars at KAPA, integrated into your monthly plan. Hangar economics are modeled in pricing.”
+  - CTA: “See Pricing @ Sky Harbour” → `/pricing?location=sky-harbour`
+  - JSON-LD Organization/Brand + FAQ (“Is hangar cost included?”, “Do prices vary by hangar?”)
+- Create `/partners/freedom-aviation-hangar`
+  - Hero: “Freedom Aviation Hangar (KAPA)”
+  - Copy: “Our home-base hangar option—fast turns, predictable access. We model the hangar line directly in your monthly price.”
+  - CTA: “See Pricing @ FA Hangar” → `/pricing?location=freedom-aviation-hangar`
+  - JSON-LD (similar pattern)
+
+2) Homepage surfacing
+- Under hero, add a “Preferred Hangar Partners” module with two badges:
+  - Sky Harbour (links to /partners/sky-harbour)
+  - Freedom Aviation Hangar (links to /partners/freedom-aviation-hangar)
+- Add the Sky Harbour logo and an FA Hangar mark (simple FA logo + “Hangar” text lockup).
+
+3) Pricing page (/pricing)
+- Add a location selector at top: None, Sky Harbour, Freedom Aviation Hangar.
+- If query param `?location=sky-harbour` or `?location=freedom-aviation-hangar`, preselect accordingly and show a callout card:
+  - “You’re viewing prices with [Location] hangar costs applied.”
+- For each class card, show:
+  - Base (class default)
+  - + Hangar (selected location default)
+  - = Estimated Total (before aircraft-specific overrides)
+- Fine print: “Representative pricing. Specific aircraft may have overrides.”
+
+4) Feature flags
+- Add `FEATURE_PARTNER_SKY_HARBOUR` and `FEATURE_FA_HANGAR` (true by default in dev).
+- Hide partner badges/pages if flags are off.
+- Track clicks with analytics events (`partner.view`, `partner.click_pricing` with location label).
+
+======================================
+E) ROUTING & CROSS-LINKS (Console ↔ Marketing)
+======================================
+- In console Dashboard → Aircraft card:
+  - If aircraft location is Sky Harbour or Freedom Aviation Hangar, show a subtle tag.
+  - Link “How this affects your price” → `/pricing?location=<slug>` (marketing site).
+- In Configurator:
+  - Selecting a location shows inline helper with default hangar cost and a link to its partner page.
+
+==========================
+F) TESTS (Unit + E2E)
+==========================
+@freedom/pricing-engine
+- Test that hangar is taken from:
+  1) override when present,
+  2) else location default,
+  3) else 0
+- Verify total_cost & margin_pct respond correctly to location changes.
+
+Console E2E (Playwright)
+- Admin edits `default_hangar_cost` for Freedom Aviation Hangar → FleetGrid recomputes deltas.
+- Publish snapshot → Marketing /pricing reflects new totals for that location.
+
+======================
+G) IMPLEMENTATION NOTES
+======================
+- Location slugs: 
+  - Sky Harbour → "sky-harbour"
+  - Freedom Aviation Hangar → "freedom-aviation-hangar"
+- Currency formatting: centralize in `packages/ui` (e.g., `<Money cents|number />`).
+- Ensure the Pricing page reads the **latest published snapshot** only (no draft leakage).
+- Ensure feature flags are read from server/public settings with client caching and dev overrides.
+
+======================
+H) OUTPUT REQUIREMENTS
+======================
+- PR with:
+  - SQL migration for `default_hangar_cost`
+  - Pricing engine change + tests
+  - Configurator updates (LocationsTable, FleetGrid, Publish)
+  - New marketing partner pages + homepage module + pricing location selector
+  - Feature flags and analytics events
+  - Seeds for Sky Harbour (2000) and Freedom Aviation Hangar (1500)
+- Confirm both apps build; show screenshots or DOM asserts for:
+  - Pricing page showing Base + Hangar + Total
+  - Partner pages live
+  - Configurator FleetGrid “Hangar (derived)” column with override badge
