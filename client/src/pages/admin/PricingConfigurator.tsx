@@ -1,0 +1,280 @@
+import { useState } from "react";
+import { useAircraft } from "../../lib/hooks/useAircraft";
+import {
+  useAssumptions,
+  useSaveAssumptions,
+  useLocations,
+  useSaveLocation,
+  useClasses,
+  useOverrides,
+  usePublishSnapshot,
+  type Location,
+  type PricingClass,
+} from "../../features/pricing/hooks";
+import { calcRow } from "../../lib/pricing";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "../../hooks/use-toast";
+import { Loader2, Rocket } from "lucide-react";
+
+export default function PricingConfigurator() {
+  const { toast } = useToast();
+  const { aircraft } = useAircraft();
+  const assumptionsQuery = useAssumptions();
+  const locationsQuery = useLocations();
+  const classesQuery = useClasses();
+  const overridesQuery = useOverrides();
+  
+  const saveAssumptions = useSaveAssumptions();
+  const saveLocation = useSaveLocation();
+  const publishSnapshot = usePublishSnapshot();
+
+  const [assumptions, setAssumptions] = useState(assumptionsQuery.data || {
+    labor_rate: 30,
+    card_fee_pct: 3,
+    cfi_allocation: 42,
+    cleaning_supplies: 50,
+    overhead_per_ac: 106,
+    avionics_db_per_ac: 0,
+  });
+
+  const handleSaveAssumptions = async () => {
+    try {
+      await saveAssumptions.mutateAsync(assumptions);
+      toast({ title: "Saved", description: "Assumptions updated successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save assumptions", variant: "destructive" });
+    }
+  };
+
+  const handlePublish = async () => {
+    try {
+      const payload = {
+        assumptions: assumptionsQuery.data,
+        locations: locationsQuery.data,
+        classes: classesQuery.data,
+        overrides: overridesQuery.data,
+      };
+
+      await publishSnapshot.mutateAsync({
+        label: `Snapshot ${new Date().toISOString()}`,
+        payload,
+      });
+
+      toast({ title: "Published!", description: "Pricing snapshot created successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to publish snapshot", variant: "destructive" });
+    }
+  };
+
+  if (assumptionsQuery.isLoading || locationsQuery.isLoading || classesQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-8 space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Pricing Configurator</h1>
+          <p className="text-muted-foreground">Manage hangar partnerships and pricing models</p>
+        </div>
+        <Button onClick={handlePublish} disabled={publishSnapshot.isPending} data-testid="button-publish-snapshot">
+          {publishSnapshot.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Rocket className="mr-2 h-4 w-4" />
+          )}
+          Publish Snapshot
+        </Button>
+      </div>
+
+      {/* Assumptions Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Global Assumptions</CardTitle>
+          <CardDescription>Base cost parameters used across all calculations</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="labor_rate">Labor Rate ($/hr)</Label>
+              <Input
+                id="labor_rate"
+                type="number"
+                value={assumptions.labor_rate}
+                onChange={(e) => setAssumptions({ ...assumptions, labor_rate: Number(e.target.value) })}
+                data-testid="input-labor-rate"
+              />
+            </div>
+            <div>
+              <Label htmlFor="card_fee_pct">Card Fee (%)</Label>
+              <Input
+                id="card_fee_pct"
+                type="number"
+                value={assumptions.card_fee_pct}
+                onChange={(e) => setAssumptions({ ...assumptions, card_fee_pct: Number(e.target.value) })}
+                data-testid="input-card-fee"
+              />
+            </div>
+            <div>
+              <Label htmlFor="cfi_allocation">CFI Allocation ($)</Label>
+              <Input
+                id="cfi_allocation"
+                type="number"
+                value={assumptions.cfi_allocation}
+                onChange={(e) => setAssumptions({ ...assumptions, cfi_allocation: Number(e.target.value) })}
+                data-testid="input-cfi-allocation"
+              />
+            </div>
+            <div>
+              <Label htmlFor="cleaning_supplies">Cleaning Supplies ($)</Label>
+              <Input
+                id="cleaning_supplies"
+                type="number"
+                value={assumptions.cleaning_supplies}
+                onChange={(e) => setAssumptions({ ...assumptions, cleaning_supplies: Number(e.target.value) })}
+                data-testid="input-cleaning-supplies"
+              />
+            </div>
+            <div>
+              <Label htmlFor="overhead_per_ac">Overhead per A/C ($)</Label>
+              <Input
+                id="overhead_per_ac"
+                type="number"
+                value={assumptions.overhead_per_ac}
+                onChange={(e) => setAssumptions({ ...assumptions, overhead_per_ac: Number(e.target.value) })}
+                data-testid="input-overhead"
+              />
+            </div>
+            <div>
+              <Label htmlFor="avionics_db_per_ac">Avionics DB per A/C ($)</Label>
+              <Input
+                id="avionics_db_per_ac"
+                type="number"
+                value={assumptions.avionics_db_per_ac}
+                onChange={(e) => setAssumptions({ ...assumptions, avionics_db_per_ac: Number(e.target.value) })}
+                data-testid="input-avionics-db"
+              />
+            </div>
+          </div>
+          <Button onClick={handleSaveAssumptions} disabled={saveAssumptions.isPending} data-testid="button-save-assumptions">
+            {saveAssumptions.isPending ? "Saving..." : "Save Assumptions"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Locations Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Hangar Locations</CardTitle>
+          <CardDescription>Sky Harbour & Freedom Aviation Hangar partnerships</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {locationsQuery.data?.map((loc: Location) => (
+              <div key={loc.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`location-${loc.slug}`}>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <p className="font-medium">{loc.name}</p>
+                    <p className="text-sm text-muted-foreground">Default hangar: ${loc.default_hangar_cost || 0}</p>
+                  </div>
+                  {loc.slug === 'sky-harbour' && (
+                    <Badge variant="default">Preferred Partner</Badge>
+                  )}
+                  {loc.slug === 'freedom-aviation-hangar' && (
+                    <Badge variant="secondary">FA Home Base</Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pricing Classes Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pricing Classes</CardTitle>
+          <CardDescription>Class templates with default pricing</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {classesQuery.data?.map((cls: PricingClass) => (
+              <div key={cls.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`class-${cls.id}`}>
+                <div>
+                  <p className="font-medium">{cls.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    ${cls.default_price} • {cls.labor_hours}hr labor • ${cls.consumables} consumables
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Fleet Grid Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Fleet Pricing Preview</CardTitle>
+          <CardDescription>Computed pricing with hangar costs</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {aircraft.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No aircraft to display</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Tail</th>
+                    <th className="text-left p-2">Class</th>
+                    <th className="text-right p-2">Base Price</th>
+                    <th className="text-right p-2">Hangar</th>
+                    <th className="text-right p-2">Total Cost</th>
+                    <th className="text-right p-2">Margin %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aircraft.map((ac: any) => {
+                    // Find matching class (simplified - use ac.class or default to first class)
+                    const matchingClass = classesQuery.data?.[0];
+                    if (!matchingClass || !assumptionsQuery.data) return null;
+
+                    const computed = calcRow(
+                      assumptionsQuery.data,
+                      matchingClass,
+                      { tail: ac.tail_number, class_name: matchingClass.name }
+                    );
+
+                    const marginColor = computed.margin_pct > 0.3 ? 'text-green-600' : computed.margin_pct > 0.2 ? 'text-amber-600' : 'text-red-600';
+
+                    return (
+                      <tr key={ac.id} className="border-b" data-testid={`aircraft-row-${ac.id}`}>
+                        <td className="p-2 font-mono">{ac.tail_number}</td>
+                        <td className="p-2 text-sm">{matchingClass.name}</td>
+                        <td className="p-2 text-right">${computed.final_price}</td>
+                        <td className="p-2 text-right">${computed.hangar_derived}</td>
+                        <td className="p-2 text-right">${computed.total_cost}</td>
+                        <td className={`p-2 text-right font-medium ${marginColor}`}>
+                          {(computed.margin_pct * 100).toFixed(1)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
