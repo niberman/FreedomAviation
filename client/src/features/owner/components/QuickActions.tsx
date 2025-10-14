@@ -123,9 +123,8 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
         status: "pending",
         user_id: userId,
         aircraft_id: prepForm.aircraft_id || null,
-        requested_date: prepForm.requested_departure ? new Date(prepForm.requested_departure).toISOString().split('T')[0] : null,
-        requested_time: prepForm.requested_departure ? new Date(prepForm.requested_departure).toISOString().split('T')[1].substring(0, 5) : null,
         description: descriptionParts,
+        notes: prepForm.requested_departure ? `Requested departure: ${new Date(prepForm.requested_departure).toLocaleString()}` : null,
       };
       
       const { error } = await supabase.from("service_requests").insert(payload);
