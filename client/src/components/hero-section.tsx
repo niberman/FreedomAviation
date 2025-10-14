@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Plane } from "lucide-react";
 import { useLocation } from "wouter";
 import heroImage from "@assets/stock_images/premium_cirrus_sr22t_b2f4f8b8.jpg";
+import logoImage from "@assets/Screenshot 2025-09-19 at 10.34.45 AM_1760474804160.png";
 
 export function HeroSection() {
   const [, setLocation] = useLocation();
@@ -19,8 +19,8 @@ export function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
       
       <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <Plane className="h-8 w-8 text-primary" />
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <img src={logoImage} alt="Freedom Aviation" className="h-12 w-auto" />
           <span className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
             Freedom Aviation
           </span>
