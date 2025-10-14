@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Calendar, FileText } from "lucide-react";
+import { Calendar, FileText } from "lucide-react";
+import logoImage from "@assets/freedom-aviation-logo.png";
 
 export default function CFIDashboard() {
   // TODO: remove mock functionality
@@ -20,8 +21,8 @@ export default function CFIDashboard() {
     <div className="min-h-screen bg-background">
       <header className="border-b sticky top-0 bg-background z-50">
         <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Plane className="h-6 w-6 text-primary" />
+          <div className="flex items-center gap-3">
+            <img src={logoImage} alt="Freedom Aviation" className="h-8 w-auto" />
             <h1 className="text-xl font-semibold">Freedom Aviation - CFI</h1>
           </div>
           <ThemeToggle />
