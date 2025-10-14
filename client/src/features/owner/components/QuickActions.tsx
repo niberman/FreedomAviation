@@ -127,7 +127,9 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
         description: descriptionParts,
       };
       
-      const { error } = await supabase.from("service_requests").insert(payload);
+      console.log("Submitting payload:", payload);
+      const { data, error } = await supabase.from("service_requests").insert(payload).select();
+      console.log("Insert response:", { data, error });
       if (error) throw error;
       
       toast({
