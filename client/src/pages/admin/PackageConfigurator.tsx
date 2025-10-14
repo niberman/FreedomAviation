@@ -144,6 +144,23 @@ export default function PackageConfigurator() {
     );
   }
 
+  // Handle error states
+  if (assumptionsQuery.isError || locationsQuery.isError || classesQuery.isError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-8">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold mb-4">Configuration Unavailable</h2>
+          <p className="text-muted-foreground mb-6">
+            The pricing configuration tables are not accessible. Please ensure the database schema is properly set up.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Go to your Supabase Dashboard → Settings → API → Click "Reload Schema"
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const locations = locationsQuery.data || [];
   const classes = classesQuery.data || [];
 
