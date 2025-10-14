@@ -27,30 +27,30 @@ export function HeroSection() {
         </div>
         
         <h1 className="text-6xl md:text-7xl font-bold tracking-tight mb-6 text-foreground">
-          Just Fly. We Handle<br />Everything.
+          Just fly.<br />We do the rest.
         </h1>
         
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-          Premium aircraft management and expert flight instruction for owner-pilots at Centennial Airport.
+          Premium aircraft management, detailing, and pilot development for owner-operators across the Front Range.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Button 
             size="lg" 
-            onClick={handleOpenPortal}
-            data-testid="button-open-portal"
+            onClick={() => setLocation("/pricing")}
+            data-testid="button-see-plans"
             className="text-lg px-8"
           >
-            Open Owner Portal
+            See Plans & Start
           </Button>
           <Button 
             size="lg" 
             variant="outline" 
-            onClick={() => console.log("Learn more clicked")}
-            data-testid="button-learn-more"
+            onClick={handleOpenPortal}
+            data-testid="button-owner-portal"
             className="text-lg px-8 backdrop-blur-sm bg-background/30"
           >
-            Learn More
+            Owner Portal
           </Button>
         </div>
         

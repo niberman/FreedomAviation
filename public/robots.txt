@@ -1,0 +1,12 @@
+# Freedom Aviation - robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://www.freedomaviationco.com/sitemap.xml
+
+# Disallow admin and internal pages
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /cfi/
+Disallow: /api/
