@@ -15,6 +15,7 @@ import OwnerDashboard from "./pages/owner-dashboard";
 import OwnerMore from "./pages/owner-more";
 import AdminDashboard from "./pages/admin-dashboard";
 import PricingConfigurator from "./pages/admin/PricingConfigurator";
+import PackageConfigurator from "./pages/admin/PackageConfigurator";
 import CFIDashboard from "./pages/cfi-dashboard";
 import NotFound from "./pages/not-found";
 
@@ -44,6 +45,11 @@ function Router() {
       <Route path="/admin/pricing-configurator">
         <ProtectedRoute>
           <PricingConfigurator />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/packages">
+        <ProtectedRoute>
+          <PackageConfigurator />
         </ProtectedRoute>
       </Route>
       <Route path="/cfi">
