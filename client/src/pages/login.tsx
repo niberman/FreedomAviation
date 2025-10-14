@@ -2,11 +2,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plane } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import logoImage from "@assets/Screenshot 2025-09-19 at 10.34.45 AM_1760474804160.png";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -50,7 +50,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Plane className="h-12 w-12 text-primary" />
+            <img src={logoImage} alt="Freedom Aviation" className="h-16 w-auto" />
           </div>
           <CardTitle className="text-2xl">Freedom Aviation</CardTitle>
           <CardDescription>Sign in to your owner portal</CardDescription>
