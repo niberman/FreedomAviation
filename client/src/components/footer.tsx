@@ -1,4 +1,5 @@
 import { MapPin, Phone, Mail } from "lucide-react";
+import { Link } from "wouter";
 import logoImage from "@assets/freedom-aviation-logo.png";
 
 export function Footer() {
@@ -19,20 +20,20 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-3">Services</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="hover-elevate cursor-pointer">Aircraft Management</li>
-              <li className="hover-elevate cursor-pointer">Flight Instruction</li>
-              <li className="hover-elevate cursor-pointer">Maintenance Coordination</li>
-              <li className="hover-elevate cursor-pointer">Concierge Service</li>
+              <li><Link href="/#services" data-testid="link-aircraft-management" className="hover-elevate block">Aircraft Management</Link></li>
+              <li><Link href="/#services" data-testid="link-flight-instruction" className="hover-elevate block">Flight Instruction</Link></li>
+              <li><Link href="/#services" data-testid="link-maintenance" className="hover-elevate block">Maintenance Coordination</Link></li>
+              <li><Link href="/#services" data-testid="link-concierge" className="hover-elevate block">Concierge Service</Link></li>
             </ul>
           </div>
           
           <div>
             <h4 className="font-semibold mb-3">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="hover-elevate cursor-pointer">Owner Portal</li>
-              <li className="hover-elevate cursor-pointer">Pricing Calculator</li>
-              <li className="hover-elevate cursor-pointer">Support</li>
-              <li className="hover-elevate cursor-pointer">Contact Us</li>
+              <li><Link href="/dashboard" data-testid="link-owner-portal" className="hover-elevate block">Owner Portal</Link></li>
+              <li><Link href="/#pricing" data-testid="link-pricing-calculator" className="hover-elevate block">Pricing Calculator</Link></li>
+              <li><a href="mailto:fly@freedomaviation.com" data-testid="link-support" className="hover-elevate block">Support</a></li>
+              <li><a href="mailto:fly@freedomaviation.com" data-testid="link-contact" className="hover-elevate block">Contact Us</a></li>
             </ul>
           </div>
           
@@ -45,11 +46,11 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
-                (720) 555-FREE
+                <a href="tel:7205553733" data-testid="link-phone" className="hover-elevate">(720) 555-FREE</a>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                fly@freedomaviation.com
+                <a href="mailto:fly@freedomaviation.com" data-testid="link-email" className="hover-elevate">fly@freedomaviation.com</a>
               </li>
             </ul>
           </div>
@@ -58,8 +59,8 @@ export function Footer() {
         <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <p>© 2024 Freedom Aviation. All rights reserved.</p>
           <div className="flex gap-6">
-            <span className="hover-elevate cursor-pointer">Privacy Policy</span>
-            <span className="hover-elevate cursor-pointer">Terms of Service</span>
+            <Link href="/privacy" data-testid="link-privacy" className="hover-elevate">Privacy Policy</Link>
+            <Link href="/terms" data-testid="link-terms" className="hover-elevate">Terms of Service</Link>
           </div>
         </div>
       </div>
