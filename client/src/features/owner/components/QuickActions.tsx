@@ -93,31 +93,39 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
     setLoading(true);
     
     try {
+      // Build fuel request description
+      let fuelDescription = "";
+      if (prepForm.fuel_target === 'ADD_QUANTITY' && prepForm.fuel_add_quantity) {
+        fuelDescription = `Fuel: Add ${prepForm.fuel_add_quantity} gallons`;
+      } else if (prepForm.fuel_target === 'FILL_TO_TABS') {
+        fuelDescription = "Fuel: Fill to Tabs";
+      } else if (prepForm.fuel_target === 'FILL_TO_TABS_PLUS' && prepForm.fuel_tabs_plus) {
+        fuelDescription = `Fuel: Fill to Tabs + ${prepForm.fuel_tabs_plus} gallons`;
+      } else if (prepForm.fuel_target === 'FILL_TO_FULL') {
+        fuelDescription = "Fuel: Fill to Full";
+      }
+
+      // Build description with all details
+      const descriptionParts = [
+        `Pre-Flight Concierge Request - ${prepForm.airport}`,
+        fuelDescription,
+        prepForm.o2_topoff ? "O₂ Top-off" : null,
+        prepForm.tks_topoff ? "TKS Top-off" : null,
+        prepForm.gpu_required ? "GPU Required" : null,
+        prepForm.hangar_pullout ? "Hangar Pull-out" : null,
+        prepForm.cabin_provisioning ? `Provisioning: ${prepForm.cabin_provisioning}` : null,
+        prepForm.description ? `Notes: ${prepForm.description}` : null,
+      ].filter(Boolean).join(" | ");
+
       const payload: any = {
         service_type: "Pre-Flight Concierge",
         priority: "high",
         status: "pending",
         user_id: userId,
         aircraft_id: prepForm.aircraft_id || null,
-        airport: prepForm.airport?.toUpperCase() || "KAPA",
-        requested_departure: prepForm.requested_departure || null,
-        fuel_target: prepForm.fuel_target,
-        fuel_add_quantity: prepForm.fuel_target === 'ADD_QUANTITY' ? (prepForm.fuel_add_quantity || null) : null,
-        fuel_tabs_plus: prepForm.fuel_target === 'FILL_TO_TABS_PLUS' ? (prepForm.fuel_tabs_plus || null) : null,
-        o2_topoff: prepForm.o2_topoff,
-        tks_topoff: prepForm.tks_topoff,
-        gpu_required: prepForm.gpu_required,
-        hangar_pullout: prepForm.hangar_pullout,
-        description: prepForm.description || "Pre-Flight Concierge Request",
-        cabin_provisioning: (() => {
-          const t = prepForm.cabin_provisioning?.trim();
-          if (!t) return null;
-          try { 
-            return JSON.parse(t); 
-          } catch { 
-            return t; 
-          }
-        })(),
+        requested_date: prepForm.requested_departure ? new Date(prepForm.requested_departure).toISOString().split('T')[0] : null,
+        requested_time: prepForm.requested_departure ? new Date(prepForm.requested_departure).toISOString().split('T')[1].substring(0, 5) : null,
+        description: descriptionParts,
       };
       
       const { error } = await supabase.from("service_requests").insert(payload);
