@@ -21,9 +21,13 @@ Freedom Aviation is a production-ready web application for premium aircraft mana
 /
 ├── client/src/                 # Frontend application
 │   ├── components/            # Reusable UI components
-│   │   ├── ui/               # shadcn/ui primitives
+│   │   ├── ui/               # shadcn/ui primitives + custom components
+│   │   │   ├── status-pill.tsx      # Status badges with variants
+│   │   │   ├── money.tsx            # Currency & credit formatting
+│   │   │   └── ...                  # Other shadcn components
 │   │   ├── owner/            # Owner-specific components
 │   │   │   └── CreditsOverview.tsx
+│   │   ├── error-boundary.tsx       # Global error boundary
 │   │   ├── hero-section.tsx  # Marketing components
 │   │   ├── features-grid.tsx
 │   │   ├── membership-tiers.tsx
@@ -48,19 +52,25 @@ Freedom Aviation is a production-ready web application for premium aircraft mana
 │   │   ├── owner-more.tsx         # Owner settings
 │   │   ├── admin-dashboard.tsx    # Admin panel (/admin)
 │   │   └── cfi-dashboard.tsx      # CFI panel (/cfi)
-│   ├── lib/                  # Shared utilities
+│   ├── lib/                  # Shared utilities & infrastructure
+│   │   ├── types/            # TypeScript type definitions
+│   │   │   └── database.ts   # Generated Supabase types
+│   │   ├── hooks/            # Typed, validated data hooks
+│   │   │   ├── useAircraft.ts       # Aircraft CRUD with Zod validation
+│   │   │   └── useServiceRequests.ts # Service requests with validation
 │   │   ├── supabase.ts       # Supabase client
 │   │   ├── auth-context.tsx  # Auth provider & hooks
 │   │   ├── queryClient.ts    # React Query setup
 │   │   ├── creditCalculator.ts    # Credit tier utilities
 │   │   └── utils.ts          # Helper functions
 │   ├── hooks/                # Custom React hooks
-│   ├── App.tsx               # Root component with routing
+│   ├── App.tsx               # Root component with routing & error boundary
 │   └── index.css             # Global styles & design tokens
 ├── server/                    # Express backend (if needed)
 ├── shared/                    # Shared types & schemas
 ├── attached_assets/          # Images & media
-│   └── extracted2/           # Uploaded dashboard code (analyzed)
+│   ├── freedom-aviation-logo.png   # Company logo
+│   └── stock_images/         # Hero images
 └── design_guidelines.md      # Design system documentation
 ```
 
@@ -116,6 +126,30 @@ See `design_guidelines.md` for complete design specifications.
 - `service_requests` - Owner service request queue
 - `instructors` - CFI profiles and availability
 - `pricing_packages` - Configurable service packages
+
+## Type Safety & Data Layer
+
+### Generated TypeScript Types
+- **Database Types**: Auto-generated from Supabase schema in `lib/types/database.ts`
+- **Type Exports**: Helper types for common entities (Aircraft, ServiceRequest, Membership, etc.)
+- **Full Type Safety**: Row, Insert, and Update types for all tables
+
+### Validated Data Hooks
+- **useAircraft**: Type-safe aircraft CRUD with Zod validation
+  - Validates tail number format (N12345A pattern)
+  - Automatic owner_id assignment
+  - Optimistic updates with React Query
+  
+- **useServiceRequests**: Service request management with validation
+  - Fuel grade enums (100LL, Jet-A, MoGas)
+  - Priority levels (low, medium, high)
+  - Status tracking (pending, in_progress, completed, cancelled)
+
+### UI Components
+- **StatusPill**: Consistent status badges with predefined variants
+- **Money**: Currency formatting with negative/positive indicators
+- **CreditAmount**: Credit display with proper pluralization
+- **ErrorBoundary**: Global error handling with graceful fallbacks
 
 ## Development
 
