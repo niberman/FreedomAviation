@@ -4,6 +4,7 @@ import { MembershipTiers } from "@/components/membership-tiers";
 import { Testimonials } from "@/components/testimonials";
 import { Footer } from "@/components/footer";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PartnerBadges } from "../components/partner-badges";
 
 export default function Home() {
   return (
@@ -13,6 +14,7 @@ export default function Home() {
       </header>
       
       <HeroSection />
+      <PartnerBadges />
       <FeaturesGrid />
       <MembershipTiers />
       <Testimonials />
