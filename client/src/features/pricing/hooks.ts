@@ -20,18 +20,25 @@ const locationSchema = z.object({
   id: z.string(),
   name: z.string(),
   slug: z.string(),
-  default_hangar_cost: z.number().nullable(),
-  is_active: z.boolean(),
+  hangar_cost_monthly: z.number(),
+  description: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  features: z.any().nullable().optional(),
+  active: z.boolean(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
 });
 
 const classSchema = z.object({
   id: z.string(),
   name: z.string(),
-  default_price: z.number(),
-  labor_hours: z.number(),
-  avionics_db: z.number(),
-  consumables: z.number(),
-  is_active: z.boolean(),
+  slug: z.string(),
+  base_monthly: z.number(),
+  description: z.string().nullable().optional(),
+  features: z.any().nullable().optional(),
+  sort_order: z.number().optional(),
+  active: z.boolean(),
+  created_at: z.string().optional(),
 });
 
 const overrideSchema = z.object({
@@ -94,7 +101,7 @@ export function useLocations() {
       const { data, error } = await supabase
         .from('pricing_locations')
         .select('*')
-        .eq('is_active', true)
+        .eq('active', true)
         .order('name');
       
       console.log('[useLocations] Result:', { data, error, count: data?.length });
@@ -136,8 +143,8 @@ export function useClasses() {
       const { data, error} = await supabase
         .from('pricing_classes')
         .select('*')
-        .eq('is_active', true)
-        .order('name');
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
       
       if (error) throw error;
       return data.map((d: any) => classSchema.parse(d));
