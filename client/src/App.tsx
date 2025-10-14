@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth-context";
 import { ProtectedRoute } from "@/components/protected-route";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { DevToolbar } from "@/components/dev-toolbar";
 import Home from "./pages/home";
 import Login from "./pages/login";
 import Pricing from "./pages/Pricing";
@@ -70,6 +71,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <DevToolbar />
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>
