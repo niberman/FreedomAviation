@@ -77,6 +77,24 @@ Transformed Freedom Aviation into a premium, Colorado-based brand with comprehen
 - Screen reader accessible keyword blocks on homepage
 - Location-specific SEO keywords on pricing page
 
+### Homepage Pricing Integration (October 2025)
+**Service Packages Display** (`client/src/components/membership-tiers.tsx`):
+- Fetches real pricing data from database using `useLatestSnapshot()` and `useLocations()` hooks
+- Displays actual service class packages with base monthly pricing + hangar costs
+- Shows "Most Popular" badge on middle tier
+- Integrated hangar partner badges in same section
+- Client-side navigation with Wouter (no page reloads)
+- Memoized hangar lookups for optimal performance
+- Comprehensive error handling with user-friendly messages
+- Loading states with spinner
+- "See Full Pricing" buttons navigate to /pricing page
+
+**Implementation Details:**
+- Removed standalone `PartnerBadges` component
+- Combined service packages and hangar partners in single unified section
+- Error states display helpful messages when data unavailable
+- Falls back to "Pricing packages coming soon" if database empty
+
 ### Files Created/Modified
 **New Files:**
 - `client/src/brand/manifest.ts`
@@ -87,7 +105,8 @@ Transformed Freedom Aviation into a premium, Colorado-based brand with comprehen
 
 **Modified Files:**
 - `client/src/components/hero-section.tsx` - Updated hero copy and CTAs
-- `client/src/pages/home.tsx` - Added SEO and keyword blocks
+- `client/src/components/membership-tiers.tsx` - Integrated real pricing data and hangar partners
+- `client/src/pages/home.tsx` - Added SEO, keyword blocks, removed PartnerBadges
 - `client/src/pages/Pricing.tsx` - Added SEO and enhanced disclaimer
 - `client/src/App.tsx` - Added HelmetProvider
 
