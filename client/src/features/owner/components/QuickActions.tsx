@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -7,10 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { Plane, Wrench } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
+
+type FuelTarget = 'ADD_QUANTITY' | 'FILL_TO_TABS' | 'FILL_TO_TABS_PLUS' | 'FILL_TO_FULL';
 
 interface QuickActionsProps {
   aircraftId: string;
@@ -28,14 +32,14 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
   const [openPrep, setOpenPrep] = useState(false);
   const [openService, setOpenService] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [fuelGrades] = useState<string[]>(["100LL", "Jet-A", "Jet-A+", "MOGAS"]);
 
   const [prepForm, setPrepForm] = useState({
     aircraft_id: "",
     airport: "",
     requested_departure: "",
-    fuel_grade: "100LL",
-    fuel_quantity: "",
+    fuel_target: "ADD_QUANTITY" as FuelTarget,
+    fuel_add_quantity: "" as number | "",
+    fuel_tabs_plus: "" as number | "",
     o2_topoff: false,
     tks_topoff: false,
     gpu_required: false,
@@ -43,6 +47,30 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
     cabin_provisioning: "",
     description: "",
   });
+
+  // Fuel calculation
+  const fuelPreview = useMemo(() => {
+    const current = 0; // We don't have current fuel data in this view
+    const full = 100; // Default usable fuel capacity
+    const tabs = 60; // Default tabs level
+    
+    if (prepForm.fuel_target === 'ADD_QUANTITY') {
+      const qty = typeof prepForm.fuel_add_quantity === 'number' ? prepForm.fuel_add_quantity : 0;
+      return Math.max(0, Math.min(qty, full - current));
+    }
+    if (prepForm.fuel_target === 'FILL_TO_TABS') {
+      return Math.max(0, tabs - current);
+    }
+    if (prepForm.fuel_target === 'FILL_TO_TABS_PLUS') {
+      const plus = typeof prepForm.fuel_tabs_plus === 'number' ? prepForm.fuel_tabs_plus : 0;
+      const goal = Math.min(tabs + plus, full);
+      return Math.max(0, goal - current);
+    }
+    if (prepForm.fuel_target === 'FILL_TO_FULL') {
+      return Math.max(0, full - current);
+    }
+    return 0;
+  }, [prepForm.fuel_target, prepForm.fuel_add_quantity, prepForm.fuel_tabs_plus]);
 
   const [serviceForm, setServiceForm] = useState({
     type: "preflight",
@@ -73,8 +101,9 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
         aircraft_id: prepForm.aircraft_id || null,
         airport: prepForm.airport?.toUpperCase() || "KAPA",
         requested_departure: prepForm.requested_departure || null,
-        fuel_grade: prepForm.fuel_grade || null,
-        fuel_quantity: prepForm.fuel_quantity || null,
+        fuel_target: prepForm.fuel_target,
+        fuel_add_quantity: prepForm.fuel_target === 'ADD_QUANTITY' ? (prepForm.fuel_add_quantity || null) : null,
+        fuel_tabs_plus: prepForm.fuel_target === 'FILL_TO_TABS_PLUS' ? (prepForm.fuel_tabs_plus || null) : null,
         o2_topoff: prepForm.o2_topoff,
         tks_topoff: prepForm.tks_topoff,
         gpu_required: prepForm.gpu_required,
@@ -104,8 +133,9 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
         aircraft_id: aircraftData?.id || "",
         airport: aircraftData?.base_location?.toUpperCase() || "",
         requested_departure: "",
-        fuel_grade: fuelGrades[0] || "100LL",
-        fuel_quantity: "",
+        fuel_target: "ADD_QUANTITY",
+        fuel_add_quantity: "",
+        fuel_tabs_plus: "",
         o2_topoff: false,
         tks_topoff: false,
         gpu_required: false,
@@ -238,28 +268,56 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Fuel</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Select
-                      value={prepForm.fuel_grade}
-                      onValueChange={(v) => setPrepForm({ ...prepForm, fuel_grade: v })}
-                    >
-                      <SelectTrigger data-testid="select-fuel-grade">
-                        <SelectValue placeholder="Grade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fuelGrades.map((g) => (
-                          <SelectItem key={g} value={g}>{g}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      placeholder="Gallons"
-                      inputMode="decimal"
-                      value={prepForm.fuel_quantity}
-                      onChange={(e) => setPrepForm({ ...prepForm, fuel_quantity: e.target.value })}
-                      data-testid="input-fuel-quantity"
-                    />
+                  <Label>Fuel Request</Label>
+                  <RadioGroup 
+                    value={prepForm.fuel_target} 
+                    onValueChange={(v) => setPrepForm({ ...prepForm, fuel_target: v as FuelTarget })}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="ADD_QUANTITY" id="fuel-add" />
+                      <Label htmlFor="fuel-add" className="flex-1 font-normal">Add specific gallons</Label>
+                      <Input
+                        className="w-28"
+                        type="number"
+                        step="0.1"
+                        min={0}
+                        disabled={prepForm.fuel_target !== 'ADD_QUANTITY'}
+                        value={prepForm.fuel_add_quantity}
+                        onChange={(e) => setPrepForm({ ...prepForm, fuel_add_quantity: e.target.value === '' ? '' : Number(e.target.value) })}
+                        placeholder="e.g. 20.0"
+                        data-testid="input-fuel-add"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="FILL_TO_TABS" id="fuel-tabs" />
+                      <Label htmlFor="fuel-tabs" className="flex-1 font-normal">Fill to Tabs</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="FILL_TO_TABS_PLUS" id="fuel-tabs-plus" />
+                      <Label htmlFor="fuel-tabs-plus" className="flex-1 font-normal">Fill to Tabs +</Label>
+                      <Input
+                        className="w-28"
+                        type="number"
+                        step="0.1"
+                        min={0}
+                        disabled={prepForm.fuel_target !== 'FILL_TO_TABS_PLUS'}
+                        value={prepForm.fuel_tabs_plus}
+                        onChange={(e) => setPrepForm({ ...prepForm, fuel_tabs_plus: e.target.value === '' ? '' : Number(e.target.value) })}
+                        placeholder="e.g. 10.0"
+                        data-testid="input-fuel-tabs-plus"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="FILL_TO_FULL" id="fuel-full" />
+                      <Label htmlFor="fuel-full" className="flex-1 font-normal">Fill to Full</Label>
+                    </div>
+                  </RadioGroup>
+                  <div className="text-xs text-muted-foreground pt-1">
+                    Estimated add: <span className="font-semibold">{fuelPreview.toFixed(1)} gal</span>
                   </div>
                 </div>
               </div>
