@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, MapPin, MapPinned } from "lucide-react";
+import { Seo } from "@/components/Seo";
+import { locationKeywords } from "@/seo/keywords";
 
 export default function Pricing() {
   const [, navigate] = useLocation();
@@ -42,8 +44,19 @@ export default function Pricing() {
     navigate(`/pricing?location=${slug}`);
   };
 
+  const seoDescription = selectedLocation && selectedLocation.slug !== 'none'
+    ? `Transparent aircraft management pricing with ${selectedLocation.name} hangar costs. View complete package pricing for owner-operators at Centennial Airport.`
+    : `Transparent aircraft management pricing for owner-operators at Centennial Airport. Choose your hangar location to see complete package costs.`;
+
   return (
     <div className="min-h-screen">
+      <Seo
+        title="Transparent Pricing - Aircraft Management Packages"
+        description={seoDescription}
+        keywords={locationKeywords(selectedLocation?.slug)}
+        canonical="/pricing"
+      />
+      
       {/* Header */}
       <section className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground py-16">
         <div className="container mx-auto px-6">
@@ -152,11 +165,12 @@ export default function Pricing() {
               </div>
             )}
 
-            {/* Fine Print */}
-            <div className="mt-12 text-center text-sm text-muted-foreground">
-              <p>
-                Pricing shown is representative. Specific aircraft may have custom pricing or hangar overrides.
-                Contact us for a personalized quote for your aircraft.
+            {/* Fine Print / Disclaimer */}
+            <div className="mt-12 p-6 bg-muted/50 rounded-lg border">
+              <p className="text-sm text-center text-muted-foreground leading-relaxed">
+                <strong className="text-foreground">Representative Pricing:</strong> Prices shown are representative class packages including selected hangar costs. 
+                Actual pricing may vary based on aircraft-specific requirements, travel costs, and facility availability. 
+                Hangar costs confirmed during onboarding. Facility availability subject to final confirmation.
               </p>
             </div>
           </div>
