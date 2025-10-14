@@ -25,6 +25,31 @@ The application includes public marketing pages (`/`, `/login`) and protected da
 ### System Design Choices
 The project uses a component-based architecture for the frontend, organizing code into reusable UI components, feature modules, and pages. Utilities and infrastructure are separated into a `lib/` directory. Supabase Row Level Security (RLS) is extensively used to ensure data privacy and access control, with policies ensuring users only access their relevant data (owners their aircraft, CFIs their clients, admins full access). Environment variables are validated on startup to prevent silent failures. Auth state is managed globally and persists across sessions.
 
+## Development Tools
+
+### Dev Toolbar (Development Mode Only)
+A floating toolbar appears in the bottom-right corner during development to streamline navigation between pages and dashboards.
+
+**Features:**
+- **Quick Navigation**: Dropdown menus for Marketing Pages and Dashboards
+- **Current Route Display**: Shows which page you're currently on
+- **Minimizable**: Collapse to a single button when not needed
+- **Auto-Hidden in Production**: Only appears when `import.meta.env.PROD === false`
+
+**Usage:**
+1. Look for the yellow "DEV MODE" toolbar in the bottom-right corner
+2. Click "Marketing Pages" to navigate to Home, Pricing, Partner pages, or Login
+3. Click "Dashboards" to switch between Owner, Admin, CFI, and Configurator views
+4. Click minimize (down arrow) to collapse the toolbar
+
+**Available Pages:**
+- **Marketing**: Home, Pricing, Sky Harbour, FA Hangar, Login
+- **Dashboards**: Owner Dashboard, Owner More, Admin, Pricing Configurator, Package Configurator, CFI
+
+**Implementation:**
+- Component: `client/src/components/dev-toolbar.tsx`
+- Integrated in: `client/src/App.tsx`
+
 ## External Dependencies
 - **Supabase**: Used for PostgreSQL database, authentication (`@supabase/supabase-js`), and Row Level Security (RLS).
 - **React 18**: Frontend library.
