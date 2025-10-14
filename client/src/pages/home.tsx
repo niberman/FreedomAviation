@@ -4,7 +4,6 @@ import { MembershipTiers } from "@/components/membership-tiers";
 import { Testimonials } from "@/components/testimonials";
 import { Footer } from "@/components/footer";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { PartnerBadges } from "../components/partner-badges";
 import { Seo, getLocalBusinessJsonLd } from "@/components/Seo";
 import { allKeywords } from "@/seo/keywords";
 
@@ -40,7 +39,6 @@ export default function Home() {
         </p>
       </div>
       
-      <PartnerBadges />
       <FeaturesGrid />
       <MembershipTiers />
       <Testimonials />
