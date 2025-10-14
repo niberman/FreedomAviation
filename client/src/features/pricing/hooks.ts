@@ -1,0 +1,234 @@
+// Pricing Configurator Data Hooks
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../../lib/supabase';
+import { z } from 'zod';
+
+// Zod Schemas
+const assumptionsSchema = z.object({
+  id: z.number(),
+  labor_rate: z.number(),
+  card_fee_pct: z.number(),
+  cfi_allocation: z.number(),
+  cleaning_supplies: z.number(),
+  overhead_per_ac: z.number(),
+  avionics_db_per_ac: z.number(),
+  status: z.string(),
+  version: z.number(),
+});
+
+const locationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  default_hangar_cost: z.number().nullable(),
+  is_active: z.boolean(),
+});
+
+const classSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  default_price: z.number(),
+  labor_hours: z.number(),
+  avionics_db: z.number(),
+  consumables: z.number(),
+  is_active: z.boolean(),
+});
+
+const overrideSchema = z.object({
+  aircraft_id: z.string(),
+  location_id: z.string().nullable(),
+  class_name: z.string(),
+  custom_price: z.number().nullable(),
+  hangar_cost: z.number().nullable(),
+  start_month: z.number().nullable(),
+});
+
+export type Assumptions = z.infer<typeof assumptionsSchema>;
+export type Location = z.infer<typeof locationSchema>;
+export type PricingClass = z.infer<typeof classSchema>;
+export type PricingOverride = z.infer<typeof overrideSchema>;
+
+// Assumptions Hook
+export function useAssumptions() {
+  return useQuery({
+    queryKey: ['pricing-assumptions'],
+    queryFn: async (): Promise<Assumptions | null> => {
+      const { data, error } = await supabase
+        .from('settings_pricing_assumptions')
+        .select('*')
+        .eq('id', 1)
+        .single();
+      
+      if (error) throw error;
+      return data ? assumptionsSchema.parse(data) : null;
+    },
+  });
+}
+
+export function useSaveAssumptions() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (assumptions: Partial<Assumptions>) => {
+      const { data, error } = await supabase
+        .from('settings_pricing_assumptions')
+        .upsert({ id: 1, ...assumptions })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pricing-assumptions'] });
+    },
+  });
+}
+
+// Locations Hook
+export function useLocations() {
+  return useQuery({
+    queryKey: ['pricing-locations'],
+    queryFn: async (): Promise<Location[]> => {
+      const { data, error } = await supabase
+        .from('pricing_locations')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      return data.map((d: any) => locationSchema.parse(d));
+    },
+  });
+}
+
+export function useSaveLocation() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (location: Partial<Location>) => {
+      const { data, error } = await supabase
+        .from('pricing_locations')
+        .upsert(location)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pricing-locations'] });
+    },
+  });
+}
+
+// Classes Hook
+export function useClasses() {
+  return useQuery({
+    queryKey: ['pricing-classes'],
+    queryFn: async (): Promise<PricingClass[]> => {
+      const { data, error} = await supabase
+        .from('pricing_classes')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      return data.map((d: any) => classSchema.parse(d));
+    },
+  });
+}
+
+export function useSaveClass() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (pricingClass: Partial<PricingClass>) => {
+      const { data, error } = await supabase
+        .from('pricing_classes')
+        .upsert(pricingClass)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pricing-classes'] });
+    },
+  });
+}
+
+// Overrides Hook
+export function useOverrides() {
+  return useQuery({
+    queryKey: ['pricing-overrides'],
+    queryFn: async (): Promise<PricingOverride[]> => {
+      const { data, error } = await supabase
+        .from('aircraft_pricing_overrides')
+        .select('*');
+      
+      if (error) throw error;
+      return data.map((d: any) => overrideSchema.parse(d));
+    },
+  });
+}
+
+export function useSaveOverride() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (override: PricingOverride) => {
+      const { data, error } = await supabase
+        .from('aircraft_pricing_overrides')
+        .upsert(override)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pricing-overrides'] });
+    },
+  });
+}
+
+// Publish Snapshot
+export function usePublishSnapshot() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (payload: { label: string; payload: any }) => {
+      const { data, error } = await supabase
+        .from('pricing_snapshots')
+        .insert(payload)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pricing-snapshots'] });
+    },
+  });
+}
+
+// Get Latest Snapshot (for public pricing page)
+export function useLatestSnapshot() {
+  return useQuery({
+    queryKey: ['pricing-snapshots', 'latest'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pricing_snapshots')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+      return data;
+    },
+  });
+}
