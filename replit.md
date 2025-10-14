@@ -1,252 +1,38 @@
 # Freedom Aviation - Unified Web Application
 
-## Project Overview
+## Overview
+Freedom Aviation is a production-ready web application providing premium aircraft management and expert flight instruction for owner-pilots at Centennial Airport (KAPA). The platform unifies marketing pages with a secure owner dashboard. Its core purpose is to streamline aircraft management, flight instruction, and client interaction for an aviation business. The project aims to deliver a robust, scalable, and user-friendly solution with a premium aesthetic, targeting owner-pilots as its primary market.
 
-Freedom Aviation is a production-ready web application for premium aircraft management and expert flight instruction serving owner-pilots at Centennial Airport (KAPA). This unified platform combines marketing pages with an owner dashboard, using Supabase for authentication and database.
+## User Preferences
+I prefer simple language and clear, concise explanations. I want iterative development with frequent, small updates rather than large, infrequent ones. Please ask for my approval before making any major architectural changes or introducing new significant dependencies. I prefer detailed explanations of proposed changes and their impact. Do not make changes to the `attached_assets/` folder.
 
-## Architecture
+## System Architecture
 
-### Tech Stack
-- **Frontend**: React 18 + TypeScript + Vite
-- **Routing**: Wouter (React Router alternative)
-- **Styling**: Tailwind CSS + shadcn/ui components
-- **State Management**: TanStack Query (React Query)
-- **Authentication**: Supabase Auth
-- **Database**: Supabase (PostgreSQL)
-- **Backend API**: Express.js (for any custom endpoints)
+### UI/UX Decisions
+The application features an aviation-themed design with a deep blue palette (215 85% 25%) and monospace fonts for tail numbers. It employs a premium aesthetic with clean typography (Inter & JetBrains Mono), is responsive with a mobile-first approach, and includes full dark mode support based on system preferences. UI components like `StatusPill`, `Money`, and `CreditAmount` ensure consistent display of data.
 
-### Project Structure
+### Technical Implementations
+The frontend is built with React 18, TypeScript, and Vite, utilizing Wouter for routing, Tailwind CSS and shadcn/ui for styling, and TanStack Query for state management. Supabase provides authentication and database services (PostgreSQL). An Express.js backend can be integrated for custom API endpoints if needed. Type safety is maintained through auto-generated Supabase types and Zod validation for data hooks (`useAircraft`, `useServiceRequests`). Global error handling is managed via an `ErrorBoundary`.
 
-```
-/
-├── client/src/                 # Frontend application
-│   ├── components/            # Reusable UI components
-│   │   ├── ui/               # shadcn/ui primitives + custom components
-│   │   │   ├── status-pill.tsx      # Status badges with variants
-│   │   │   ├── money.tsx            # Currency & credit formatting
-│   │   │   └── ...                  # Other shadcn components
-│   │   ├── owner/            # Owner-specific components
-│   │   │   └── CreditsOverview.tsx
-│   │   ├── error-boundary.tsx       # Global error boundary
-│   │   ├── hero-section.tsx  # Marketing components
-│   │   ├── features-grid.tsx
-│   │   ├── membership-tiers.tsx
-│   │   ├── testimonials.tsx
-│   │   ├── footer.tsx
-│   │   ├── your-aircraft-card.tsx  # Dashboard components
-│   │   ├── kanban-board.tsx
-│   │   ├── aircraft-table.tsx
-│   │   └── protected-route.tsx     # Auth guard
-│   ├── features/             # Feature modules
-│   │   └── owner/
-│   │       ├── components/   # Owner dashboard components
-│   │       │   ├── QuickActions.tsx       # Service request forms
-│   │       │   ├── ServiceTimeline.tsx    # Tasks & requests timeline
-│   │       │   ├── BillingCard.tsx        # Invoice display
-│   │       │   └── DocsCard.tsx           # Document management
-│   │       └── types.ts      # TypeScript type definitions
-│   ├── pages/                # Route pages
-│   │   ├── home.tsx          # Marketing landing page (/)
-│   │   ├── login.tsx         # Authentication (/login)
-│   │   ├── owner-dashboard.tsx    # Owner portal (/dashboard)
-│   │   ├── owner-more.tsx         # Owner settings
-│   │   ├── admin-dashboard.tsx    # Admin panel (/admin)
-│   │   └── cfi-dashboard.tsx      # CFI panel (/cfi)
-│   ├── lib/                  # Shared utilities & infrastructure
-│   │   ├── types/            # TypeScript type definitions
-│   │   │   └── database.ts   # Generated Supabase types
-│   │   ├── hooks/            # Typed, validated data hooks
-│   │   │   ├── useAircraft.ts       # Aircraft CRUD with Zod validation
-│   │   │   └── useServiceRequests.ts # Service requests with validation
-│   │   ├── supabase.ts       # Supabase client
-│   │   ├── auth-context.tsx  # Auth provider & hooks
-│   │   ├── queryClient.ts    # React Query setup
-│   │   ├── creditCalculator.ts    # Credit tier utilities
-│   │   └── utils.ts          # Helper functions
-│   ├── hooks/                # Custom React hooks
-│   ├── App.tsx               # Root component with routing & error boundary
-│   └── index.css             # Global styles & design tokens
-├── server/                    # Express backend (if needed)
-├── shared/                    # Shared types & schemas
-├── attached_assets/          # Images & media
-│   ├── freedom-aviation-logo.png   # Company logo
-│   └── stock_images/         # Hero images
-└── design_guidelines.md      # Design system documentation
-```
+### Feature Specifications
+The application includes public marketing pages (`/`, `/login`) and protected dashboards for Owners (`/dashboard`, `/dashboard/more`), Admins (`/admin`), and CFIs (`/cfi`). Key features include:
+- **Owner Dashboard**: Aircraft management, service requests, billing, and document management.
+- **Admin Panel**: Kanban board and aircraft management.
+- **CFI Panel**: Scheduling and student management.
+- **Authentication**: Supabase Auth with global state management and protected routes.
+- **Pricing System**: A comprehensive package pricing configurator that integrates hangar costs. This includes configurable service tiers, hangar partnership locations, global cost assumptions, aircraft-specific overrides, and a snapshot system for publishing pricing versions. An admin interface allows managing these configurations, and a public pricing page dynamically displays package options.
 
-## Routes
+### System Design Choices
+The project uses a component-based architecture for the frontend, organizing code into reusable UI components, feature modules, and pages. Utilities and infrastructure are separated into a `lib/` directory. Supabase Row Level Security (RLS) is extensively used to ensure data privacy and access control, with policies ensuring users only access their relevant data (owners their aircraft, CFIs their clients, admins full access). Environment variables are validated on startup to prevent silent failures. Auth state is managed globally and persists across sessions.
 
-### Marketing (Public)
-- `/` - Home page with hero, features, tiers, testimonials
-
-### Authentication
-- `/login` - Sign in page (Supabase Auth)
-
-### Dashboard (Protected)
-- `/dashboard` - Owner aircraft management portal
-- `/dashboard/more` - Owner settings and preferences
-- `/admin` - Admin kanban & aircraft management
-- `/cfi` - CFI scheduling and student management
-
-## Authentication Flow
-
-1. **Supabase Integration**: Uses `@supabase/supabase-js` for auth
-2. **Auth Context**: Global auth state via `AuthProvider` in `lib/auth-context.tsx`
-3. **Protected Routes**: `ProtectedRoute` component guards dashboard pages
-4. **Session Management**: Automatic session refresh via Supabase SDK
-
-### Environment Variables
-- `VITE_SUPABASE_URL` - Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key
-- `DATABASE_URL` - Supabase database connection string
-
-## Design System
-
-See `design_guidelines.md` for complete design specifications.
-
-### Key Design Principles
-- **Aviation-themed**: Deep blue palette (215 85% 25%), monospace tail numbers
-- **Premium aesthetic**: Clean typography with Inter & JetBrains Mono
-- **Responsive**: Mobile-first approach with PWA readiness
-- **Dark mode**: Full dark mode support with automatic system preference
-
-### Color Tokens
-- Primary: Deep Aviation Blue (#0A2540)
-- Secondary: Slate Gray
-- Accent: Sky Blue (used sparingly)
-- Status colors: Green (ready), Amber (due soon), Red (overdue)
-
-## Database Schema (Supabase)
-
-### Planned Tables
-- `users` - User profiles (linked to Supabase Auth)
-- `aircraft` - Aircraft registry with tail numbers, models, class
-- `memberships` - Owner membership tiers (I, II, III)
-- `maintenance` - Maintenance tracking and due dates
-- `service_requests` - Owner service request queue
-- `instructors` - CFI profiles and availability
-- `pricing_packages` - Configurable service packages
-
-## Type Safety & Data Layer
-
-### Generated TypeScript Types
-- **Database Types**: Auto-generated from Supabase schema in `lib/types/database.ts`
-- **Type Exports**: Helper types for common entities (Aircraft, ServiceRequest, Membership, etc.)
-- **Full Type Safety**: Row, Insert, and Update types for all tables
-
-### Validated Data Hooks
-- **useAircraft**: Type-safe aircraft CRUD with Zod validation
-  - Validates tail number format (N12345A pattern)
-  - Automatic owner_id assignment
-  - Optimistic updates with React Query
-  
-- **useServiceRequests**: Service request management with validation
-  - Fuel grade enums (100LL, Jet-A, MoGas)
-  - Priority levels (low, medium, high)
-  - Status tracking (pending, in_progress, completed, cancelled)
-
-### UI Components
-- **StatusPill**: Consistent status badges with predefined variants
-- **Money**: Currency formatting with negative/positive indicators
-- **CreditAmount**: Credit display with proper pluralization
-- **ErrorBoundary**: Global error handling with graceful fallbacks
-
-## Development
-
-### Running Locally
-```bash
-npm run dev  # Starts Vite dev server on port 5000
-```
-
-### Building for Production
-```bash
-npm run build  # Builds optimized production bundle
-npm start      # Runs production server
-```
-
-## Future Enhancements
-
-1. **Stripe Integration** - Billing and subscription management
-2. **Pricing Configurator** - Dynamic package builder with pricing calculator
-3. **PWA Support** - Install dashboard as mobile app
-4. **Custom Domain** - Deploy to freedomaviationco.com with optional dashboard subdomain
-5. **Real-time Updates** - Supabase Realtime for live maintenance status
-6. **File Uploads** - Aircraft document management
-7. **Calendar Integration** - CFI scheduling system
-
-## Migration Status
-
-- ✅ Supabase client configured with environment validation
-- ✅ Authentication flow implemented with proper loading states
-- ✅ Protected routes with auth guards
-- ✅ Marketing components migrated
-- ✅ Dashboard components integrated
-- ✅ Design system unified
-- ✅ Database schema with complete RLS policies
-- ✅ Auto-create user profiles on signup (via trigger)
-- ✅ Comprehensive setup documentation
-- ✅ Multi-location pricing system implemented (see below)
-- ⏳ Connect dashboard components to real data
-- ⏳ Stripe payment integration
-- ⏳ PWA configuration
-
-## Multi-Location Pricing System (October 2025)
-
-### Features Implemented
-- **Database Schema**: 5 new tables (pricing_locations, aircraft_pricing_overrides, settings_pricing_assumptions, pricing_classes, pricing_snapshots)
-- **Seed Data**: 3 locations (Sky Harbour $2000, FA Hangar $1500, Centennial), 4 pricing classes, initial assumptions
-- **Pricing Engine**: Type-safe calculation engine (client/src/lib/pricing/) with location-based hangar costs
-- **Admin Configurator**: /admin/pricing-configurator with assumptions, locations, classes, fleet grid, and publish functionality
-- **Partner Pages**: /partners/sky-harbour and /partners/freedom-aviation-hangar with SEO/JSON-LD
-- **Public Pricing**: /pricing with location selector and snapshot-based pricing display
-- **Partner Badges**: Homepage integration with feature flags
-- **Feature Flags**: FEATURE_PRICING_CONFIGURATOR, FEATURE_PARTNER_SKY_HARBOUR, FEATURE_PARTNER_FA_HANGAR
-
-### Known Issue - Supabase Query Resolution
-**Status**: Database verified correct via SQL, but browser-side Supabase queries returning empty results
-**What Works**:
-- All database tables created with proper schema
-- Seed data inserted and verified (SELECT queries return correct data)
-- RLS policies in place for public SELECT access
-- pricing_snapshots.payload column type: JSONB
-- Supabase env vars (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) exist
-- Admin Configurator state hydration fixed with useEffect
-
-**What Needs Verification**:
-- Browser-side useLocations() and useLatestSnapshot() queries return null/undefined
-- Pricing page shows "No pricing data available" despite database having correct data
-- May be environment-specific issue (dev vs production)
-- Suggest testing in production deployment or verifying Supabase project settings
-
-### Files
-- Database: supabase-schema.sql (includes new pricing tables)
-- Pricing Engine: client/src/lib/pricing/types.ts, calc.ts
-- Hooks: client/src/features/pricing/hooks.ts (with error logging)
-- Admin UI: client/src/pages/admin/PricingConfigurator.tsx
-- Public Pricing: client/src/pages/Pricing.tsx
-- Partner Pages: client/src/pages/partners/SkyHarbour.tsx, FAHangar.tsx
-- Feature Flags: client/src/lib/flags.ts
-
-## Critical Security Features
-
-### Environment Validation
-- Supabase client throws clear error if env vars missing
-- Prevents silent failures with empty credentials
-
-### Auth State Management
-- Loading state properly cleared on all auth transitions
-- No infinite spinners on sign-in/sign-out
-
-### Row Level Security (RLS)
-- All tables have proper RLS policies with WITH CHECK clauses
-- Owners see only their own data
-- CFIs can view/update client data
-- Admins have full CRUD access
-- User profiles auto-created via database trigger
-
-## Notes
-
-- Original dashboard was on Neon DB - now migrated to Supabase
-- ZIP file contained business documents, not code (contracts, proposals, insurance)
-- All components use shared design tokens from `index.css`
-- Auth state persists across page refreshes via Supabase session management
+## External Dependencies
+- **Supabase**: Used for PostgreSQL database, authentication (`@supabase/supabase-js`), and Row Level Security (RLS).
+- **React 18**: Frontend library.
+- **TypeScript**: For type-safe development.
+- **Vite**: Frontend build tool.
+- **Wouter**: Client-side routing.
+- **Tailwind CSS**: Utility-first CSS framework.
+- **shadcn/ui**: UI component library built on Tailwind CSS.
+- **TanStack Query (React Query)**: Data fetching and state management.
+- **Zod**: Schema validation library.
+- **Express.js**: (Optional) Backend framework for custom API endpoints.
