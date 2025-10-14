@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import heroImage from "@assets/stock_images/premium_cirrus_sr22t_b2f4f8b8.jpg";
-import logoImage from "@assets/Screenshot 2025-09-19 at 10.34.45 AM_1760474804160.png";
+import logoImage from "@assets/freedom-aviation-logo.png";
 
 export function HeroSection() {
   const [, setLocation] = useLocation();

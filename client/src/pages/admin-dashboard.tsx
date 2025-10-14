@@ -3,15 +3,15 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { AircraftTable } from "@/components/aircraft-table";
 import { MaintenanceList } from "@/components/maintenance-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane } from "lucide-react";
+import logoImage from "@assets/freedom-aviation-logo.png";
 
 export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b sticky top-0 bg-background z-50">
         <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Plane className="h-6 w-6 text-primary" />
+          <div className="flex items-center gap-3">
+            <img src={logoImage} alt="Freedom Aviation" className="h-8 w-auto" />
             <h1 className="text-xl font-semibold">Freedom Aviation - Admin</h1>
           </div>
           <ThemeToggle />
