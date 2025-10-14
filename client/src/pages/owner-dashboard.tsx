@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plane } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect } from "react";
 import { CreditsOverview } from "@/components/owner/CreditsOverview";
@@ -10,6 +9,7 @@ import { QuickActions } from "@/features/owner/components/QuickActions";
 import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
 import { DocsCard } from "@/features/owner/components/DocsCard";
+import logoImage from "@assets/freedom-aviation-logo.png";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
@@ -217,7 +217,7 @@ export default function OwnerDashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
           <CardTitle className="text-base font-medium">My Aircraft</CardTitle>
-          <Plane className="h-5 w-5 text-muted-foreground" />
+          <img src={logoImage} alt="Freedom Aviation" className="h-6 w-auto opacity-50" />
         </CardHeader>
         <CardContent>
           {aircraft ? (
