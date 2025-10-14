@@ -1,4 +1,5 @@
-import { Plane, MapPin, Phone, Mail } from "lucide-react";
+import { MapPin, Phone, Mail } from "lucide-react";
+import logoImage from "@assets/freedom-aviation-logo.png";
 
 export function Footer() {
   return (
@@ -6,8 +7,8 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Plane className="h-6 w-6 text-primary" />
+            <div className="flex items-center gap-3 mb-4">
+              <img src={logoImage} alt="Freedom Aviation" className="h-8 w-auto" />
               <span className="font-semibold text-lg">Freedom Aviation</span>
             </div>
             <p className="text-sm text-muted-foreground">
