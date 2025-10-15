@@ -98,8 +98,29 @@ export default function UnifiedPricingConfigurator() {
 
   const handlePublish = async () => {
     try {
+      // Validate that we have data to publish
+      if (!locationsQuery.data || locationsQuery.data.length === 0) {
+        toast({ 
+          title: "Cannot Publish", 
+          description: "Please add at least one hangar location before publishing", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      if (!classesQuery.data || classesQuery.data.length === 0) {
+        toast({ 
+          title: "Cannot Publish", 
+          description: "Please add at least one service class before publishing", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      // Use current in-memory assumptions state (may have unsaved changes)
+      // Use query data for locations and classes (since they're saved via dialogs)
       const payload = {
-        assumptions: assumptionsQuery.data,
+        assumptions: assumptions, // Use local state, not query data
         locations: locationsQuery.data,
         classes: classesQuery.data,
       };
