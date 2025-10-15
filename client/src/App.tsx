@@ -16,8 +16,7 @@ import FAHangar from "./pages/partners/FAHangar";
 import OwnerDashboard from "./pages/owner-dashboard";
 import OwnerMore from "./pages/owner-more";
 import AdminDashboard from "./pages/admin-dashboard";
-import PricingConfigurator from "./pages/admin/PricingConfigurator";
-import PackageConfigurator from "./pages/admin/PackageConfigurator";
+import UnifiedPricingConfigurator from "./pages/admin/UnifiedPricingConfigurator";
 import CFIDashboard from "./pages/cfi-dashboard";
 import NotFound from "./pages/not-found";
 
@@ -44,14 +43,9 @@ function Router() {
           <AdminDashboard />
         </ProtectedRoute>
       </Route>
-      <Route path="/admin/pricing-configurator">
+      <Route path="/admin/pricing">
         <ProtectedRoute>
-          <PricingConfigurator />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/admin/packages">
-        <ProtectedRoute>
-          <PackageConfigurator />
+          <UnifiedPricingConfigurator />
         </ProtectedRoute>
       </Route>
       <Route path="/cfi">
