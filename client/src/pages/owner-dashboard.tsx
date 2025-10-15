@@ -11,6 +11,7 @@ import { BillingCard } from "@/features/owner/components/BillingCard";
 import { DocsCard } from "@/features/owner/components/DocsCard";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
+import { DEMO_AIRCRAFT, DEMO_USER } from "@/lib/demo-data";
 import logoImage from "@assets/freedom-aviation-logo.png";
 
 export default function OwnerDashboard() {
@@ -18,9 +19,10 @@ export default function OwnerDashboard() {
   const { isDemo } = useDemoMode();
   
   const { data: aircraftList } = useQuery({
-    queryKey: ["/api/aircraft", { ownerId: user?.id }],
-    enabled: Boolean(user?.id),
+    queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }],
+    enabled: isDemo || Boolean(user?.id),
     queryFn: async () => {
+      if (isDemo) return [DEMO_AIRCRAFT];
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from("aircraft")
@@ -35,9 +37,13 @@ export default function OwnerDashboard() {
   const aircraft = aircraftList && aircraftList.length > 0 ? aircraftList[0] : null;
 
   const { data: nextFlight, refetch: refetchNextFlight } = useQuery({
-    queryKey: ["next-flight", user?.id],
-    enabled: Boolean(user?.id),
+    queryKey: ["next-flight", isDemo ? "demo" : user?.id],
+    enabled: isDemo || Boolean(user?.id),
     queryFn: async () => {
+      if (isDemo) {
+        const { DEMO_NEXT_FLIGHT } = await import("@/lib/demo-data");
+        return DEMO_NEXT_FLIGHT;
+      }
       if (!user?.id) return null;
       const { data } = await supabase
         .from("service_requests")
@@ -54,9 +60,13 @@ export default function OwnerDashboard() {
   });
 
   const { data: serviceRequests = [], refetch: refetchServiceRequests } = useQuery({
-    queryKey: ["service-requests", user?.id, aircraft?.id],
-    enabled: Boolean(user?.id && aircraft?.id),
+    queryKey: ["service-requests", isDemo ? "demo" : user?.id, aircraft?.id],
+    enabled: isDemo || Boolean(user?.id && aircraft?.id),
     queryFn: async () => {
+      if (isDemo) {
+        const { DEMO_SERVICE_REQUESTS } = await import("@/lib/demo-data");
+        return DEMO_SERVICE_REQUESTS;
+      }
       if (!user?.id || !aircraft?.id) return [];
       const { data, error } = await supabase
         .from("service_requests")
@@ -77,8 +87,12 @@ export default function OwnerDashboard() {
 
   const { data: serviceTasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["service-tasks", aircraft?.id],
-    enabled: Boolean(aircraft?.id && user?.id),
+    enabled: isDemo || Boolean(aircraft?.id && user?.id),
     queryFn: async () => {
+      if (isDemo) {
+        const { DEMO_SERVICE_TASKS } = await import("@/lib/demo-data");
+        return DEMO_SERVICE_TASKS;
+      }
       if (!aircraft?.id) return [];
       
       const { data, error } = await supabase
@@ -109,9 +123,13 @@ export default function OwnerDashboard() {
   });
 
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
-    queryKey: ["invoices", aircraft?.id, user?.id],
-    enabled: Boolean(aircraft?.id && user?.id),
+    queryKey: ["invoices", aircraft?.id, isDemo ? "demo" : user?.id],
+    enabled: isDemo || Boolean(aircraft?.id && user?.id),
     queryFn: async () => {
+      if (isDemo) {
+        const { DEMO_INVOICES } = await import("@/lib/demo-data");
+        return DEMO_INVOICES;
+      }
       if (!aircraft?.id || !user?.id) return [];
       
       const { data, error } = await supabase
@@ -132,9 +150,13 @@ export default function OwnerDashboard() {
   });
 
   const { data: membership = null } = useQuery({
-    queryKey: ["membership", user?.id],
-    enabled: Boolean(user?.id),
+    queryKey: ["membership", isDemo ? "demo" : user?.id],
+    enabled: isDemo || Boolean(user?.id),
     queryFn: async () => {
+      if (isDemo) {
+        const { DEMO_MEMBERSHIP } = await import("@/lib/demo-data");
+        return DEMO_MEMBERSHIP;
+      }
       if (!user?.id) return null;
       
       const { data, error } = await supabase
@@ -154,7 +176,7 @@ export default function OwnerDashboard() {
   });
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (isDemo || !user?.id) return;
 
     const channel = supabase
       .channel('service-requests-changes')
@@ -188,7 +210,7 @@ export default function OwnerDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, refetchNextFlight, refetchServiceRequests]);
+  }, [isDemo, user?.id, refetchNextFlight, refetchServiceRequests]);
 
   const readinessTypes = [
     "readiness",
@@ -267,10 +289,10 @@ export default function OwnerDashboard() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {aircraft && user && (
+        {aircraft && (user || isDemo) && (
           <QuickActions 
             aircraftId={aircraft.id} 
-            userId={user.id}
+            userId={isDemo ? DEMO_USER.id : user!.id}
             aircraftData={aircraft}
             isDemo={isDemo}
           />
