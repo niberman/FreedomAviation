@@ -30,8 +30,7 @@ export function DevToolbar() {
       { path: "/dashboard", label: "Owner Dashboard", icon: Briefcase },
       { path: "/dashboard/more", label: "Owner More", icon: Briefcase },
       { path: "/admin", label: "Admin Dashboard", icon: Settings },
-      { path: "/admin/pricing-configurator", label: "Pricing Config", icon: Settings },
-      { path: "/admin/packages", label: "Package Config", icon: Settings },
+      { path: "/admin/pricing", label: "Pricing Configurator", icon: DollarSign },
       { path: "/cfi", label: "CFI Dashboard", icon: Users },
     ],
   };
