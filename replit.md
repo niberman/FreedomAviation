@@ -1,7 +1,7 @@
 # Freedom Aviation - Unified Web Application
 
 ## Overview
-Freedom Aviation is a production-ready web application providing premium aircraft management and expert flight instruction for owner-pilots at Centennial Airport (KAPA). The platform unifies marketing pages with a secure owner dashboard. Its core purpose is to streamline aircraft management, flight instruction, and client interaction for an aviation business. The project aims to deliver a robust, scalable, and user-friendly solution with a premium aesthetic, targeting owner-pilots as its primary market.
+Freedom Aviation is a production-ready web application designed for owner-pilots at Centennial Airport (KAPA), offering premium aircraft management and expert flight instruction. The platform consolidates marketing content with a secure owner dashboard, aiming to streamline operations, enhance client interaction, and provide a robust, scalable, and user-friendly solution with a premium aesthetic. The project's ambition is to serve as a comprehensive tool for an aviation business, targeting owner-pilots as its core market.
 
 ## User Preferences
 I prefer simple language and clear, concise explanations. I want iterative development with frequent, small updates rather than large, infrequent ones. Please ask for my approval before making any major architectural changes or introducing new significant dependencies. I prefer detailed explanations of proposed changes and their impact. Do not make changes to the `attached_assets/` folder.
@@ -9,228 +9,31 @@ I prefer simple language and clear, concise explanations. I want iterative devel
 ## System Architecture
 
 ### UI/UX Decisions
-The application features an aviation-themed design with a deep blue palette (215 85% 25%) and monospace fonts for tail numbers. It employs a premium aesthetic with clean typography (Inter & JetBrains Mono), is responsive with a mobile-first approach, and includes full dark mode support based on system preferences. UI components like `StatusPill`, `Money`, and `CreditAmount` ensure consistent display of data.
+The application features an aviation-themed design with a deep blue palette and monospace fonts for tail numbers. It prioritizes a premium aesthetic with clean typography (Inter & JetBrains Mono), responsive design (mobile-first), and full dark mode support. Custom UI components like `StatusPill`, `Money`, and `CreditAmount` ensure data consistency. Recent updates include a redesigned pricing page with enhanced card designs and a "No Hangar" option, and the consolidation of hangar partner pages into a single, dynamic `/hangar-locations` route for improved navigation and scalability.
 
 ### Technical Implementations
-The frontend is built with React 18, TypeScript, and Vite, utilizing Wouter for routing, Tailwind CSS and shadcn/ui for styling, and TanStack Query for state management. Supabase provides authentication and database services (PostgreSQL). An Express.js backend can be integrated for custom API endpoints if needed. Type safety is maintained through auto-generated Supabase types and Zod validation for data hooks (`useAircraft`, `useServiceRequests`). Global error handling is managed via an `ErrorBoundary`.
+The frontend is built with React 18, TypeScript, and Vite, using Wouter for routing, Tailwind CSS and shadcn/ui for styling, and TanStack Query for state management. Supabase provides authentication and PostgreSQL database services, with auto-generated types and Zod validation ensuring type safety. An Express.js backend can be integrated for custom API needs. Global error handling is managed via an `ErrorBoundary`. The system also incorporates a feature flag (`VITE_PRICING_MODE`) to switch between fixed (static) and configurator (database-driven) pricing models. Comprehensive SEO infrastructure is implemented using `react-helmet-async` for dynamic meta tags, Open Graph, Twitter Card support, and JSON-LD structured data, with a dedicated keywords system.
 
 ### Feature Specifications
-The application includes public marketing pages (`/`, `/login`) and protected dashboards for Owners (`/dashboard`, `/dashboard/more`), Admins (`/admin`), and CFIs (`/cfi`). Key features include:
+The application includes public marketing pages and protected dashboards for Owners, Admins, and CFIs. Key features:
 - **Owner Dashboard**: Aircraft management, service requests, billing, and document management.
-- **Admin Panel**: Kanban board and aircraft management.
+- **Admin Panel**: Kanban board, aircraft management, and a unified pricing configurator for packages, service classes, hangar locations, and cost assumptions, with a snapshot system for publishing pricing versions.
 - **CFI Panel**: Scheduling and student management.
 - **Authentication**: Supabase Auth with global state management and protected routes.
-- **Pricing System**: A comprehensive package pricing configurator that integrates hangar costs. This includes configurable service tiers, hangar partnership locations, global cost assumptions, aircraft-specific overrides, and a snapshot system for publishing pricing versions. An admin interface allows managing these configurations, and a public pricing page dynamically displays package options.
+- **Pricing System**: A comprehensive package pricing configurator with service tiers, hangar partnership locations, global cost assumptions, aircraft-specific overrides, and a snapshot system for publishing. A dual-mode pricing system (fixed vs. configurator) is implemented, controlled by an environment flag.
 
 ### System Design Choices
-The project uses a component-based architecture for the frontend, organizing code into reusable UI components, feature modules, and pages. Utilities and infrastructure are separated into a `lib/` directory. Supabase Row Level Security (RLS) is extensively used to ensure data privacy and access control, with policies ensuring users only access their relevant data (owners their aircraft, CFIs their clients, admins full access). Environment variables are validated on startup to prevent silent failures. Auth state is managed globally and persists across sessions.
-
-## Brand Transformation (October 2025)
-
-### Overview
-Transformed Freedom Aviation into a premium, Colorado-based brand with comprehensive SEO infrastructure and transparent pricing model.
-
-### Brand & Copy
-**Brand Manifest** (`client/src/brand/manifest.ts`):
-- Centralized company information (phone, email, addresses)
-- Partner facility details (Sky Harbour, Freedom Aviation Hangar)
-- Tagline: "Colorado-Based. Front Range Focused."
-
-**Homepage Hero** - Updated Copy:
-- Primary: "Just fly. We do the rest."
-- Subtext: Premium aircraft management, detailing, and pilot development for owner-operators across the Front Range
-- CTAs: "See Plans & Start" (primary) → "/pricing", "Owner Portal" (secondary) → "/login"
-
-### SEO Infrastructure
-
-**Seo Component** (`client/src/components/Seo.tsx`):
-- Dynamic meta tags (title, description, keywords)
-- Open Graph and Twitter Card support
-- JSON-LD structured data (LocalBusiness, Service schemas)
-- Canonical URLs and geo-targeting
-- Integrated with react-helmet-async
-
-**Keywords System** (`client/src/seo/keywords.ts`):
-- Services: aircraft management, detailing, flight instruction, etc.
-- Modifiers: premium, Colorado, Front Range, transparent pricing
-- Airports: KAPA, KBJC, KFTG, KDEN, KCOS, KBDU, KFNL, KGXY
-- Partners: Sky Harbour, Freedom Aviation Hangar
-- Location and airport-specific keyword helpers
-
-**SEO Files**:
-- `public/robots.txt` - Search engine directives, sitemap reference
-- `public/sitemap.xml` - Complete site structure for crawlers
-
-**Page SEO Implementation**:
-- **Homepage** (`/`): LocalBusiness JSON-LD, comprehensive keywords, screen reader airport coverage
-- **Pricing** (`/pricing`): Location-aware meta tags, dynamic descriptions based on selected hangar
-
-### Pricing Enhancements
-- Location toggle with hangar cost display
-- SEO meta tags adapt to selected location
-- Representative pricing disclaimer:
-  > "Prices shown are representative class packages including selected hangar costs. Actual pricing may vary based on aircraft-specific requirements, travel costs, and facility availability. Hangar costs confirmed during onboarding. Facility availability subject to final confirmation."
-
-### Technical Implementation
-- HelmetProvider added to App.tsx for SEO support
-- react-helmet-async for SSR compatibility
-- Screen reader accessible keyword blocks on homepage
-- Location-specific SEO keywords on pricing page
-
-### Homepage Pricing Integration (October 2025)
-**Service Packages Display** (`client/src/components/membership-tiers.tsx`):
-- Fetches real pricing data from database using `useLatestSnapshot()` and `useLocations()` hooks
-- Displays actual service class packages with base monthly pricing + hangar costs
-- Shows "Most Popular" badge on middle tier
-- Integrated hangar partner badges in same section
-- Client-side navigation with Wouter (no page reloads)
-- Memoized hangar lookups for optimal performance
-- Comprehensive error handling with user-friendly messages
-- Loading states with spinner
-- "See Full Pricing" buttons navigate to /pricing page
-
-**Implementation Details:**
-- Removed standalone `PartnerBadges` component
-- Combined service packages and hangar partners in single unified section
-- Error states display helpful messages when data unavailable
-- Falls back to "Pricing packages coming soon" if database empty
-
-### Files Created/Modified
-**New Files:**
-- `client/src/brand/manifest.ts`
-- `client/src/seo/keywords.ts`
-- `client/src/components/Seo.tsx`
-- `public/robots.txt`
-- `public/sitemap.xml`
-
-**Modified Files:**
-- `client/src/components/hero-section.tsx` - Updated hero copy and CTAs
-- `client/src/components/membership-tiers.tsx` - Integrated real pricing data and hangar partners
-- `client/src/pages/home.tsx` - Added SEO, keyword blocks, removed PartnerBadges
-- `client/src/pages/Pricing.tsx` - Added SEO and enhanced disclaimer
-- `client/src/App.tsx` - Added HelmetProvider
-
-## Development Tools
-
-### Dev Toolbar (Development Mode Only)
-A floating toolbar appears in the bottom-right corner during development to streamline navigation between pages and dashboards.
-
-**Features:**
-- **Quick Navigation**: Dropdown menus for Marketing Pages and Dashboards
-- **Current Route Display**: Shows which page you're currently on
-- **Minimizable**: Collapse to a single button when not needed
-- **Auto-Hidden in Production**: Only appears when `import.meta.env.PROD === false`
-
-**Usage:**
-1. Look for the yellow "DEV MODE" toolbar in the bottom-right corner
-2. Click "Marketing Pages" to navigate to Home, Pricing, Partner pages, or Login
-3. Click "Dashboards" to switch between Owner, Admin, CFI, and Configurator views
-4. Click minimize (down arrow) to collapse the toolbar
-
-**Available Pages:**
-- **Marketing**: Home, Pricing, Sky Harbour, FA Hangar, Login
-- **Dashboards**: Owner Dashboard, Owner More, Admin, Pricing Configurator, CFI
-
-**Implementation:**
-- Component: `client/src/components/dev-toolbar.tsx`
-- Integrated in: `client/src/App.tsx`
-
-## Pricing Administration (October 2025)
-
-### Unified Pricing Configurator
-A comprehensive admin interface at `/admin/pricing` that consolidates all pricing-related configuration into a single tabbed interface.
-
-**Features:**
-- **Packages Tab**: Configure service class packages with inclusions and monthly base pricing
-- **Service Classes Tab**: Manage service tier definitions (Essential, Premium, Concierge)
-- **Hangar Locations Tab**: Configure hangar partner locations with monthly costs and amenities
-- **Cost Assumptions Tab**: Set global cost assumptions for profit calculations (labor rate, card fees, CFI allocation, cleaning supplies, overhead, avionics DB)
-
-**Data Flow:**
-1. Configure service classes, hangar locations, and cost assumptions
-2. Create packages combining service tiers with base monthly pricing
-3. Publish snapshot to activate pricing on public-facing pages
-4. Homepage and pricing page fetch latest published snapshot
-
-**Implementation:**
-- Component: `client/src/pages/admin/UnifiedPricingConfigurator.tsx`
-- Route: `/admin/pricing` (consolidated from previous separate routes)
-- Database hooks: `client/src/features/pricing/hooks.ts`
-
-## UI/UX Enhancements (October 2025)
-
-### Pricing Page Redesign
-Completely redesigned the `/pricing` page with improved aesthetics and user experience:
-- **Enhanced Card Design**: Modern pricing cards with better visual hierarchy, improved spacing, gradient accents
-- **"No Hangar" Option**: Added prominent option for users managing their own hangar
-- **Visual Improvements**: Better typography, subtle shadows, improved color contrast
-- **Mobile-First Design**: Responsive grid layout that works on all devices
-- **Clearer CTAs**: More prominent "Contact Us" buttons with better visual weight
-
-### Hangar Locations Consolidation
-Unified Sky Harbour and Freedom Aviation Hangar partner pages into a single `/hangar-locations` route:
-- **Consolidated Page**: Single location (`client/src/pages/HangarLocations.tsx`) for all partner facilities
-- **Dynamic Content**: Fetches hangar locations from database, displays cards with amenities and pricing CTAs
-- **SEO Optimized**: Comprehensive meta tags, keywords, and JSON-LD structured data
-- **Updated Navigation**: 
-  - Partner badges component updated to link to `/hangar-locations`
-  - Dev toolbar updated to show "Hangar Locations" instead of individual pages
-  - Sitemap updated to reflect new unified structure
-- **Removed Routes**: Deleted `/partners/sky-harbour` and `/partners/freedom-aviation-hangar`
-
-**Benefits:**
-- Easier to maintain (single page vs multiple)
-- Better UX (compare options on one page)
-- Scalable (easy to add new partner locations)
-- Consistent branding and messaging
-
-### Navigation & Testing
-- **Comprehensive Button Testing**: All CTAs verified working across homepage, pricing, and hangar locations
-- **Client-side Navigation**: All routes use Wouter for smooth, no-reload navigation
-- **Query Parameters**: Pricing page supports `?location=` parameter for direct hangar selection
-
-## Bug Fixes (October 2025)
-
-### Critical Fixes Applied
-Three critical issues identified and resolved:
-
-1. **Publish Button Duplicate Key Error** (Fixed):
-   - **Issue**: Clicking "Publish Pricing" multiple times per day caused `duplicate key value violates unique constraint` error
-   - **Root Cause**: Label used `new Date().toLocaleDateString()` which was identical for all publishes on same day
-   - **Fix**: Changed to use ISO timestamp: `Pricing ${new Date().toISOString()}` for unique labels
-   - **File**: `client/src/pages/admin/UnifiedPricingConfigurator.tsx`
-
-2. **Hangar Locations Page Loading Hang** (Fixed):
-   - **Issue**: Page stuck in loading state, appeared to not load
-   - **Root Cause**: RLS policies blocked anonymous SELECT access to `pricing_locations`, `pricing_classes`, and `settings_pricing_assumptions` tables
-   - **Fix**: Added public SELECT policies:
-     ```sql
-     CREATE POLICY "pricing_locations_anon_select" ON pricing_locations FOR SELECT USING (active = true);
-     CREATE POLICY "pricing_classes_anon_select" ON pricing_classes FOR SELECT USING (active = true);
-     CREATE POLICY "assumptions_anon_select" ON settings_pricing_assumptions FOR SELECT USING (true);
-     ```
-   - **Result**: Pages now load instantly without authentication
-
-3. **Pricing Configurator Data Loading** (Fixed):
-   - **Issue**: Admin configurator showed empty tabs
-   - **Root Cause**: Same RLS policy issue prevented data loading
-   - **Fix**: Same policies above also resolved configurator data access
-   - **Result**: All tabs now display data correctly
-
-### Testing Validation
-- Hangar locations page: ✓ Loads with 2 cards, all navigation works
-- Pricing page: ✓ Location selector updates pricing correctly
-- Publish button: ✓ Can publish multiple times without errors
-- All public pages: ✓ Load without authentication
+The project employs a component-based frontend architecture with clear separation of UI components, feature modules, pages, and utilities. Supabase Row Level Security (RLS) is extensively used for data privacy and access control, ensuring users only access relevant data. Environment variables are validated on startup. Auth state is managed globally and persists across sessions.
 
 ## External Dependencies
-- **Supabase**: Used for PostgreSQL database, authentication (`@supabase/supabase-js`), and Row Level Security (RLS).
+- **Supabase**: PostgreSQL database, authentication (`@supabase/supabase-js`), and Row Level Security (RLS).
 - **React 18**: Frontend library.
 - **TypeScript**: For type-safe development.
 - **Vite**: Frontend build tool.
 - **Wouter**: Client-side routing.
 - **Tailwind CSS**: Utility-first CSS framework.
-- **shadcn/ui**: UI component library built on Tailwind CSS.
+- **shadcn/ui**: UI component library.
 - **TanStack Query (React Query)**: Data fetching and state management.
 - **Zod**: Schema validation library.
-- **Express.js**: (Optional) Backend framework for custom API endpoints.
+- **Express.js**: (Optional) Backend framework.
+- **react-helmet-async**: For managing document head tags and SEO.
