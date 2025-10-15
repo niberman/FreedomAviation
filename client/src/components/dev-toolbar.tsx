@@ -22,8 +22,7 @@ export function DevToolbar() {
     marketing: [
       { path: "/", label: "Home", icon: Home },
       { path: "/pricing", label: "Pricing", icon: DollarSign },
-      { path: "/partners/sky-harbour", label: "Sky Harbour", icon: Plane },
-      { path: "/partners/freedom-aviation-hangar", label: "FA Hangar", icon: Plane },
+      { path: "/hangar-locations", label: "Hangar Locations", icon: Plane },
       { path: "/login", label: "Login", icon: Users },
     ],
     dashboards: [

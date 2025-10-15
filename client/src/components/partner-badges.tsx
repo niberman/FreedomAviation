@@ -1,13 +1,9 @@
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, Plane } from "lucide-react";
-import { FEATURE_PARTNER_SKY_HARBOUR, FEATURE_PARTNER_FA_HANGAR } from "../lib/flags";
+import { Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function PartnerBadges() {
-  if (!FEATURE_PARTNER_SKY_HARBOUR && !FEATURE_PARTNER_FA_HANGAR) {
-    return null;
-  }
-
   return (
     <section className="py-12 bg-muted/30">
       <div className="max-w-7xl mx-auto px-6">
@@ -18,46 +14,28 @@ export function PartnerBadges() {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {FEATURE_PARTNER_SKY_HARBOUR && (
-            <Link href="/partners/sky-harbour">
-              <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-partner-sky-harbour">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Building2 className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">Sky Harbour</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Purpose-built private hangars • $2,000/mo
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
-
-          {FEATURE_PARTNER_FA_HANGAR && (
-            <Link href="/partners/freedom-aviation-hangar">
-              <Card className="hover-elevate cursor-pointer transition-all" data-testid="card-partner-fa-hangar">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Plane className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">Freedom Aviation Hangar</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Our home base at KAPA • $1,500/mo
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
+        <div className="max-w-2xl mx-auto">
+          <Card className="hover-elevate" data-testid="card-hangar-locations">
+            <CardContent className="p-8">
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-xl mb-2">Hangar Locations</h3>
+                  <p className="text-muted-foreground mb-4">
+                    From our home base at Freedom Aviation Hangar to premium Sky Harbour facilities, 
+                    we offer flexible hangar options to fit your needs and budget.
+                  </p>
+                </div>
+                <Link href="/hangar-locations">
+                  <Button variant="default" data-testid="button-view-hangar-locations">
+                    View All Hangar Options
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </section>
