@@ -1,11 +1,28 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Sparkles, Database, Droplet, Wind, Wrench } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  CalendarIcon,
+  Sparkles,
+  Database,
+  Droplet,
+  Wind,
+  Wrench,
+} from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +48,11 @@ const serviceTypes = [
   { value: "other", label: "Other Service", icon: Wrench },
 ];
 
-export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestServiceSheetProps) {
+export function RequestServiceSheet({
+  open,
+  onOpenChange,
+  aircraft,
+}: RequestServiceSheetProps) {
   const [serviceType, setServiceType] = useState("detail");
   const [date, setDate] = useState<Date>();
   const [notes, setNotes] = useState("");
@@ -40,13 +61,13 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
   const handleSubmit = () => {
     console.log("Service request submitted:", { serviceType, date, notes });
     // TODO: remove mock functionality - create service_requests record
-    
-    const selectedService = serviceTypes.find(s => s.value === serviceType);
+
+    const selectedService = serviceTypes.find((s) => s.value === serviceType);
     toast({
       title: "Service Request Submitted",
       description: `${selectedService?.label} scheduled for ${aircraft.tailNumber}`,
     });
-    
+
     onOpenChange(false);
     setServiceType("detail");
     setDate(undefined);
@@ -62,20 +83,26 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
             {aircraft.tailNumber} • {aircraft.make} {aircraft.model}
           </SheetDescription>
         </SheetHeader>
-        
+
         <div className="space-y-6 mt-6">
           <div className="space-y-3">
             <Label>Service Type</Label>
             <RadioGroup value={serviceType} onValueChange={setServiceType}>
               <div className="grid grid-cols-2 gap-3">
                 {serviceTypes.map((service) => (
-                  <label 
+                  <label
                     key={service.value}
                     className={`flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover-elevate ${
-                      serviceType === service.value ? 'border-primary bg-primary/5' : ''
+                      serviceType === service.value
+                        ? "border-primary bg-primary/5"
+                        : ""
                     }`}
                   >
-                    <RadioGroupItem value={service.value} id={service.value} data-testid={`radio-${service.value}`} />
+                    <RadioGroupItem
+                      value={service.value}
+                      id={service.value}
+                      data-testid={`radio-${service.value}`}
+                    />
                     <service.icon className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">{service.label}</span>
                   </label>
@@ -83,12 +110,16 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
               </div>
             </RadioGroup>
           </div>
-          
+
           <div className="space-y-2">
             <Label>Requested Date & Time</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start" data-testid="button-select-service-date">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  data-testid="button-select-service-date"
+                >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {date ? format(date, "PPP") : "Select date"}
                 </Button>
@@ -98,21 +129,21 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
               </PopoverContent>
             </Popover>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="service-notes">Notes</Label>
-            <Textarea 
-              id="service-notes" 
+            <Textarea
+              id="service-notes"
               placeholder="Additional details or special requests..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               data-testid="input-service-notes"
             />
           </div>
-          
-          <Button 
-            className="w-full" 
-            size="lg" 
+
+          <Button
+            className="w-full"
+            size="lg"
             onClick={handleSubmit}
             data-testid="button-submit-service"
           >

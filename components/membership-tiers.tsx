@@ -13,8 +13,8 @@ const tiers = [
       "1 full detail/month",
       "Fluid top-offs",
       "Avionics DB updates",
-      "Digital portal access"
-    ]
+      "Digital portal access",
+    ],
   },
   {
     name: "Class II",
@@ -26,8 +26,8 @@ const tiers = [
       "2 full details/month",
       "Priority scheduling",
       "All Class I features",
-      "Maintenance coordination"
-    ]
+      "Maintenance coordination",
+    ],
   },
   {
     name: "Class III",
@@ -38,9 +38,9 @@ const tiers = [
       "Unlimited detailing",
       "Dedicated concierge",
       "All Class II features",
-      "White-glove service"
-    ]
-  }
+      "White-glove service",
+    ],
+  },
 ];
 
 export function MembershipTiers() {
@@ -58,18 +58,25 @@ export function MembershipTiers() {
             Choose the perfect level of service for your aircraft class.
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {tiers.map((tier, idx) => (
-            <Card key={idx} className={tier.popular ? "border-primary shadow-lg" : ""}>
+            <Card
+              key={idx}
+              className={tier.popular ? "border-primary shadow-lg" : ""}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between mb-2">
                   <CardTitle className="text-2xl">{tier.name}</CardTitle>
                   {tier.popular && (
-                    <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
+                    <Badge className="bg-primary text-primary-foreground">
+                      Most Popular
+                    </Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground font-mono">{tier.aircraft}</p>
+                <p className="text-sm text-muted-foreground font-mono">
+                  {tier.aircraft}
+                </p>
                 <div className="mt-4">
                   <span className="text-4xl font-bold">{tier.price}</span>
                   <span className="text-muted-foreground">/month</span>
@@ -84,8 +91,8 @@ export function MembershipTiers() {
                     </li>
                   ))}
                 </ul>
-                <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   variant={tier.popular ? "default" : "outline"}
                   onClick={handleConfigureClick}
                   data-testid={`button-configure-${tier.name.toLowerCase()}`}
@@ -96,16 +103,20 @@ export function MembershipTiers() {
             </Card>
           ))}
         </div>
-        
+
         <Card className="bg-accent/50">
           <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
               <h3 className="font-semibold text-lg mb-1">Freedom+ Concierge</h3>
               <p className="text-sm text-muted-foreground">
-                Add personalized concierge service to any tier for just $200/month
+                Add personalized concierge service to any tier for just
+                $200/month
               </p>
             </div>
-            <Button onClick={handleConfigureClick} data-testid="button-add-concierge">
+            <Button
+              onClick={handleConfigureClick}
+              data-testid="button-add-concierge"
+            >
               Add to Plan
             </Button>
           </CardContent>
