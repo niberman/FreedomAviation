@@ -9,10 +9,13 @@ import { QuickActions } from "@/features/owner/components/QuickActions";
 import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
 import { DocsCard } from "@/features/owner/components/DocsCard";
+import { DemoBanner } from "@/components/DemoBanner";
+import { useDemoMode } from "@/hooks/use-demo-mode";
 import logoImage from "@assets/freedom-aviation-logo.png";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
+  const { isDemo } = useDemoMode();
   
   const { data: aircraftList } = useQuery({
     queryKey: ["/api/aircraft", { ownerId: user?.id }],
@@ -209,6 +212,8 @@ export default function OwnerDashboard() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {isDemo && <DemoBanner />}
+      
       <div className="space-y-1">
         <h2 className="text-3xl font-bold tracking-tight" data-testid="text-dashboard-title">Owner Dashboard</h2>
         <p className="text-muted-foreground">Welcome back to Freedom Aviation</p>
@@ -267,6 +272,7 @@ export default function OwnerDashboard() {
             aircraftId={aircraft.id} 
             userId={user.id}
             aircraftData={aircraft}
+            isDemo={isDemo}
           />
         )}
         <BillingCard invoices={invoices} isLoading={invoicesLoading} />
