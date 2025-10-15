@@ -4,11 +4,19 @@ import { useLatestSnapshot, useLocations } from "../features/pricing/hooks";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Check, Building2, Plane } from "lucide-react";
+import { Loader2, Check, Building2, Plane, AlertCircle } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { locationKeywords } from "@/seo/keywords";
+import { isFixedPricing } from "@/lib/flags";
+import PricingFixed from "@/components/PricingFixed";
 
 export default function Pricing() {
+  // If fixed pricing mode is enabled, use the fixed component
+  if (isFixedPricing) {
+    return <PricingFixed />;
+  }
+  
+  // Otherwise, use configurator-based pricing (requires published snapshot)
   const [, navigate] = useLocation();
   const snapshotQuery = useLatestSnapshot();
   const locationsQuery = useLocations();
