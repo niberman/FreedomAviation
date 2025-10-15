@@ -24,9 +24,10 @@ interface QuickActionsProps {
     tail_number: string;
     base_location: string | null;
   };
+  isDemo?: boolean;
 }
 
-export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsProps) {
+export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false }: QuickActionsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [openPrep, setOpenPrep] = useState(false);
@@ -90,6 +91,16 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
 
   const handlePrepareAircraft = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isDemo) {
+      toast({
+        title: "Demo Mode",
+        description: "Actions are disabled in demo mode",
+        variant: "default",
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -176,6 +187,16 @@ export function QuickActions({ aircraftId, userId, aircraftData }: QuickActionsP
 
   const handleRequestService = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isDemo) {
+      toast({
+        title: "Demo Mode",
+        description: "Actions are disabled in demo mode",
+        variant: "default",
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
