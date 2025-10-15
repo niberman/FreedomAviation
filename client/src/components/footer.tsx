@@ -13,7 +13,7 @@ export function Footer() {
               <span className="font-semibold text-lg">Freedom Aviation</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Premium aircraft management and expert flight instruction.
+              Premium aircraft management
             </p>
           </div>
           
