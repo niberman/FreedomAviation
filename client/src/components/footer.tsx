@@ -31,7 +31,7 @@ export function Footer() {
             <h4 className="font-semibold mb-3">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link href="/dashboard" data-testid="link-owner-portal" className="hover-elevate block">Owner Portal</Link></li>
-              <li><Link href="/#pricing" data-testid="link-pricing-calculator" className="hover-elevate block">Pricing Calculator</Link></li>
+              <li><Link href="/contact?source=footer_pricing" data-testid="link-pricing-calculator" className="hover-elevate block">Pricing Calculator</Link></li>
               <li><a href="mailto:fly@freedomaviation.com" data-testid="link-support" className="hover-elevate block">Support</a></li>
               <li><a href="mailto:fly@freedomaviation.com" data-testid="link-contact" className="hover-elevate block">Contact Us</a></li>
             </ul>
