@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Building2, MapPin } from "lucide-react";
 import { useLocations } from "../features/pricing/hooks";
 import { Loader2 } from "lucide-react";
 import { Seo } from "@/components/Seo";
-import { baseKeywords } from "@/seo/keywords";
+import { SEO_KEYWORDS } from "@/seo/keywords";
 
 export default function HangarLocations() {
   const locationsQuery = useLocations();
@@ -25,7 +25,15 @@ export default function HangarLocations() {
       <Seo
         title="Hangar Locations - Premium Aircraft Storage at KAPA"
         description="Professional aircraft storage solutions at Centennial Airport. From our Freedom Aviation Hangar to premium Sky Harbour facilities, transparent pricing integrated into your management package."
-        keywords={[...baseKeywords, 'aircraft hangar KAPA', 'Centennial Airport hangars', 'Sky Harbour hangar', 'Freedom Aviation Hangar', 'aircraft storage Colorado', 'premium hangar facilities']}
+        keywords={[
+          ...SEO_KEYWORDS.services,
+          ...SEO_KEYWORDS.modifiers,
+          ...SEO_KEYWORDS.partners,
+          'aircraft hangar KAPA',
+          'Centennial Airport hangars',
+          'aircraft storage Colorado',
+          'premium hangar facilities'
+        ]}
         canonical="/hangar-locations"
       />
       
