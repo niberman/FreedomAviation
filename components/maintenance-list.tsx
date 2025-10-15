@@ -15,39 +15,54 @@ interface MaintenanceItem {
 export function MaintenanceList() {
   // TODO: remove mock functionality
   const items: MaintenanceItem[] = [
-    { 
-      id: "1", 
-      tailNumber: "N847SR", 
-      title: "Annual Inspection", 
-      calendarDue: "2024-11-15", 
-      status: "due_soon" 
+    {
+      id: "1",
+      tailNumber: "N847SR",
+      title: "Annual Inspection",
+      calendarDue: "2024-11-15",
+      status: "due_soon",
     },
-    { 
-      id: "2", 
-      tailNumber: "N123JA", 
-      title: "100 Hour Inspection", 
-      hobbsDue: 1250, 
-      hobbsCurrent: 1180, 
-      status: "ok" 
+    {
+      id: "2",
+      tailNumber: "N123JA",
+      title: "100 Hour Inspection",
+      hobbsDue: 1250,
+      hobbsCurrent: 1180,
+      status: "ok",
     },
-    { 
-      id: "3", 
-      tailNumber: "N456AB", 
-      title: "Oil Change", 
-      hobbsDue: 850, 
-      hobbsCurrent: 852, 
-      status: "overdue" 
+    {
+      id: "3",
+      tailNumber: "N456AB",
+      title: "Oil Change",
+      hobbsDue: 850,
+      hobbsCurrent: 852,
+      status: "overdue",
     },
   ];
 
   const getStatusBadge = (status: MaintenanceItem["status"]) => {
     switch (status) {
       case "ok":
-        return <Badge className="bg-green-500 text-white"><CheckCircle className="h-3 w-3 mr-1" />OK</Badge>;
+        return (
+          <Badge className="bg-green-500 text-white">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            OK
+          </Badge>
+        );
       case "due_soon":
-        return <Badge className="bg-amber-500 text-white"><Clock className="h-3 w-3 mr-1" />Due Soon</Badge>;
+        return (
+          <Badge className="bg-amber-500 text-white">
+            <Clock className="h-3 w-3 mr-1" />
+            Due Soon
+          </Badge>
+        );
       case "overdue":
-        return <Badge className="bg-red-500 text-white"><AlertCircle className="h-3 w-3 mr-1" />Overdue</Badge>;
+        return (
+          <Badge className="bg-red-500 text-white">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Overdue
+          </Badge>
+        );
     }
   };
 
@@ -69,11 +84,13 @@ export function MaintenanceList() {
                   <h4 className="font-semibold">{item.title}</h4>
                   <div className="mt-2 text-sm text-muted-foreground">
                     {item.hobbsDue && (
-                      <p>Due at {item.hobbsDue} Hobbs{item.hobbsCurrent && ` (Current: ${item.hobbsCurrent})`}</p>
+                      <p>
+                        Due at {item.hobbsDue} Hobbs
+                        {item.hobbsCurrent &&
+                          ` (Current: ${item.hobbsCurrent})`}
+                      </p>
                     )}
-                    {item.calendarDue && (
-                      <p>Due: {item.calendarDue}</p>
-                    )}
+                    {item.calendarDue && <p>Due: {item.calendarDue}</p>}
                   </div>
                 </div>
               </div>

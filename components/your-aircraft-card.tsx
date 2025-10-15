@@ -31,7 +31,7 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
     baseAirport: "KAPA",
     hoursPerMonth: 22,
     membershipClass: "Class II",
-    planCode: "class_ii_standard"
+    planCode: "class_ii_standard",
   };
 
   const includedServices = [
@@ -39,13 +39,13 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
     "2 Full Details/Month",
     "Fluid Top-Offs",
     "Avionics DB Updates",
-    "Maintenance Coordination"
+    "Maintenance Coordination",
   ];
 
   return (
     <>
       <Card className="overflow-hidden">
-        <div 
+        <div
           className="h-48 bg-cover bg-center relative"
           style={{ backgroundImage: `url(${aircraftImage})` }}
         >
@@ -54,7 +54,7 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
             {mockAircraft.tailNumber}
           </Badge>
         </div>
-        
+
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
@@ -68,19 +68,21 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
             </Badge>
           </div>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground mb-1">Base Airport</p>
-              <p className="font-mono font-semibold">{mockAircraft.baseAirport}</p>
+              <p className="font-mono font-semibold">
+                {mockAircraft.baseAirport}
+              </p>
             </div>
             <div>
               <p className="text-muted-foreground mb-1">Hours/Month</p>
               <p className="font-semibold">{mockAircraft.hoursPerMonth}</p>
             </div>
           </div>
-          
+
           <div>
             <p className="text-sm font-semibold mb-3">Included Services</p>
             <div className="grid grid-cols-1 gap-2">
@@ -92,10 +94,10 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
               ))}
             </div>
           </div>
-          
+
           <div className="pt-4 border-t space-y-3">
-            <Button 
-              className="w-full justify-start" 
+            <Button
+              className="w-full justify-start"
               size="lg"
               onClick={() => setPrepareSheetOpen(true)}
               data-testid="button-prepare-aircraft"
@@ -103,9 +105,9 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
               <Calendar className="h-5 w-5 mr-2" />
               Prepare Aircraft for Flight
             </Button>
-            
-            <Button 
-              className="w-full justify-start" 
+
+            <Button
+              className="w-full justify-start"
               variant="outline"
               size="lg"
               onClick={() => setServiceSheetOpen(true)}
@@ -118,14 +120,14 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
         </CardContent>
       </Card>
 
-      <PrepareAircraftSheet 
-        open={prepareSheetOpen} 
+      <PrepareAircraftSheet
+        open={prepareSheetOpen}
         onOpenChange={setPrepareSheetOpen}
         aircraft={mockAircraft}
       />
-      
-      <RequestServiceSheet 
-        open={serviceSheetOpen} 
+
+      <RequestServiceSheet
+        open={serviceSheetOpen}
         onOpenChange={setServiceSheetOpen}
         aircraft={mockAircraft}
       />

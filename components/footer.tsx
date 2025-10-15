@@ -14,27 +14,37 @@ export function Footer() {
               Premium aircraft management and expert flight instruction.
             </p>
           </div>
-          
+
           <div>
             <h4 className="font-semibold mb-3">Services</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="hover-elevate cursor-pointer">Aircraft Management</li>
-              <li className="hover-elevate cursor-pointer">Flight Instruction</li>
-              <li className="hover-elevate cursor-pointer">Maintenance Coordination</li>
-              <li className="hover-elevate cursor-pointer">Concierge Service</li>
+              <li className="hover-elevate cursor-pointer">
+                Aircraft Management
+              </li>
+              <li className="hover-elevate cursor-pointer">
+                Flight Instruction
+              </li>
+              <li className="hover-elevate cursor-pointer">
+                Maintenance Coordination
+              </li>
+              <li className="hover-elevate cursor-pointer">
+                Concierge Service
+              </li>
             </ul>
           </div>
-          
+
           <div>
             <h4 className="font-semibold mb-3">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="hover-elevate cursor-pointer">Owner Portal</li>
-              <li className="hover-elevate cursor-pointer">Pricing Calculator</li>
+              <li className="hover-elevate cursor-pointer">
+                Pricing Calculator
+              </li>
               <li className="hover-elevate cursor-pointer">Support</li>
               <li className="hover-elevate cursor-pointer">Contact Us</li>
             </ul>
           </div>
-          
+
           <div>
             <h4 className="font-semibold mb-3">Contact</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
@@ -53,12 +63,14 @@ export function Footer() {
             </ul>
           </div>
         </div>
-        
+
         <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <p>© 2024 Freedom Aviation. All rights reserved.</p>
           <div className="flex gap-6">
             <span className="hover-elevate cursor-pointer">Privacy Policy</span>
-            <span className="hover-elevate cursor-pointer">Terms of Service</span>
+            <span className="hover-elevate cursor-pointer">
+              Terms of Service
+            </span>
           </div>
         </div>
       </div>

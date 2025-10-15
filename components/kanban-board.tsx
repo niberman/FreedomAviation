@@ -15,27 +15,50 @@ interface ServiceRequest {
 export function KanbanBoard() {
   // TODO: remove mock functionality
   const [requests, setRequests] = useState<ServiceRequest[]>([
-    { id: "1", tailNumber: "N847SR", type: "detail", requestedFor: "2024-10-15", status: "new" },
-    { id: "2", tailNumber: "N123JA", type: "maintenance", requestedFor: "2024-10-16", status: "in_progress" },
-    { id: "3", tailNumber: "N456AB", type: "db_update", requestedFor: "2024-10-14", status: "done" },
+    {
+      id: "1",
+      tailNumber: "N847SR",
+      type: "detail",
+      requestedFor: "2024-10-15",
+      status: "new",
+    },
+    {
+      id: "2",
+      tailNumber: "N123JA",
+      type: "maintenance",
+      requestedFor: "2024-10-16",
+      status: "in_progress",
+    },
+    {
+      id: "3",
+      tailNumber: "N456AB",
+      type: "db_update",
+      requestedFor: "2024-10-14",
+      status: "done",
+    },
   ]);
 
   const columns = [
     { id: "new", title: "New", color: "bg-blue-500" },
     { id: "in_progress", title: "In Progress", color: "bg-amber-500" },
-    { id: "done", title: "Done", color: "bg-green-500" }
+    { id: "done", title: "Done", color: "bg-green-500" },
   ] as const;
 
   const handleDragStart = (e: React.DragEvent, requestId: string) => {
     e.dataTransfer.setData("requestId", requestId);
   };
 
-  const handleDrop = (e: React.DragEvent, newStatus: typeof columns[number]["id"]) => {
+  const handleDrop = (
+    e: React.DragEvent,
+    newStatus: (typeof columns)[number]["id"],
+  ) => {
     e.preventDefault();
     const requestId = e.dataTransfer.getData("requestId");
-    setRequests(prev => prev.map(req => 
-      req.id === requestId ? { ...req, status: newStatus } : req
-    ));
+    setRequests((prev) =>
+      prev.map((req) =>
+        req.id === requestId ? { ...req, status: newStatus } : req,
+      ),
+    );
     console.log(`Moved request ${requestId} to ${newStatus}`);
   };
 
@@ -52,33 +75,33 @@ export function KanbanBoard() {
       oil: "Oil",
       staging: "Staging",
       maintenance: "Maintenance",
-      other: "Other"
+      other: "Other",
     };
     return labels[type] || type;
   };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {columns.map(column => (
+      {columns.map((column) => (
         <div key={column.id}>
           <div className="flex items-center gap-2 mb-4">
             <div className={`w-3 h-3 rounded-full ${column.color}`} />
             <h3 className="font-semibold">{column.title}</h3>
             <Badge variant="secondary" className="ml-auto">
-              {requests.filter(r => r.status === column.id).length}
+              {requests.filter((r) => r.status === column.id).length}
             </Badge>
           </div>
-          
-          <div 
+
+          <div
             className="space-y-3 min-h-[400px] p-2 rounded-md bg-muted/30"
             onDrop={(e) => handleDrop(e, column.id)}
             onDragOver={handleDragOver}
             data-testid={`kanban-column-${column.id}`}
           >
             {requests
-              .filter(request => request.status === column.id)
-              .map(request => (
-                <Card 
+              .filter((request) => request.status === column.id)
+              .map((request) => (
+                <Card
                   key={request.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, request.id)}
