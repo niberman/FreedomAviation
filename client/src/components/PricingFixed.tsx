@@ -205,13 +205,7 @@ export default function PricingFixed() {
                           </div>
                         </div>
 
-                        {/* Add-on */}
-                        {pkg.addons && pkg.addons.length > 0 && (
-                          <div className="mt-3 text-xs text-muted-foreground">
-                            <span className="font-medium">Optional:</span> {pkg.addons[0].name} (+${pkg.addons[0].priceDeltaMonthly}/mo)
-                          </div>
-                        )}
-                      </div>
+                        </div>
 
                       <Button 
                         className="w-full mt-6" 
