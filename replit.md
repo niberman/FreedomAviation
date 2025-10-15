@@ -157,6 +157,38 @@ A comprehensive admin interface at `/admin/pricing` that consolidates all pricin
 - Route: `/admin/pricing` (consolidated from previous separate routes)
 - Database hooks: `client/src/features/pricing/hooks.ts`
 
+## UI/UX Enhancements (October 2025)
+
+### Pricing Page Redesign
+Completely redesigned the `/pricing` page with improved aesthetics and user experience:
+- **Enhanced Card Design**: Modern pricing cards with better visual hierarchy, improved spacing, gradient accents
+- **"No Hangar" Option**: Added prominent option for users managing their own hangar
+- **Visual Improvements**: Better typography, subtle shadows, improved color contrast
+- **Mobile-First Design**: Responsive grid layout that works on all devices
+- **Clearer CTAs**: More prominent "Contact Us" buttons with better visual weight
+
+### Hangar Locations Consolidation
+Unified Sky Harbour and Freedom Aviation Hangar partner pages into a single `/hangar-locations` route:
+- **Consolidated Page**: Single location (`client/src/pages/HangarLocations.tsx`) for all partner facilities
+- **Dynamic Content**: Fetches hangar locations from database, displays cards with amenities and pricing CTAs
+- **SEO Optimized**: Comprehensive meta tags, keywords, and JSON-LD structured data
+- **Updated Navigation**: 
+  - Partner badges component updated to link to `/hangar-locations`
+  - Dev toolbar updated to show "Hangar Locations" instead of individual pages
+  - Sitemap updated to reflect new unified structure
+- **Removed Routes**: Deleted `/partners/sky-harbour` and `/partners/freedom-aviation-hangar`
+
+**Benefits:**
+- Easier to maintain (single page vs multiple)
+- Better UX (compare options on one page)
+- Scalable (easy to add new partner locations)
+- Consistent branding and messaging
+
+### Navigation & Testing
+- **Comprehensive Button Testing**: All CTAs verified working across homepage, pricing, and hangar locations
+- **Client-side Navigation**: All routes use Wouter for smooth, no-reload navigation
+- **Query Parameters**: Pricing page supports `?location=` parameter for direct hangar selection
+
 ## External Dependencies
 - **Supabase**: Used for PostgreSQL database, authentication (`@supabase/supabase-js`), and Row Level Security (RLS).
 - **React 18**: Frontend library.
