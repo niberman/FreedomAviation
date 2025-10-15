@@ -125,8 +125,10 @@ export default function UnifiedPricingConfigurator() {
         classes: classesQuery.data,
       };
 
+      // Generate unique label with timestamp to avoid constraint violations
+      const timestamp = new Date().toISOString();
       await publishSnapshot.mutateAsync({
-        label: `Pricing ${new Date().toLocaleDateString()}`,
+        label: `Pricing ${timestamp}`,
         payload,
       });
 
