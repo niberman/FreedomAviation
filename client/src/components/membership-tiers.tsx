@@ -8,38 +8,38 @@ import { FEATURE_PARTNER_SKY_HARBOUR, FEATURE_PARTNER_FA_HANGAR } from "../lib/f
 const tiers = [
   {
     name: "Class I",
-    aircraft: "C182 / Archer / Cherokee",
-    price: "$500",
+    aircraft: "C172 / C182 / Archer / Cherokee",
+    price: "$200",
     features: [
       "Weekly readiness checks",
       "1 full detail/month",
-      "Fluid top-offs",
+      "Fluid top-offs (oil, O₂, TKS)",
       "Avionics DB updates",
       "Digital portal access"
     ]
   },
   {
     name: "Class II",
-    aircraft: "SR22 / SR22T / DA40 / Mooney",
-    price: "$1,000",
+    aircraft: "SR20 / SR22 / SR22T / DA40 / Mooney",
+    price: "$550",
     popular: true,
     features: [
-      "2x weekly readiness",
-      "2 full details/month",
-      "Priority scheduling",
       "All Class I features",
-      "Maintenance coordination"
+      "Pre-/post-flight cleaning",
+      "Priority scheduling",
+      "Maintenance coordination",
+      "Enhanced readiness"
     ]
   },
   {
     name: "Class III",
-    aircraft: "Vision / TBM",
-    price: "$5,000",
+    aircraft: "Vision Jet / TBM",
+    price: "$1,000",
     features: [
+      "All Class II features",
       "Daily readiness checks",
       "Unlimited detailing",
       "Dedicated concierge",
-      "All Class II features",
       "White-glove service"
     ]
   }
