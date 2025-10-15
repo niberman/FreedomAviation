@@ -11,6 +11,7 @@ import { DevToolbar } from "@/components/dev-toolbar";
 import Home from "./pages/home";
 import Login from "./pages/login";
 import Pricing from "./pages/Pricing";
+import Contact from "./pages/Contact";
 import HangarLocations from "./pages/HangarLocations";
 import OwnerDashboard from "./pages/owner-dashboard";
 import OwnerMore from "./pages/owner-more";
@@ -25,7 +26,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/contact" component={Contact} />
       <Route path="/hangar-locations" component={HangarLocations} />
+      <Route path="/demo" component={OwnerDashboard} />
       <Route path="/dashboard">
         <ProtectedRoute>
           <OwnerDashboard />

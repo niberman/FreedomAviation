@@ -1,6 +1,7 @@
 import { HeroSection } from "@/components/hero-section";
 import { FeaturesGrid } from "@/components/features-grid";
 import { MembershipTiers } from "@/components/membership-tiers";
+import OwnerPortalDemo from "@/components/OwnerPortalDemo";
 import { Testimonials } from "@/components/testimonials";
 import { Footer } from "@/components/footer";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -41,6 +42,7 @@ export default function Home() {
       
       <FeaturesGrid />
       <MembershipTiers />
+      <OwnerPortalDemo />
       <Testimonials />
       <Footer />
     </div>
