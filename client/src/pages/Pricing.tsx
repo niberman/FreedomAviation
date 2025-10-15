@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useLatestSnapshot, useLocations } from "../features/pricing/hooks";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MapPin, MapPinned } from "lucide-react";
+import { Loader2, Check, Building2, Plane } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { locationKeywords } from "@/seo/keywords";
 
@@ -13,7 +13,6 @@ export default function Pricing() {
   const snapshotQuery = useLatestSnapshot();
   const locationsQuery = useLocations();
 
-  // Get location from query param
   const urlParams = new URLSearchParams(window.location.search);
   const locationParam = urlParams.get('location');
   
@@ -39,7 +38,7 @@ export default function Pricing() {
   const classes = snapshotQuery.data?.payload?.classes || [];
   const locations = locationsQuery.data || [];
 
-  const handleLocationChange = (slug: string) => {
+  const handleLocationSelect = (slug: string) => {
     setSelectedLocationSlug(slug);
     navigate(`/pricing?location=${slug}`);
   };
@@ -49,7 +48,7 @@ export default function Pricing() {
     : `Transparent aircraft management pricing for owner-operators at Centennial Airport. Choose your hangar location to see complete package costs.`;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Seo
         title="Transparent Pricing - Aircraft Management Packages"
         description={seoDescription}
@@ -57,107 +56,162 @@ export default function Pricing() {
         canonical="/pricing"
       />
       
-      {/* Header */}
-      <section className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground py-16">
+      {/* Hero Header */}
+      <section className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground py-20">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Transparent Pricing</h1>
-            <p className="text-xl text-primary-foreground/90">
-              Choose your hangar location to see complete pricing with all costs included
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Simple, Transparent Pricing</h1>
+            <p className="text-xl text-primary-foreground/90 max-w-2xl mx-auto">
+              Choose your service tier and hangar location. All costs included, no surprises.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Location Selector */}
-      <section className="py-8 bg-muted/30">
+      {/* Hangar Location Selector */}
+      <section className="py-12 border-b">
         <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex flex-col md:flex-row items-center gap-4">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
-                <Label className="font-medium">Hangar Location:</Label>
-              </div>
-              <Select value={selectedLocationSlug} onValueChange={handleLocationChange}>
-                <SelectTrigger className="w-full md:w-80" data-testid="select-location">
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.slug} data-testid={`location-option-${loc.slug}`}>
-                      {loc.name}
-                      {loc.hangar_cost_monthly ? ` ($${loc.hangar_cost_monthly}/mo)` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedLocation && selectedLocation.slug !== 'none' && (
-                <Badge variant="secondary" className="ml-auto">
-                  Hangar: ${hangarCost}/mo
-                </Badge>
-              )}
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold mb-2">Step 1: Select Hangar Location</h2>
+              <p className="text-muted-foreground">Choose where your aircraft will be housed</p>
             </div>
-
-            {selectedLocation && selectedLocation.slug !== 'none' && (
-              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-900 dark:text-blue-100 flex items-center gap-2">
-                  <MapPinned className="h-4 w-4" />
-                  <span>You're viewing prices with <strong>{selectedLocation.name}</strong> hangar costs applied.</span>
-                </p>
-              </div>
-            )}
+            
+            <div className="grid md:grid-cols-3 gap-4">
+              {locations.map((loc) => {
+                const isSelected = selectedLocationSlug === loc.slug;
+                return (
+                  <Card 
+                    key={loc.id}
+                    className={`cursor-pointer transition-all hover-elevate ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                    onClick={() => handleLocationSelect(loc.slug)}
+                    data-testid={`location-card-${loc.slug}`}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          {loc.slug === 'none' ? (
+                            <Plane className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <Building2 className="h-5 w-5 text-primary" />
+                          )}
+                          <CardTitle className="text-lg">{loc.name}</CardTitle>
+                        </div>
+                        {isSelected && (
+                          <Badge variant="default" className="ml-2">
+                            <Check className="h-3 w-3 mr-1" />
+                            Selected
+                          </Badge>
+                        )}
+                      </div>
+                      <CardDescription className="text-sm mt-1">
+                        {loc.description || 'Standard hangar option'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold">
+                          ${loc.hangar_cost_monthly}
+                        </span>
+                        <span className="text-sm text-muted-foreground">/month</span>
+                      </div>
+                      {loc.features?.amenities && loc.features.amenities.length > 0 && (
+                        <ul className="mt-3 space-y-1">
+                          {loc.features.amenities.slice(0, 2).map((amenity: string, idx: number) => (
+                            <li key={idx} className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Check className="h-3 w-3 text-primary" />
+                              {amenity}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Pricing Cards */}
+      {/* Service Packages */}
       <section className="py-16">
         <div className="container mx-auto px-6">
           <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl font-bold mb-2">Step 2: Choose Your Service Tier</h2>
+              <p className="text-muted-foreground">
+                {selectedLocation?.slug !== 'none' 
+                  ? `Prices shown include ${selectedLocation?.name} hangar costs`
+                  : 'Prices shown are base service rates (hangar not included)'}
+              </p>
+            </div>
+
             {classes.length === 0 ? (
-              <p className="text-center text-muted-foreground">No pricing data available. Contact admin to publish pricing.</p>
+              <Card className="p-12">
+                <p className="text-center text-muted-foreground">
+                  No pricing packages available yet. Please check back soon or contact us directly.
+                </p>
+              </Card>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {classes.map((cls: any) => {
+              <div className="grid md:grid-cols-3 gap-6">
+                {classes.map((cls: any, index: number) => {
                   const basePrice = cls.base_monthly;
-                  const estimatedTotal = basePrice + hangarCost;
+                  const totalPrice = basePrice + hangarCost;
+                  const isMiddle = index === 1 && classes.length === 3;
 
                   return (
-                    <Card key={cls.id} className="relative hover-elevate" data-testid={`pricing-card-${cls.id}`}>
-                      <CardHeader>
-                        <CardTitle>{cls.name}</CardTitle>
-                        <CardDescription>
+                    <Card 
+                      key={cls.id} 
+                      className={`relative hover-elevate flex flex-col ${isMiddle ? 'ring-2 ring-primary scale-105' : ''}`}
+                      data-testid={`pricing-card-${cls.id}`}
+                    >
+                      {isMiddle && (
+                        <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                          <Badge variant="default" className="px-4">Most Popular</Badge>
+                        </div>
+                      )}
+                      
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-2xl">{cls.name}</CardTitle>
+                        <CardDescription className="min-h-[3rem]">
                           {cls.description || 'Premium aircraft management service'}
                         </CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex justify-between items-center py-2 border-b">
-                          <span className="text-sm text-muted-foreground">Base Service</span>
-                          <span className="font-medium">${basePrice.toFixed(2)}</span>
+                      
+                      <CardContent className="flex-1 flex flex-col">
+                        <div className="mb-6">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-4xl font-bold">${totalPrice.toLocaleString()}</span>
+                            <span className="text-muted-foreground">/month</span>
+                          </div>
+                          <div className="mt-2 text-sm text-muted-foreground">
+                            <div>Base service: ${basePrice.toLocaleString()}</div>
+                            <div>Hangar: ${hangarCost.toLocaleString()}</div>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center py-2 border-b">
-                          <span className="text-sm text-muted-foreground">+ Hangar ({selectedLocation?.name || 'None'})</span>
-                          <span className="font-medium">${hangarCost.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-3 bg-muted/50 rounded-lg px-3">
-                          <span className="font-semibold">Total Package</span>
-                          <span className="text-2xl font-bold">${estimatedTotal.toFixed(2)}</span>
-                        </div>
-                        {cls.features?.benefits && (
-                          <div className="pt-3">
-                            <ul className="space-y-1 text-sm">
-                              {cls.features.benefits.slice(0, 3).map((benefit: string, idx: number) => (
-                                <li key={idx} className="flex items-start gap-2">
-                                  <span className="text-primary mt-0.5">✓</span>
+
+                        {cls.features?.benefits && cls.features.benefits.length > 0 && (
+                          <div className="flex-1">
+                            <div className="text-sm font-medium mb-3">Includes:</div>
+                            <ul className="space-y-2">
+                              {cls.features.benefits.map((benefit: string, idx: number) => (
+                                <li key={idx} className="flex items-start gap-2 text-sm">
+                                  <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                                   <span className="text-muted-foreground">{benefit}</span>
                                 </li>
                               ))}
                             </ul>
                           </div>
                         )}
-                        <p className="text-xs text-muted-foreground pt-2">
-                          Per month. Specific aircraft may have custom pricing.
-                        </p>
+
+                        <Button 
+                          className="w-full mt-6" 
+                          variant={isMiddle ? "default" : "outline"}
+                          data-testid={`button-select-${cls.id}`}
+                        >
+                          Get Started
+                        </Button>
                       </CardContent>
                     </Card>
                   );
@@ -165,21 +219,19 @@ export default function Pricing() {
               </div>
             )}
 
-            {/* Fine Print / Disclaimer */}
-            <div className="mt-12 p-6 bg-muted/50 rounded-lg border">
-              <p className="text-sm text-center text-muted-foreground leading-relaxed">
-                <strong className="text-foreground">Representative Pricing:</strong> Prices shown are representative class packages including selected hangar costs. 
-                Actual pricing may vary based on aircraft-specific requirements, travel costs, and facility availability. 
-                Hangar costs confirmed during onboarding. Facility availability subject to final confirmation.
-              </p>
-            </div>
+            {/* Disclaimer */}
+            <Card className="mt-12 bg-muted/50">
+              <CardContent className="p-6">
+                <p className="text-sm text-center text-muted-foreground leading-relaxed">
+                  <strong className="text-foreground">Pricing Notice:</strong> Prices shown are representative packages. 
+                  Final pricing may vary based on your specific aircraft requirements, location preferences, and service needs. 
+                  All costs are confirmed during onboarding. Contact us for a personalized quote.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
     </div>
   );
-}
-
-function Label({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <label className={className}>{children}</label>;
 }

@@ -11,8 +11,7 @@ import { DevToolbar } from "@/components/dev-toolbar";
 import Home from "./pages/home";
 import Login from "./pages/login";
 import Pricing from "./pages/Pricing";
-import SkyHarbour from "./pages/partners/SkyHarbour";
-import FAHangar from "./pages/partners/FAHangar";
+import HangarLocations from "./pages/HangarLocations";
 import OwnerDashboard from "./pages/owner-dashboard";
 import OwnerMore from "./pages/owner-more";
 import AdminDashboard from "./pages/admin-dashboard";
@@ -26,8 +25,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/pricing" component={Pricing} />
-      <Route path="/partners/sky-harbour" component={SkyHarbour} />
-      <Route path="/partners/freedom-aviation-hangar" component={FAHangar} />
+      <Route path="/hangar-locations" component={HangarLocations} />
       <Route path="/dashboard">
         <ProtectedRoute>
           <OwnerDashboard />
