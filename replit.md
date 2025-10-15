@@ -129,11 +129,33 @@ A floating toolbar appears in the bottom-right corner during development to stre
 
 **Available Pages:**
 - **Marketing**: Home, Pricing, Sky Harbour, FA Hangar, Login
-- **Dashboards**: Owner Dashboard, Owner More, Admin, Pricing Configurator, Package Configurator, CFI
+- **Dashboards**: Owner Dashboard, Owner More, Admin, Pricing Configurator, CFI
 
 **Implementation:**
 - Component: `client/src/components/dev-toolbar.tsx`
 - Integrated in: `client/src/App.tsx`
+
+## Pricing Administration (October 2025)
+
+### Unified Pricing Configurator
+A comprehensive admin interface at `/admin/pricing` that consolidates all pricing-related configuration into a single tabbed interface.
+
+**Features:**
+- **Packages Tab**: Configure service class packages with inclusions and monthly base pricing
+- **Service Classes Tab**: Manage service tier definitions (Essential, Premium, Concierge)
+- **Hangar Locations Tab**: Configure hangar partner locations with monthly costs and amenities
+- **Cost Assumptions Tab**: Set global cost assumptions for profit calculations (labor rate, card fees, CFI allocation, cleaning supplies, overhead, avionics DB)
+
+**Data Flow:**
+1. Configure service classes, hangar locations, and cost assumptions
+2. Create packages combining service tiers with base monthly pricing
+3. Publish snapshot to activate pricing on public-facing pages
+4. Homepage and pricing page fetch latest published snapshot
+
+**Implementation:**
+- Component: `client/src/pages/admin/UnifiedPricingConfigurator.tsx`
+- Route: `/admin/pricing` (consolidated from previous separate routes)
+- Database hooks: `client/src/features/pricing/hooks.ts`
 
 ## External Dependencies
 - **Supabase**: Used for PostgreSQL database, authentication (`@supabase/supabase-js`), and Row Level Security (RLS).
