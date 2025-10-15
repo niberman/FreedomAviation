@@ -51,9 +51,9 @@ export default function HangarLocations() {
               Professional aircraft storage at Centennial Airport (KAPA). 
               All hangar costs are transparently included in your monthly pricing.
             </p>
-            <Link href="/contact?source=hangar_hero">
+            <Link href="/pricing">
               <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 border-white/30" data-testid="button-view-all-pricing">
-                Contact Us for Pricing
+                View All Pricing Options
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
@@ -108,9 +108,9 @@ export default function HangarLocations() {
                       </div>
                     )}
 
-                    <Link href={`/contact?source=hangar_${location.slug}`}>
+                    <Link href={`/pricing?location=${location.slug}`}>
                       <Button className="w-full" variant="outline" data-testid={`button-view-pricing-${location.slug}`}>
-                        Contact Us for {location.name}
+                        View Pricing with {location.name}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
