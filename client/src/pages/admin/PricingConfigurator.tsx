@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAircraft } from "../../lib/hooks/useAircraft";
 import {
   useAssumptions,
   useSaveAssumptions,
@@ -11,7 +10,6 @@ import {
   type Location,
   type PricingClass,
 } from "../../features/pricing/hooks";
-import { calcRow } from "../../lib/pricing";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +20,6 @@ import { Loader2, Rocket } from "lucide-react";
 
 export default function PricingConfigurator() {
   const { toast } = useToast();
-  const { aircraft } = useAircraft();
   const assumptionsQuery = useAssumptions();
   const locationsQuery = useLocations();
   const classesQuery = useClasses();
@@ -207,7 +204,7 @@ export default function PricingConfigurator() {
                 <div className="flex items-center gap-3">
                   <div>
                     <p className="font-medium">{loc.name}</p>
-                    <p className="text-sm text-muted-foreground">Default hangar: ${loc.default_hangar_cost || 0}</p>
+                    <p className="text-sm text-muted-foreground">Hangar cost: ${loc.hangar_cost_monthly || 0}/mo</p>
                   </div>
                   {loc.slug === 'sky-harbour' && (
                     <Badge variant="default">Preferred Partner</Badge>
@@ -235,7 +232,7 @@ export default function PricingConfigurator() {
                 <div>
                   <p className="font-medium">{cls.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    ${cls.default_price} • {cls.labor_hours}hr labor • ${cls.consumables} consumables
+                    ${cls.base_monthly}/mo base price
                   </p>
                 </div>
               </div>
@@ -244,61 +241,6 @@ export default function PricingConfigurator() {
         </CardContent>
       </Card>
 
-      {/* Fleet Grid Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Fleet Pricing Preview</CardTitle>
-          <CardDescription>Computed pricing with hangar costs</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {aircraft.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No aircraft to display</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Tail</th>
-                    <th className="text-left p-2">Class</th>
-                    <th className="text-right p-2">Base Price</th>
-                    <th className="text-right p-2">Hangar</th>
-                    <th className="text-right p-2">Total Cost</th>
-                    <th className="text-right p-2">Margin %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {aircraft.map((ac: any) => {
-                    // Find matching class (simplified - use ac.class or default to first class)
-                    const matchingClass = classesQuery.data?.[0];
-                    if (!matchingClass || !assumptionsQuery.data) return null;
-
-                    const computed = calcRow(
-                      assumptionsQuery.data,
-                      matchingClass,
-                      { tail: ac.tail_number, class_name: matchingClass.name }
-                    );
-
-                    const marginColor = computed.margin_pct > 0.3 ? 'text-green-600' : computed.margin_pct > 0.2 ? 'text-amber-600' : 'text-red-600';
-
-                    return (
-                      <tr key={ac.id} className="border-b" data-testid={`aircraft-row-${ac.id}`}>
-                        <td className="p-2 font-mono">{ac.tail_number}</td>
-                        <td className="p-2 text-sm">{matchingClass.name}</td>
-                        <td className="p-2 text-right">${computed.final_price}</td>
-                        <td className="p-2 text-right">${computed.hangar_derived}</td>
-                        <td className="p-2 text-right">${computed.total_cost}</td>
-                        <td className={`p-2 text-right font-medium ${marginColor}`}>
-                          {(computed.margin_pct * 100).toFixed(1)}%
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
