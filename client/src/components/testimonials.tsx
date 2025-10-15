@@ -7,14 +7,14 @@ import pilot2 from "@assets/stock_images/professional_pilot_s_544bb357.jpg";
 const testimonials = [
   {
     name: "Sarah Mitchell",
-    aircraft: "N847SR • SR22T",
+    aircraft: "SR22T",
     image: pilot1,
     quote: "Freedom Aviation transformed my flying experience. I spend zero time worrying about maintenance—just pure flying enjoyment.",
     rating: 5
   },
   {
     name: "James Anderson",
-    aircraft: "N123JA • Vision Jet",
+    aircraft: "Vision Jet",
     image: pilot2,
     quote: "The concierge service is unmatched. My aircraft is always ready when I am, and the team handles everything with precision.",
     rating: 5
