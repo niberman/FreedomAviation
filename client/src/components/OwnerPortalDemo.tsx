@@ -17,7 +17,7 @@ export default function OwnerPortalDemo({
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">{subhead}</p>
 
           <Card className="overflow-hidden shadow-lg">
-            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+            <div className="relative w-full" style={{ paddingBottom: '112.5%' }}>
               <iframe
                 src="/demo?readonly=1&seed=DEMO"
                 title="Freedom Owner Portal Demo"
