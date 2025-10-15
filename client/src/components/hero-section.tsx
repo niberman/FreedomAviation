@@ -37,7 +37,7 @@ export function HeroSection() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Button 
             size="lg" 
-            onClick={() => setLocation("/pricing")}
+            onClick={() => setLocation("/contact?source=hero_cta")}
             data-testid="button-see-plans"
             className="text-lg px-8"
           >

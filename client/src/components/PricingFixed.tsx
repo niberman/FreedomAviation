@@ -58,7 +58,7 @@ export default function PricingFixed() {
   const hangarCost = selectedHangar.cost;
 
   const handleContinue = (packageId: string) => {
-    navigate(`/signup?hangar=${selectedHangarId}&package=${packageId}`);
+    navigate(`/contact?source=pricing_${packageId}&hangar=${selectedHangarId}`);
   };
 
   return (

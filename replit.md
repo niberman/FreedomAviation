@@ -17,7 +17,7 @@ The frontend is built with React 18, TypeScript, and Vite, using Wouter for rout
 ### Feature Specifications
 The application includes public marketing pages and protected dashboards for Owners, Admins, and CFIs. Key features:
 - **Owner Dashboard**: Aircraft management, service requests, billing, and document management. Includes demo mode support with read-only guards to prevent mutations when accessed via `?readonly=1` query parameter.
-- **Owner Portal Demo**: Video demonstration section on homepage with autoplay/loop video and modal CTA that opens an iframe to a live demo of the owner dashboard.
+- **Owner Portal Demo**: Embedded live demo iframe on homepage showing the owner dashboard in read-only mode.
 - **Contact Page**: FormSubmit.co integration at `/contact` with source tracking via query parameters for attribution analytics.
 - **Demo Mode Infrastructure**: Complete read-only demo system with `useDemoMode` hook, `DemoBanner` component, and mutation guards in `QuickActions` to prevent database writes while showing informative toast messages.
 - **Admin Panel**: Kanban board, aircraft management, and a unified pricing configurator for packages, service classes, hangar locations, and cost assumptions, with a snapshot system for publishing pricing versions.
