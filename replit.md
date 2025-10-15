@@ -189,6 +189,40 @@ Unified Sky Harbour and Freedom Aviation Hangar partner pages into a single `/ha
 - **Client-side Navigation**: All routes use Wouter for smooth, no-reload navigation
 - **Query Parameters**: Pricing page supports `?location=` parameter for direct hangar selection
 
+## Bug Fixes (October 2025)
+
+### Critical Fixes Applied
+Three critical issues identified and resolved:
+
+1. **Publish Button Duplicate Key Error** (Fixed):
+   - **Issue**: Clicking "Publish Pricing" multiple times per day caused `duplicate key value violates unique constraint` error
+   - **Root Cause**: Label used `new Date().toLocaleDateString()` which was identical for all publishes on same day
+   - **Fix**: Changed to use ISO timestamp: `Pricing ${new Date().toISOString()}` for unique labels
+   - **File**: `client/src/pages/admin/UnifiedPricingConfigurator.tsx`
+
+2. **Hangar Locations Page Loading Hang** (Fixed):
+   - **Issue**: Page stuck in loading state, appeared to not load
+   - **Root Cause**: RLS policies blocked anonymous SELECT access to `pricing_locations`, `pricing_classes`, and `settings_pricing_assumptions` tables
+   - **Fix**: Added public SELECT policies:
+     ```sql
+     CREATE POLICY "pricing_locations_anon_select" ON pricing_locations FOR SELECT USING (active = true);
+     CREATE POLICY "pricing_classes_anon_select" ON pricing_classes FOR SELECT USING (active = true);
+     CREATE POLICY "assumptions_anon_select" ON settings_pricing_assumptions FOR SELECT USING (true);
+     ```
+   - **Result**: Pages now load instantly without authentication
+
+3. **Pricing Configurator Data Loading** (Fixed):
+   - **Issue**: Admin configurator showed empty tabs
+   - **Root Cause**: Same RLS policy issue prevented data loading
+   - **Fix**: Same policies above also resolved configurator data access
+   - **Result**: All tabs now display data correctly
+
+### Testing Validation
+- Hangar locations page: ✓ Loads with 2 cards, all navigation works
+- Pricing page: ✓ Location selector updates pricing correctly
+- Publish button: ✓ Can publish multiple times without errors
+- All public pages: ✓ Load without authentication
+
 ## External Dependencies
 - **Supabase**: Used for PostgreSQL database, authentication (`@supabase/supabase-js`), and Row Level Security (RLS).
 - **React 18**: Frontend library.
