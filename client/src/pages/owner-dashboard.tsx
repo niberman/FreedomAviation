@@ -239,7 +239,7 @@ export default function OwnerDashboard() {
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Tach Time</p>
                   <p className="text-xl font-semibold">
-                    1234.5
+                    {aircraft.tach_hours ? `${aircraft.tach_hours.toFixed(1)} hrs` : 'N/A'}
                   </p>
                 </div>
               </div>
