@@ -107,10 +107,10 @@ export function MembershipTiers() {
                 <Button 
                   className="w-full" 
                   variant={tier.popular ? "default" : "outline"}
-                  onClick={() => window.location.href = `/contact?source=tier_${tier.name.toLowerCase().replace(/\s+/g, '_')}`}
+                  onClick={() => window.location.href = '/pricing'}
                   data-testid={`button-configure-${tier.name.toLowerCase()}`}
                 >
-                  Contact Us
+                  See Full Pricing
                 </Button>
               </CardContent>
             </Card>
@@ -129,7 +129,7 @@ export function MembershipTiers() {
             
             <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               {activePartners.map((partner) => (
-                <Link key={partner.slug} href={`/contact?source=partner_${partner.slug}`}>
+                <Link key={partner.slug} href={`/pricing?hangar=${partner.slug}`}>
                   <Card className="hover-elevate cursor-pointer transition-all" data-testid={`card-partner-${partner.slug}`}>
                     <CardContent className="p-6">
                       <div className="flex items-center gap-4">
