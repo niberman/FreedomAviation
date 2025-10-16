@@ -7,7 +7,10 @@ import { Footer } from "@/components/footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Seo, getLocalBusinessJsonLd } from "@/components/Seo";
 import { allKeywords } from "@/seo/keywords";
-
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 export default function Home() {
   return (
     <div className="min-h-screen">
@@ -43,6 +46,7 @@ export default function Home() {
       <FeaturesGrid />
       <MembershipTiers />
       <OwnerPortalDemo />
+      
       <Testimonials />
       <Footer />
     </div>
