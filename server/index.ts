@@ -3,6 +3,28 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+const CANONICAL = "www.freedomaviationco.com";
+
+app.enable("trust proxy"); // important when behind a proxy/load balancer
+
+app.use((req, res, next) => {
+  const host = (req.headers.host || "").toLowerCase();
+  const proto =
+    (req.headers["x-forwarded-proto"] as string) ||
+    (req.secure ? "https" : "http");
+
+  // 1) Force host to CANONICAL
+  if (host !== CANONICAL) {
+    return res.redirect(301, `https://${CANONICAL}${req.originalUrl}`);
+  }
+
+  // 2) Force HTTPS without adding :443
+  if (proto !== "https") {
+    return res.redirect(301, `https://${CANONICAL}${req.originalUrl}`);
+  }
+
+  return next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -61,31 +83,30 @@ app.use((req, res, next) => {
     // Other ports are firewalled. Default to 5000 if not specified.
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
-    const PORT = process.env.PORT || '5000';
+    const PORT = process.env.PORT || "5000";
     const port = parseInt(PORT, 10);
-    
+
     log(`Starting server on port ${port} (from PORT=${PORT})`);
-    
+
     server.listen(port, "0.0.0.0", () => {
       log(`✓ Server successfully listening on port ${port}`);
       log(`✓ Environment: ${app.get("env")}`);
       log(`✓ Ready to accept connections`);
     });
 
-    server.on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
+    server.on("error", (error: any) => {
+      if (error.code === "EADDRINUSE") {
         log(`✗ Error: Port ${port} is already in use`);
-      } else if (error.code === 'EACCES') {
+      } else if (error.code === "EACCES") {
         log(`✗ Error: Permission denied to bind to port ${port}`);
       } else {
         log(`✗ Server error: ${error.message}`);
       }
-      console.error('Server startup error:', error);
+      console.error("Server startup error:", error);
       process.exit(1);
     });
-
   } catch (error) {
-    console.error('Failed to initialize server:', error);
+    console.error("Failed to initialize server:", error);
     log(`✗ Fatal error during server initialization: ${error}`);
     process.exit(1);
   }
