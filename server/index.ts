@@ -7,24 +7,27 @@ const CANONICAL = "www.freedomaviationco.com";
 
 app.enable("trust proxy"); // important when behind a proxy/load balancer
 
-app.use((req, res, next) => {
-  const host = (req.headers.host || "").toLowerCase();
-  const proto =
-    (req.headers["x-forwarded-proto"] as string) ||
-    (req.secure ? "https" : "http");
+// Only enforce canonical domain and HTTPS in production
+if (app.get("env") === "production") {
+  app.use((req, res, next) => {
+    const host = (req.headers.host || "").toLowerCase();
+    const proto =
+      (req.headers["x-forwarded-proto"] as string) ||
+      (req.secure ? "https" : "http");
 
-  // 1) Force host to CANONICAL
-  if (host !== CANONICAL) {
-    return res.redirect(301, `https://${CANONICAL}${req.originalUrl}`);
-  }
+    // 1) Force host to CANONICAL
+    if (host !== CANONICAL) {
+      return res.redirect(301, `https://${CANONICAL}${req.originalUrl}`);
+    }
 
-  // 2) Force HTTPS without adding :443
-  if (proto !== "https") {
-    return res.redirect(301, `https://${CANONICAL}${req.originalUrl}`);
-  }
+    // 2) Force HTTPS without adding :443
+    if (proto !== "https") {
+      return res.redirect(301, `https://${CANONICAL}${req.originalUrl}`);
+    }
 
-  return next();
-});
+    return next();
+  });
+}
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
