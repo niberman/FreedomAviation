@@ -54,11 +54,11 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
-                (720) 555-FREE
+                (970) 618-2094
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                fly@freedomaviation.com
+                info@freedomaviationco.com
               </li>
             </ul>
           </div>
