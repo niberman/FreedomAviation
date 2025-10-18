@@ -1,0 +1,80 @@
+	•	Provide a scripts/seed.ts and scripts/bootstrap.sql to create schema + seed data.
+	•	Add npm run dev, build, start, lint, test:unit, test:e2e, db:bootstrap, db:seed.
+
+3) Core personas & roles
+	•	Owner-Pilot (member): sees their aircraft, requests services, prepares aircraft for flight.
+	•	Ops Admin: manages aircraft, maintenance, consumables, detailing, work orders, reservations.
+	•	CFI: schedules instruction, signs off IPC/BFR, logs flights.
+
+Implement RLS so each Owner sees only their aircraft/data. Admin/CFI see assigned items; Ops Admin is superuser.
+
+4) Data model (Supabase tables)
+	•	profiles (id UUID PK, role enum: owner|cfi|admin, name, phone).
+	•	aircraft (id PK, tail_number unique, make, model, class_enum: class_i|class_ii|class_iii, base_airport, owner_id FK profiles).
+	•	memberships (id, aircraft_id FK, plan_code, start_date, status enum).
+	•	service_requests (id, aircraft_id, type enum: detail|db_update|o2|tks|oil|staging|maintenance|other, status enum: new|in_progress|done, requested_for timestamptz, notes).
+	•	readiness_tasks (id, aircraft_id, checklist_json, due_at, status).
+	•	maintenance_items (id, aircraft_id, title, hobbs_due, tach_due, calendar_due, status).
+	•	consumables (id, aircraft_id, type enum: oil|o2|tks|misc, qty, unit, last_top_off_at).
+	•	reservations (id, aircraft_id, start_at, end_at, purpose, created_by).
+	•	flight_logs (id, aircraft_id, date, hobbs_start, hobbs_end, cfi_id nullable, notes).
+	•	billing_methods (tokenized reference only), invoices (stub; no processor yet).
+
+Seed with 1 SR22T at KAPA (Class II) and four placeholder aircraft at F9.
+
+5) Membership pricing logic (config + UI)
+
+Implement a server-side config module for membership tiers and scaling rules. Use these references for copy/logic:
+	•	Scaling by hours flown/month → 0–10: weekly readiness + 1 full detail; 10–20: 2 details; 20–30: 3; 30–40: 4; 40+: on-demand concierge. Include “Always Included” list (fluids, avionics DB, pre/post-flight checks, ramp/hangar coordination, digital portal).  ￼
+	•	Base monthly by class → Class I (C182/Archer/Cherokee) $200; Class II (SR22/SR22T/DA40/Mooney) $550; Class III (Vision/TBM) $1,000. Also include the frequency/multipliers table in code as a constant so pricing can be recomputed. Add optional Freedom+ Concierge (+$200/mo) with the features listed.  ￼
+
+Create a “Freedom Configurator” modal that:
+	•	Accepts aircraft class + estimated monthly hours.
+	•	Shows included services, scaled details/month, readiness frequency, and computed price (base × multiplier + concierge add-on if selected).
+	•	Persists the chosen plan to memberships.
+
+6) Pages & UX (App Router)
+	•	/ (Marketing splash): hero with tagline “Just Fly. We Handle Everything.” + CTA “Open Owner Portal”. Include a compact explainer of classes/benefits from the references above and a footer with KAPA mention.  ￼
+	•	/login & /onboarding (Supabase Auth; collect name/phone; role assignment gated to admin).
+	•	/dashboard (Owner):
+	•	Top “Your Aircraft” card: tail number, make/model, base, hours/month (derived), current membership summary (class, plan, included services), and two primary actions inside this card:
+	•	Prepare Aircraft for Flight → opens a sheet to select date/time, tasks (stage on ramp, fuel coord (note only), fluid top-offs, avionics DB update), special notes. Creates a readiness_tasks record and any service_requests needed. Provide success toast and deep-link to request.
+	•	Request Service → opens a sheet with the enumerated service types (detail, db update, O₂, TKS, oil, staging, maintenance, other), requested time, notes.
+	•	Keep everything else behind a “More” page (link button).
+	•	/dashboard/more (Owner):
+	•	Boxes for Upcoming Reservations, Maintenance Due, Consumables, Pilot Currency, Insurance, Payment Methods, Support Tickets. These load from respective tables; show empty states. (But on the main dashboard, comment out these boxes—only keep “Your Aircraft” with the two actions inside it.)
+	•	/admin (Ops):
+	•	Kanban for service_requests (New → In Progress → Done) with drag/drop.
+	•	Aircraft table (filters by base; quick actions: create readiness task, top-off consumable, apply avionics DB update).
+	•	Maintenance due list (color badges for due soon/overdue).
+	•	Simple invoice generator (stubbed).
+	•	/cfi:
+	•	Schedule (read-only from reservations), flight log sign-offs, IPC/BFR tracking with notes.
+
+7) Re-implement “old buttons” behavior
+	•	The two actions now inside the “Your Aircraft” card must call the same handlers/routes the previous “Quick Actions” buttons used to call (create corresponding records and show toasts + optimistic updates).
+	•	Provide unit tests to prove both actions still create the same DB rows and state transitions.
+
+8) Brand & UI polish
+	•	Use clean aviation feel; motion on CTA hover; cards with rounded-2xl, subtle shadows; grid layouts.
+	•	shadcn/ui components: Card, Button, Sheet/Drawer, Dialog, Tabs, DataTable.
+	•	Include a tiny footer line with KAPA + contact.
+
+9) Security & RLS
+	•	Owners can only select their own aircraft in action sheets.
+	•	CFIs can only sign logs where cfi_id = their profile id.
+	•	Admin can read/write all.
+
+10) Acceptance criteria (write Playwright tests)
+	•	Owner login lands on /dashboard with exactly one card “Your Aircraft” + the two actions embedded.
+	•	“Prepare Aircraft for Flight” creates readiness_tasks and any linked service_requests; success toast appears; detail page link works.
+	•	“Request Service” creates a service_requests row with correct type/status.
+	•	Configurator computes expected price for Class II at 22 hours/month with Concierge on (assert math from the pricing tables).
+	•	Admin Kanban drag/drop changes status.
+	•	RLS: Owner A cannot load Owner B’s aircraft or requests (403).
+
+11) Deliverables
+	•	Complete repo with code + README (setup, env, scripts, seed).
+	•	SQL + seed scripts; RLS policies checked in.
+	•	Unit + e2e tests passing.
+	•	Deployed preview (Vercel config in repo).
