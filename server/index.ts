@@ -3,8 +3,12 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-const CANONICAL = "www.freedomaviationco.com";
 
+app.get("/healthz", (_req, res) => res.status(200).json({ ok: true }));
+const CANONICAL = "www.freedomaviationco.com";
+const DEV = app.get("env") === "development";
+const USE_VITE = DEV && !process.env.SKIP_VITE;
+log(`Dev=${DEV} UseVite=${USE_VITE} SkipVite=${!!process.env.SKIP_VITE}`);
 app.enable("trust proxy"); // important when behind a proxy/load balancer
 
 app.use((req, res, next) => {
@@ -73,7 +77,9 @@ app.use((req, res, next) => {
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
-    if (app.get("env") === "development") {
+    const DEV = app.get("env") === "development";
+const USE_VITE = DEV && !process.env.SKIP_VITE;
+if (USE_VITE) {
       await setupVite(app, server);
     } else {
       serveStatic(app);
