@@ -1,0 +1,131 @@
+You are working in a single Vite + React + Tailwind + Supabase app.
+
+GOAL
+Replace all “Request a Quote” patterns with a transparent, self-serve pricing experience. Brand hangars as selectable facility options (“Freedom Aviation Hangar (Fox 9)” and “Sky Harbour @ KAPA”) directly in pricing and onboarding. Keep tone premium and compliant.
+
+NON-NEGOTIABLES
+- No “Request a Quote” anywhere.
+- Primary CTA is self-serve: “See Plans & Start” and per-plan “Start with this plan”.
+- Pricing shows actual totals (base class + hangar component) in-page, not behind a form.
+- Hangars are presented as **options now** (availability noted), not future promises.
+
+========================================================
+A) GLOBAL COPY & CTA CHANGES
+========================================================
+1) Replace all “Request a Quote” with:
+   - Primary CTA (hero, nav): “See Plans & Start”
+   - Card CTA: “Start with this plan”
+   - Secondary CTA: “Talk to Ops” (links /contact)
+
+2) Homepage hero (replace existing):
+   H1: “Transparent Pricing. Colorado-Based.”
+   Sub: “Premium aircraft management, detailing, and pilot development for owner-operators across the Front Range.”
+   Buttons: [See Plans & Start](/pricing)  [Talk to Ops](/contact)
+
+3) Footer line (keep compliance):
+   “Facility options include Freedom Aviation Hangar (Fox 9) and Sky Harbour @ KAPA. Availability subject to facility approval.”
+
+========================================================
+B) PRICING PAGE (TRANSPARENT + HANGAR OPTIONS)
+========================================================
+Create/Update /src/pages/pricing.tsx with:
+- Left rail: **Facility Options** (radio or tiles):
+  • “No Hangar / Customer Hangar (0/mo)”
+  • “Freedom Aviation Hangar (Fox 9) (+$1,500/mo)”
+  • “Sky Harbour @ KAPA (+$2,000/mo)”
+- Main grid: **Class Plans** (cards for Class I, Class II (w/o hangar), Class II (w/ hangar), Class III)
+  Each card shows:
+   • Base monthly price
+   • Selected Hangar add-on (from left rail)
+   • Fees/ops breakdown (labor, overhead, CC fee)
+   • **Total monthly** (large, bold)
+   • Button: “Start with this plan” → /enroll?class=<slug>&facility=<slug>
+- Fine print: “Facility availability subject to final confirmation. Prices reflect representative class + facility options; aircraft-specific items may vary slightly.”
+
+Implementation:
+- Create /src/lib/pricing/{types.ts,calc.ts} with calcRow(assumptions, classCfg, row) and hangar = override ?? location.default_hangar_cost ?? 0.
+- Default assumptions and class prices from current code/DB; hangar defaults: FA Hangar = 1500, Sky Harbour = 2000, None = 0.
+- Persist the selected facility in querystring (?facility=fox9|skyharbour|none).
+
+========================================================
+C) PARTNER PAGES → “FACILITY OPTIONS”
+========================================================
+Refresh copy to brand as options **now** (text-only logos):
+- /partners/freedom-aviation-hangar: “Facility option: Freedom Aviation Hangar (Fox 9) — +$1,500/mo representative.”
+- /partners/sky-harbour: “Facility option: Sky Harbour @ KAPA — +$2,000/mo representative.”
+- Add a “Choose this facility” button → /pricing?facility=<slug>
+
+========================================================
+D) SELF-SERVE ENROLLMENT (NO QUOTES)
+========================================================
+1) DB (Supabase, idempotent):
+create table if not exists public.enrollments (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  user_id uuid references auth.users(id),
+  full_name text not null,
+  email text not null,
+  phone text,
+  aircraft_make text,
+  aircraft_model text,
+  tail_number text,
+  facility_slug text not null,      -- none | fox9 | skyharbour
+  class_name text not null,         -- e.g., Class II W Hangar
+  monthly_total numeric not null,   -- computed at submission
+  notes text
+);
+alter table public.enrollments enable row level security;
+create policy "enroll read own" on public.enrollments for select using (auth.uid() = user_id);
+create policy "enroll insert self" on public.enrollments for insert with check (auth.uid() = user_id);
+create policy "enroll admin read" on public.enrollments for select using (exists(select 1 from public.user_roles ur where ur.user_id=auth.uid() and ur.role='ADMIN'));
+
+2) /src/pages/enroll.tsx (new):
+- Reads class & facility from querystring, shows computed transparent total (using pricing calc).
+- Short form: name, email, phone, aircraft (make/model/tail), optional notes.
+- On submit: inserts into public.enrollments with monthly_total used at submission time.
+- Confirmation screen: “Thanks! Ops will confirm facility availability and activate your plan.”
+
+3) Owner Dashboard first-run:
+- If user has an enrollment row, show a **Setup card**:
+  “Selected facility: [name]. We’re confirming availability. You can update documents and pilot currency while we finalize.”
+
+========================================================
+E) SEO: REMOVE “QUOTE” LANGUAGE
+========================================================
+Update Seo.tsx usages and page metadata to remove “quote” language. Use keywords centered on “transparent pricing”, “aircraft management pricing”, “Colorado aircraft management”.
+
+========================================================
+F) NAV & ROUTING
+========================================================
+- Nav primary items: Pricing, Services, Facility Options, Contact, Sign In.
+- Pricing and partner pages link to /enroll with the chosen class/facility.
+
+========================================================
+G) ANALYTICS
+========================================================
+Track:
+- pricing_view (facility, class),
+- pricing_facility_change (prev, next),
+- enroll_start (facility, class),
+- enroll_submit (facility, class, success).
+
+========================================================
+H) ACCESSIBILITY & PERF
+========================================================
+- Facility tiles must be keyboard-selectable radio group with ARIA.
+- Announce total monthly updates via aria-live="polite".
+- Lazy-load partner page images; ensure alt text and one <h1>/page.
+
+========================================================
+I) ACCEPTANCE CRITERIA
+========================================================
+- No “Request a Quote” anywhere (search the repo).
+- Pricing page shows in-page totals that change instantly when facility changes.
+- Partner pages clearly labeled as **Facility Options** with +$/mo.
+- /enroll accepts class+facility, stores an enrollment row with the calculated monthly_total.
+- Dashboard shows first-run “Setup” card referencing selected facility.
+- SEO & nav updated accordingly.
+
+OUTPUT
+- Commit in small PRs (pricing page, enroll page, partner copy).
+- Include screenshots of pricing totals for each facility and the enroll flow confirmation.

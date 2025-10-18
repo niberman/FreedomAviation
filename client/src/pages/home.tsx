@@ -21,34 +21,32 @@ export default function Home() {
         canonical="/"
         jsonLd={getLocalBusinessJsonLd()}
       />
-
+      
       <header className="fixed top-0 right-0 z-50 p-4">
         <ThemeToggle />
       </header>
-
+      
       <HeroSection />
-
+      
       {/* SEO Keywords - Screen reader only */}
       <div className="sr-only">
         <h2>Colorado Front Range Aircraft Services</h2>
         <p>
-          Serving KAPA (Centennial Airport), KBJC (Rocky Mountain Metropolitan),
-          KFTG (Front Range), KDEN (Denver International), KCOS (Colorado
-          Springs), KBDU (Boulder), KFNL (Fort Collins-Loveland), and KGXY
-          (Greeley-Weld County).
+          Serving KAPA (Centennial Airport), KBJC (Rocky Mountain Metropolitan), 
+          KFTG (Front Range), KDEN (Denver International), KCOS (Colorado Springs), 
+          KBDU (Boulder), KFNL (Fort Collins-Loveland), and KGXY (Greeley-Weld County).
         </p>
         <p>
-          Services include aircraft management, aircraft detailing, flight
-          instruction, pilot development, maintenance coordination, hangar
-          services, fuel management, and aircraft concierge services for
-          owner-operators in Colorado.
+          Services include aircraft management, aircraft detailing, flight instruction, 
+          pilot development, maintenance coordination, hangar services, fuel management, 
+          and aircraft concierge services for owner-operators in Colorado.
         </p>
       </div>
-
+      
       <FeaturesGrid />
-
-      <OwnerPortalDemo />
       <MembershipTiers />
+      <OwnerPortalDemo />
+      
       <Testimonials />
       <Footer />
     </div>
