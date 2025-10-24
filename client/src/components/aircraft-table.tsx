@@ -1,33 +1,87 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Wrench, Plus, Database } from "lucide-react";
 import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL!,
+  import.meta.env.VITE_SUPABASE_ANON_KEY!,
+);
 
 interface Aircraft {
-  id: string;
+  id: string; // UUID from public.aircraft.id
   tailNumber: string;
   make: string;
   model: string;
   class: string;
-  baseAirport: string;
-  owner: string;
+  baseAirport: string; // maps to aircraft.base_location
+  owner: string; // display only
 }
 
-export function AircraftTable() {
+export function AircraftTable({ items }: { items: Aircraft[] }) {
   const [baseFilter, setBaseFilter] = useState<string>("all");
 
-  // TODO: remove mock functionality
-  const aircraft: Aircraft[] = [
-    { id: "1", tailNumber: "N847SR", make: "Cirrus", model: "SR22T", class: "Class II", baseAirport: "KAPA", owner: "Sarah Mitchell" },
-    { id: "2", tailNumber: "N123JA", make: "Cirrus", model: "Vision Jet", class: "Class III", baseAirport: "KAPA", owner: "James Anderson" },
-    { id: "3", tailNumber: "N456AB", make: "Cessna", model: "182T", class: "Class I", baseAirport: "KAPA", owner: "Mike Thompson" },
-  ];
+  const filteredAircraft =
+    baseFilter === "all"
+      ? items
+      : items.filter((a) => a.baseAirport === baseFilter);
 
-  const filteredAircraft = baseFilter === "all" 
-    ? aircraft 
-    : aircraft.filter(a => a.baseAirport === baseFilter);
+  async function createReadinessTask(aircraftId: string) {
+    // service_tasks: aircraft_id (uuid) NOT NULL, type text NOT NULL, status default 'pending'
+    await supabase
+      .from("service_tasks")
+      .insert([
+        {
+          aircraft_id: aircraftId,
+          type: "readiness",
+          status: "pending",
+          notes: "Created from dashboard",
+        },
+      ]);
+  }
+
+  async function topOffOil(aircraftId: string) {
+    // consumable_events requires: aircraft_id, kind ('OIL'|'O2'|'TKS')
+    await supabase
+      .from("consumable_events")
+      .insert([
+        {
+          aircraft_id: aircraftId,
+          kind: "OIL",
+          quantity: 2,
+          unit: "qt",
+          notes: "Top-off request",
+        },
+      ]);
+  }
+
+  async function markAvionicsDbUpdate(aircraftId: string) {
+    await supabase
+      .from("service_tasks")
+      .insert([
+        {
+          aircraft_id: aircraftId,
+          type: "avionics_db_update",
+          status: "pending",
+        },
+      ]);
+  }
 
   return (
     <div className="space-y-4">
@@ -58,49 +112,60 @@ export function AircraftTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAircraft.map((aircraft) => (
-              <TableRow key={aircraft.id} data-testid={`aircraft-row-${aircraft.id}`}>
-                <TableCell className="font-mono font-semibold">
-                  {aircraft.tailNumber}
-                </TableCell>
-                <TableCell>
-                  {aircraft.make} {aircraft.model}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{aircraft.class}</Badge>
-                </TableCell>
-                <TableCell className="font-mono">{aircraft.baseAirport}</TableCell>
-                <TableCell>{aircraft.owner}</TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-end gap-1">
-                    <Button 
-                      size="icon" 
-                      variant="ghost"
-                      onClick={() => console.log("Create readiness task")}
-                      data-testid={`button-readiness-${aircraft.id}`}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      size="icon" 
-                      variant="ghost"
-                      onClick={() => console.log("Top-off consumable")}
-                      data-testid={`button-topoff-${aircraft.id}`}
-                    >
-                      <Wrench className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      size="icon" 
-                      variant="ghost"
-                      onClick={() => console.log("Update avionics DB")}
-                      data-testid={`button-db-update-${aircraft.id}`}
-                    >
-                      <Database className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {filteredAircraft.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="text-center text-muted-foreground"
+                >
+                  No aircraft at this base yet.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredAircraft.map((a) => (
+                <TableRow key={a.id} data-testid={`aircraft-row-${a.id}`}>
+                  <TableCell className="font-mono font-semibold">
+                    {a.tailNumber}
+                  </TableCell>
+                  <TableCell>
+                    {a.make} {a.model}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{a.class}</Badge>
+                  </TableCell>
+                  <TableCell className="font-mono">{a.baseAirport}</TableCell>
+                  <TableCell>{a.owner}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => createReadinessTask(a.id)}
+                        data-testid={`button-readiness-${a.id}`}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => topOffOil(a.id)}
+                        data-testid={`button-topoff-${a.id}`}
+                      >
+                        <Wrench className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => markAvionicsDbUpdate(a.id)}
+                        data-testid={`button-db-update-${a.id}`}
+                      >
+                        <Database className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
