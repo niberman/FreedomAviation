@@ -1,5 +1,5 @@
-import { Testimonials } from "../testimonials";
-
-export default function TestimonialsExample() {
-  return <Testimonials />;
-}
+// import { Testimonials } from "../testimonials";
+// 
+// export default function TestimonialsExample() {
+//   return <Testimonials />;
+// }

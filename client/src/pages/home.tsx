@@ -21,13 +21,10 @@ export default function Home() {
         canonical="/"
         jsonLd={getLocalBusinessJsonLd()}
       />
-
       <header className="fixed top-0 right-0 z-50 p-4">
         <ThemeToggle />
       </header>
-
       <HeroSection />
-
       {/* SEO Keywords - Screen reader only */}
       <div className="sr-only">
         <h2>Colorado Front Range Aircraft Services</h2>
@@ -44,12 +41,11 @@ export default function Home() {
           owner-operators in Colorado. Get freedom from independence aviation.
         </p>
       </div>
-
       <FeaturesGrid />
       <MembershipTiers />
       <OwnerPortalDemo />
+      {/*Testimonials />*/}
 
-      <Testimonials />
       <Footer />
     </div>
   );
