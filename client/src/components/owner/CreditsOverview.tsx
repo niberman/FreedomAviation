@@ -21,7 +21,7 @@ export function CreditsOverview() {
           )
         `)
         .eq("owner_id", user.id)
-        .eq("is_active", true)
+        .eq("active", true)
         .maybeSingle();
       if (error) throw error;
       return data;

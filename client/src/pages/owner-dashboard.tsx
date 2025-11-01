@@ -3,11 +3,14 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { QuickActions } from "@/features/owner/components/QuickActions";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT, DEMO_USER } from "@/lib/demo-data";
 import logoImage from "@assets/freedom-aviation-logo.png";
+import { Link } from "wouter";
+import { ArrowRight } from "lucide-react";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
@@ -84,7 +87,7 @@ export default function OwnerDashboard() {
         .from("memberships")
         .select("*")
         .eq("owner_id", user.id)
-        .eq("is_active", true)
+        .eq("active", true)
         .maybeSingle();
       
       if (error) {
@@ -181,6 +184,15 @@ export default function OwnerDashboard() {
           isDemo={isDemo}
         />
       )}
+
+      <div className="flex justify-center pt-4">
+        <Link href="/owner-more">
+          <Button variant="outline" size="lg" data-testid="button-view-more">
+            View More Details
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }
