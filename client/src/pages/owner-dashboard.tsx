@@ -3,12 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useEffect } from "react";
-import { CreditsOverview } from "@/components/owner/CreditsOverview";
 import { QuickActions } from "@/features/owner/components/QuickActions";
-import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
-import { BillingCard } from "@/features/owner/components/BillingCard";
-import { DocsCard } from "@/features/owner/components/DocsCard";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT, DEMO_USER } from "@/lib/demo-data";
@@ -36,54 +31,6 @@ export default function OwnerDashboard() {
   
   const aircraft = aircraftList && aircraftList.length > 0 ? aircraftList[0] : null;
 
-  const { data: nextFlight, refetch: refetchNextFlight } = useQuery({
-    queryKey: ["next-flight", isDemo ? "demo" : user?.id],
-    enabled: isDemo || Boolean(user?.id),
-    queryFn: async () => {
-      if (isDemo) {
-        const { DEMO_NEXT_FLIGHT } = await import("@/lib/demo-data");
-        return DEMO_NEXT_FLIGHT;
-      }
-      if (!user?.id) return null;
-      const { data } = await supabase
-        .from("service_requests")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("service_type", "Pre-Flight Concierge")
-        .not("requested_departure", "is", null)
-        .gte("requested_departure", new Date().toISOString())
-        .order("requested_departure", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      return data;
-    }
-  });
-
-  const { data: serviceRequests = [], refetch: refetchServiceRequests } = useQuery({
-    queryKey: ["service-requests", isDemo ? "demo" : user?.id, aircraft?.id],
-    enabled: isDemo || Boolean(user?.id && aircraft?.id),
-    queryFn: async () => {
-      if (isDemo) {
-        const { DEMO_SERVICE_REQUESTS } = await import("@/lib/demo-data");
-        return DEMO_SERVICE_REQUESTS;
-      }
-      if (!user?.id || !aircraft?.id) return [];
-      const { data, error } = await supabase
-        .from("service_requests")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("aircraft_id", aircraft.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      
-      if (error) {
-        console.error("Error fetching service requests:", error);
-        return [];
-      }
-      
-      return data || [];
-    }
-  });
 
   const { data: serviceTasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["service-tasks", aircraft?.id],
@@ -122,32 +69,6 @@ export default function OwnerDashboard() {
     },
   });
 
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
-    queryKey: ["invoices", aircraft?.id, isDemo ? "demo" : user?.id],
-    enabled: isDemo || Boolean(aircraft?.id && user?.id),
-    queryFn: async () => {
-      if (isDemo) {
-        const { DEMO_INVOICES } = await import("@/lib/demo-data");
-        return DEMO_INVOICES;
-      }
-      if (!aircraft?.id || !user?.id) return [];
-      
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
-        .eq("aircraft_id", aircraft.id)
-        .eq("owner_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(6);
-      
-      if (error) {
-        console.error("Error fetching invoices:", error);
-        return [];
-      }
-      
-      return data;
-    },
-  });
 
   const { data: membership = null } = useQuery({
     queryKey: ["membership", isDemo ? "demo" : user?.id],
@@ -175,42 +96,6 @@ export default function OwnerDashboard() {
     },
   });
 
-  useEffect(() => {
-    if (isDemo || !user?.id) return;
-
-    const channel = supabase
-      .channel('service-requests-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'service_requests',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          refetchNextFlight();
-          refetchServiceRequests();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'service_requests',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          refetchServiceRequests();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isDemo, user?.id, refetchNextFlight, refetchServiceRequests]);
 
   const readinessTypes = [
     "readiness",
@@ -288,28 +173,14 @@ export default function OwnerDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {aircraft && (user || isDemo) && (
-          <QuickActions 
-            aircraftId={aircraft.id} 
-            userId={isDemo ? DEMO_USER.id : user!.id}
-            aircraftData={aircraft}
-            isDemo={isDemo}
-          />
-        )}
-        <BillingCard invoices={invoices} isLoading={invoicesLoading} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ServiceTimeline 
-          tasks={serviceTasks} 
-          requests={serviceRequests}
-          isLoading={tasksLoading} 
+      {aircraft && (user || isDemo) && (
+        <QuickActions 
+          aircraftId={aircraft.id} 
+          userId={isDemo ? DEMO_USER.id : user!.id}
+          aircraftData={aircraft}
+          isDemo={isDemo}
         />
-        <DocsCard />
-      </div>
-
-      <CreditsOverview />
+      )}
     </div>
   );
 }
