@@ -18,14 +18,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserPlus, Mail, User, Plane } from "lucide-react";
+import { Mail, User, Plane, Pencil, Info } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Client {
   id: string;
@@ -39,10 +39,10 @@ interface Client {
 
 export function ClientsTable() {
   const { toast } = useToast();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newClientEmail, setNewClientEmail] = useState("");
-  const [newClientName, setNewClientName] = useState("");
-  const [newClientPhone, setNewClientPhone] = useState("");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editClientId, setEditClientId] = useState("");
+  const [editClientName, setEditClientName] = useState("");
+  const [editClientPhone, setEditClientPhone] = useState("");
 
   // Fetch all clients (owners)
   const { data: clients = [], isLoading } = useQuery({
@@ -71,46 +71,29 @@ export function ClientsTable() {
     },
   });
 
-  // Create new client mutation
-  const createClientMutation = useMutation({
+  // Update existing client
+  const updateClientMutation = useMutation({
     mutationFn: async () => {
-      // First, create auth user
-      const { data: authData, error: signUpError } = await supabase.auth.admin.createUser({
-        email: newClientEmail,
-        email_confirm: true,
-        user_metadata: {
-          full_name: newClientName,
-        },
-      });
-
-      if (signUpError) throw signUpError;
-      if (!authData.user) throw new Error("Failed to create user");
-
-      // Then create user profile
-      const { error: profileError } = await supabase
+      const { error } = await supabase
         .from('user_profiles')
-        .insert([
-          {
-            id: authData.user.id,
-            email: newClientEmail,
-            full_name: newClientName,
-            phone: newClientPhone || null,
-            role: 'owner',
-          },
-        ]);
+        .update({
+          full_name: editClientName,
+          phone: editClientPhone || null,
+        })
+        .eq('id', editClientId);
 
-      if (profileError) throw profileError;
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       queryClient.invalidateQueries({ queryKey: ['/api/owners'] });
-      setIsAddDialogOpen(false);
-      setNewClientEmail("");
-      setNewClientName("");
-      setNewClientPhone("");
+      setIsEditDialogOpen(false);
+      setEditClientId("");
+      setEditClientName("");
+      setEditClientPhone("");
       toast({
-        title: "Client added",
-        description: "New client has been successfully added.",
+        title: "Client updated",
+        description: "Client information has been updated successfully.",
       });
     },
     onError: (error: Error) => {
@@ -122,17 +105,24 @@ export function ClientsTable() {
     },
   });
 
-  const handleAddClient = (e: React.FormEvent) => {
+  const handleEditClient = (client: Client) => {
+    setEditClientId(client.id);
+    setEditClientName(client.full_name);
+    setEditClientPhone(client.phone || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateClient = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClientEmail || !newClientName) {
+    if (!editClientName) {
       toast({
-        title: "Missing fields",
-        description: "Email and name are required.",
+        title: "Missing name",
+        description: "Name is required.",
         variant: "destructive",
       });
       return;
     }
-    createClientMutation.mutate();
+    updateClientMutation.mutate();
   };
 
   if (isLoading) {
@@ -150,80 +140,17 @@ export function ClientsTable() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold">Client Management</h2>
-          <p className="text-sm text-muted-foreground">Manage owner accounts and information</p>
+          <p className="text-sm text-muted-foreground">View and manage owner accounts</p>
         </div>
-        
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-client">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Client
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Client</DialogTitle>
-              <DialogDescription>
-                Create a new owner account. They will receive an email to set their password.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddClient}>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="John Doe"
-                    value={newClientName}
-                    onChange={(e) => setNewClientName(e.target.value)}
-                    data-testid="input-client-name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    value={newClientEmail}
-                    onChange={(e) => setNewClientEmail(e.target.value)}
-                    data-testid="input-client-email"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone (optional)</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    value={newClientPhone}
-                    onChange={(e) => setNewClientPhone(e.target.value)}
-                    data-testid="input-client-phone"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createClientMutation.isPending}
-                  data-testid="button-save-client"
-                >
-                  {createClientMutation.isPending ? "Adding..." : "Add Client"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
+
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Clients shown here are users who have signed up through the authentication system. 
+          To add a new client, have them create an account through the sign-up page first.
+        </AlertDescription>
+      </Alert>
 
       <Card>
         <CardHeader>
@@ -235,7 +162,7 @@ export function ClientsTable() {
         <CardContent>
           {clients.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
-              No clients found. Add your first client to get started.
+              No clients found. Clients must sign up through the authentication system first.
             </p>
           ) : (
             <Table>
@@ -247,6 +174,7 @@ export function ClientsTable() {
                   <TableHead>Aircraft</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -274,6 +202,16 @@ export function ClientsTable() {
                     <TableCell>
                       <Badge variant="secondary">Active</Badge>
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditClient(client)}
+                        data-testid={`button-edit-${client.id}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -281,6 +219,60 @@ export function ClientsTable() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Client Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Client</DialogTitle>
+            <DialogDescription>
+              Update client information
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateClient}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Full Name *</Label>
+                <Input
+                  id="edit-name"
+                  placeholder="John Doe"
+                  value={editClientName}
+                  onChange={(e) => setEditClientName(e.target.value)}
+                  data-testid="input-edit-client-name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone (optional)</Label>
+                <Input
+                  id="edit-phone"
+                  type="tel"
+                  placeholder="+1 (555) 123-4567"
+                  value={editClientPhone}
+                  onChange={(e) => setEditClientPhone(e.target.value)}
+                  data-testid="input-edit-client-phone"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateClientMutation.isPending}
+                data-testid="button-update-client"
+              >
+                {updateClientMutation.isPending ? "Updating..." : "Update Client"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
