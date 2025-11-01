@@ -5,39 +5,15 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Building2, Plane } from "lucide-react";
-import { PACKAGES } from "@/lib/pricing-packages";
-
-// Fixed hangar locations
-const HANGAR_OPTIONS = [
-  {
-    id: "none",
-    name: "No Hangar",
-    slug: "none",
-    cost: 0,
-    description: "I'll arrange my own hangar or tie-down",
-    icon: Plane,
-  },
-  {
-    id: "sky-harbour",
-    name: "Sky Harbour — Denver (KAPA)",
-    slug: "sky-harbour",
-    cost: 2000,
-    description: "Premium hangar facility with full amenities",
-    icon: Building2,
-  },
-  {
-    id: "f9",
-    name: "F9 — Centennial (KAPA)",
-    slug: "f9",
-    cost: 1500,
-    description: "Our home base with direct ramp access",
-    icon: Building2,
-  },
-];
+import { Check, Building2, Plane, Loader2 } from "lucide-react";
+import { useClasses, useLocations } from "@/features/pricing/hooks";
 
 export default function PricingFixed() {
   const [, navigate] = useLocation();
+  
+  // Fetch pricing data from database
+  const { data: pricingClasses, isLoading: isLoadingClasses } = useClasses();
+  const { data: locations, isLoading: isLoadingLocations } = useLocations();
   
   // Load hangar selection from localStorage
   const [selectedHangarId, setSelectedHangarId] = useState<string>(() => {
@@ -54,12 +30,51 @@ export default function PricingFixed() {
     }
   }, [selectedHangarId]);
 
-  const selectedHangar = HANGAR_OPTIONS.find(h => h.id === selectedHangarId) || HANGAR_OPTIONS[0];
-  const hangarCost = selectedHangar.cost;
+  // Transform database locations to hangar options format
+  const hangarOptions = locations ? [
+    {
+      id: "none",
+      slug: "none",
+      name: "No Hangar",
+      cost: 0,
+      description: "I'll arrange my own hangar or tie-down",
+      icon: Plane,
+    },
+    ...locations.map(loc => ({
+      id: loc.slug,
+      slug: loc.slug,
+      name: loc.name,
+      cost: loc.hangar_cost_monthly,
+      description: loc.description || "Premium hangar facility",
+      icon: Building2,
+    }))
+  ] : [];
+
+  const selectedHangar = hangarOptions.find(h => h.id === selectedHangarId) || hangarOptions[0];
+  const hangarCost = selectedHangar?.cost || 0;
 
   const handleContinue = (packageId: string) => {
     navigate(`/contact?source=pricing_${packageId}&hangar=${selectedHangarId}`);
   };
+
+  // Show loading state
+  if (isLoadingClasses || isLoadingLocations) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" data-testid="loading-spinner" />
+      </div>
+    );
+  }
+
+  // Transform pricing classes to packages format
+  const packages = pricingClasses?.map((cls, index) => ({
+    id: cls.slug,
+    title: cls.name,
+    examples: cls.description ? [cls.description] : [],
+    baseMonthly: cls.base_monthly,
+    includes: cls.features?.benefits || [],
+    isPopular: index === 1 && pricingClasses.length === 3, // Middle package
+  })) || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,7 +100,7 @@ export default function PricingFixed() {
             </div>
             
             <div className="grid md:grid-cols-3 gap-4">
-              {HANGAR_OPTIONS.map((hangar) => {
+              {hangarOptions.map((hangar) => {
                 const isSelected = selectedHangarId === hangar.id;
                 const Icon = hangar.icon;
                 
@@ -143,9 +158,9 @@ export default function PricingFixed() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              {PACKAGES.map((pkg, index) => {
+              {packages.map((pkg, index) => {
                 const totalPrice = pkg.baseMonthly + hangarCost;
-                const isMiddle = index === 1;
+                const isMiddle = pkg.isPopular;
 
                 return (
                   <Card 
@@ -176,36 +191,19 @@ export default function PricingFixed() {
                           <div>Base service: ${pkg.baseMonthly.toLocaleString()}</div>
                           <div>Hangar: ${hangarCost.toLocaleString()}</div>
                         </div>
-                        <div className="mt-3 text-xs text-muted-foreground">
-                          Base rate for 0-10 hours/month
-                        </div>
                       </div>
 
                       <div className="flex-1">
                         <div className="text-sm font-medium mb-3">Includes:</div>
                         <ul className="space-y-2">
-                          {pkg.includes.slice(0, 4).map((benefit, idx) => (
+                          {pkg.includes.slice(0, 5).map((benefit, idx) => (
                             <li key={idx} className="flex items-start gap-2 text-sm">
                               <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                               <span className="text-muted-foreground">{benefit}</span>
                             </li>
                           ))}
                         </ul>
-                        
-                        {/* Hours Scaling Info */}
-                        <div className="mt-4 p-3 bg-muted/50 rounded-md">
-                          <div className="text-xs font-medium mb-2">Hours Scaling:</div>
-                          <div className="space-y-1">
-                            {pkg.hours.map((band) => (
-                              <div key={band.range} className="flex justify-between text-xs text-muted-foreground">
-                                <span>{band.range} hrs</span>
-                                <span>{band.priceMultiplier}x</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        </div>
+                      </div>
 
                       <Button 
                         className="w-full mt-6" 
