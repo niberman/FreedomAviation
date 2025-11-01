@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 interface ServiceRequest {
   id: string;
@@ -12,13 +14,18 @@ interface ServiceRequest {
   status: "new" | "in_progress" | "done";
 }
 
-export function KanbanBoard() {
-  // TODO: remove mock functionality
-  const [requests, setRequests] = useState<ServiceRequest[]>([
-    { id: "1", tailNumber: "N847SR", type: "detail", requestedFor: "2024-10-15", status: "new" },
-    { id: "2", tailNumber: "N123JA", type: "maintenance", requestedFor: "2024-10-16", status: "in_progress" },
-    { id: "3", tailNumber: "N456AB", type: "db_update", requestedFor: "2024-10-14", status: "done" },
-  ]);
+interface KanbanBoardProps {
+  items?: ServiceRequest[];
+}
+
+export function KanbanBoard({ items = [] }: KanbanBoardProps) {
+  const [requests, setRequests] = useState<ServiceRequest[]>(items);
+  const { toast } = useToast();
+
+  // Update local state when props change
+  useEffect(() => {
+    setRequests(items);
+  }, [items]);
 
   const columns = [
     { id: "new", title: "New", color: "bg-blue-500" },
@@ -30,13 +37,35 @@ export function KanbanBoard() {
     e.dataTransfer.setData("requestId", requestId);
   };
 
-  const handleDrop = (e: React.DragEvent, newStatus: typeof columns[number]["id"]) => {
+  const handleDrop = async (e: React.DragEvent, newStatus: typeof columns[number]["id"]) => {
     e.preventDefault();
     const requestId = e.dataTransfer.getData("requestId");
+    
+    // Optimistically update UI
     setRequests(prev => prev.map(req => 
       req.id === requestId ? { ...req, status: newStatus } : req
     ));
-    console.log(`Moved request ${requestId} to ${newStatus}`);
+
+    // Update in database
+    const { error } = await supabase
+      .from('service_requests')
+      .update({ status: newStatus })
+      .eq('id', requestId);
+
+    if (error) {
+      // Revert on error
+      setRequests(items);
+      toast({
+        title: "Error",
+        description: "Failed to update request status",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Status updated",
+        description: `Request moved to ${newStatus.replace('_', ' ')}`,
+      });
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
