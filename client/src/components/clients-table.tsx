@@ -48,6 +48,17 @@ export function ClientsTable() {
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['/api/clients'],
     queryFn: async () => {
+      console.log('[ClientsTable] Fetching clients...');
+      
+      // First, let's check ALL users to debug
+      const { data: allUsers, error: allError } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email, role')
+        .order('created_at', { ascending: false });
+      
+      console.log('[ClientsTable] ALL users in database:', allUsers, 'Error:', allError);
+      
+      // Now fetch only owners
       const { data, error } = await supabase
         .from('user_profiles')
         .select(`
@@ -62,12 +73,20 @@ export function ClientsTable() {
         .eq('role', 'owner')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      console.log('[ClientsTable] Owners query result:', { data, error });
       
-      return (data || []).map((client: any) => ({
+      if (error) {
+        console.error('[ClientsTable] Error fetching clients:', error);
+        throw error;
+      }
+      
+      const mapped = (data || []).map((client: any) => ({
         ...client,
         aircraft_count: client.aircraft?.[0]?.count || 0,
       }));
+      
+      console.log('[ClientsTable] Mapped clients:', mapped);
+      return mapped;
     },
   });
 
