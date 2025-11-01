@@ -129,9 +129,9 @@ CREATE POLICY "Users can update own profile" ON public.user_profiles
   FOR UPDATE USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
 
-CREATE POLICY "Admins can view all profiles" ON public.user_profiles
+CREATE POLICY "Admins and CFIs can view all profiles" ON public.user_profiles
   FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
   );
 
 CREATE POLICY "Admins can update all profiles" ON public.user_profiles
@@ -421,7 +421,53 @@ RETURNS UUID AS $$
 DECLARE
   v_invoice_id UUID;
   v_invoice_number TEXT;
+  v_user_role TEXT;
+  v_aircraft_owner_id UUID;
 BEGIN
+  -- Verify the caller is authenticated
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+  
+  -- Verify the CFI ID matches the authenticated user (or user is admin)
+  IF p_cfi_id != auth.uid() THEN
+    -- Check if user is admin
+    SELECT role INTO v_user_role
+    FROM public.user_profiles
+    WHERE id = auth.uid();
+    
+    IF v_user_role != 'admin' THEN
+      RAISE EXCEPTION 'CFI ID must match authenticated user';
+    END IF;
+  END IF;
+  
+  -- Verify user has CFI or admin role
+  SELECT role INTO v_user_role
+  FROM public.user_profiles
+  WHERE id = auth.uid();
+  
+  IF v_user_role NOT IN ('cfi', 'admin') THEN
+    RAISE EXCEPTION 'Only CFIs and admins can create instruction invoices';
+  END IF;
+  
+  -- Verify aircraft exists and belongs to owner
+  SELECT owner_id INTO v_aircraft_owner_id
+  FROM public.aircraft
+  WHERE id = p_aircraft_id;
+  
+  IF v_aircraft_owner_id IS NULL THEN
+    RAISE EXCEPTION 'Aircraft not found';
+  END IF;
+  
+  IF v_aircraft_owner_id != p_owner_id THEN
+    RAISE EXCEPTION 'Aircraft does not belong to the specified owner';
+  END IF;
+  
+  -- Verify owner exists
+  IF NOT EXISTS (SELECT 1 FROM public.user_profiles WHERE id = p_owner_id) THEN
+    RAISE EXCEPTION 'Owner not found';
+  END IF;
+  
   -- Generate invoice number
   v_invoice_number := 'INV-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || SUBSTRING(gen_random_uuid()::TEXT, 1, 8);
   
@@ -466,7 +512,29 @@ CREATE OR REPLACE FUNCTION public.finalize_invoice(p_invoice_id UUID)
 RETURNS VOID AS $$
 DECLARE
   v_total_cents INTEGER;
+  v_cfi_id UUID;
+  v_is_admin BOOLEAN;
 BEGIN
+  -- Check authorization: only CFI who created it or admin can finalize
+  SELECT created_by_cfi_id INTO v_cfi_id
+  FROM public.invoices
+  WHERE id = p_invoice_id AND category = 'instruction';
+  
+  IF v_cfi_id IS NULL THEN
+    RAISE EXCEPTION 'Invoice not found or not an instruction invoice';
+  END IF;
+  
+  -- Check if user is admin
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_profiles 
+    WHERE id = auth.uid() AND role = 'admin'
+  ) INTO v_is_admin;
+  
+  -- Verify authorization: CFI who created it or admin
+  IF v_cfi_id != auth.uid() AND NOT v_is_admin THEN
+    RAISE EXCEPTION 'Not authorized to finalize this invoice';
+  END IF;
+  
   -- Calculate total from invoice lines
   SELECT COALESCE(SUM(quantity * unit_cents), 0)
   INTO v_total_cents
@@ -482,3 +550,7 @@ BEGIN
   WHERE id = p_invoice_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permissions on RPC functions
+GRANT EXECUTE ON FUNCTION public.create_instruction_invoice TO authenticated;
+GRANT EXECUTE ON FUNCTION public.finalize_invoice TO authenticated;
