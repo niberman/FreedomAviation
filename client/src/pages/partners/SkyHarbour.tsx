@@ -1,14 +1,29 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { useLocations } from "@/features/pricing/hooks";
 
 export default function SkyHarbour() {
+  const { data: locations, isLoading } = useLocations();
+  
   useEffect(() => {
     // Track page view
     console.log("Sky Harbour partner page viewed");
   }, []);
+
+  // Find Sky Harbour location pricing
+  const skyHarbour = locations?.find(loc => loc.slug === 'sky-harbour');
+  const hangarCost = skyHarbour?.hangar_cost_monthly || 2000; // Fallback to 2000
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -56,7 +71,7 @@ export default function SkyHarbour() {
                   <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
                   <h3 className="font-semibold text-lg mb-2">Transparent Pricing</h3>
                   <p className="text-muted-foreground">
-                    Hangar costs ($2,000/mo) included in your monthly management fee
+                    Hangar costs (${hangarCost.toLocaleString()}/mo) included in your monthly management fee
                   </p>
                 </CardContent>
               </Card>
@@ -93,7 +108,7 @@ export default function SkyHarbour() {
                 <h3 className="font-semibold text-lg mb-2">Is hangar cost included in pricing?</h3>
                 <p className="text-muted-foreground">
                   Yes! Sky Harbour hangar costs are transparently included in our pricing calculator
-                  and reflected in your monthly management fee. The default hangar cost is $2,000/month.
+                  and reflected in your monthly management fee. The hangar cost is ${hangarCost.toLocaleString()}/month.
                 </p>
               </div>
               <div className="border-b pb-4">
@@ -128,7 +143,7 @@ export default function SkyHarbour() {
                 name: "Is hangar cost included in pricing?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Yes! Sky Harbour hangar costs are transparently included in our pricing calculator and reflected in your monthly management fee. The default hangar cost is $2,000/month.",
+                  text: `Yes! Sky Harbour hangar costs are transparently included in our pricing calculator and reflected in your monthly management fee. The hangar cost is $${hangarCost.toLocaleString()}/month.`,
                 },
               },
               {
