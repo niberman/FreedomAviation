@@ -12,33 +12,11 @@ interface MaintenanceItem {
   status: "ok" | "due_soon" | "overdue";
 }
 
-export function MaintenanceList() {
-  // TODO: remove mock functionality
-  const items: MaintenanceItem[] = [
-    { 
-      id: "1", 
-      tailNumber: "N847SR", 
-      title: "Annual Inspection", 
-      calendarDue: "2024-11-15", 
-      status: "due_soon" 
-    },
-    { 
-      id: "2", 
-      tailNumber: "N123JA", 
-      title: "100 Hour Inspection", 
-      hobbsDue: 1250, 
-      hobbsCurrent: 1180, 
-      status: "ok" 
-    },
-    { 
-      id: "3", 
-      tailNumber: "N456AB", 
-      title: "Oil Change", 
-      hobbsDue: 850, 
-      hobbsCurrent: 852, 
-      status: "overdue" 
-    },
-  ];
+interface MaintenanceListProps {
+  items?: MaintenanceItem[];
+}
+
+export function MaintenanceList({ items = [] }: MaintenanceListProps) {
 
   const getStatusBadge = (status: MaintenanceItem["status"]) => {
     switch (status) {

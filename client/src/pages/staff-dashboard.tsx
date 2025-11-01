@@ -298,7 +298,14 @@ export default function StaffDashboard() {
           {/* Service Requests (Admin) */}
           <TabsContent value="requests" className="space-y-4">
             <h2 className="text-2xl font-semibold">Service Requests</h2>
-            <KanbanBoard />
+            <KanbanBoard items={serviceRequests.map((sr: any) => ({
+              id: sr.id,
+              tailNumber: sr.aircraft?.tail_number || 'N/A',
+              type: sr.service_type,
+              requestedFor: sr.requested_for || 'TBD',
+              notes: sr.notes,
+              status: sr.status || 'new',
+            }))} />
           </TabsContent>
 
           {/* Aircraft (Admin) */}
@@ -308,7 +315,43 @@ export default function StaffDashboard() {
 
           {/* Maintenance (Admin) */}
           <TabsContent value="maintenance" className="space-y-4">
-            <MaintenanceList />
+            <MaintenanceList items={maintenanceItems.map((m: any) => {
+              // Calculate status based on due dates and hobbs
+              let status: "ok" | "due_soon" | "overdue" = "ok";
+              
+              if (m.due_date) {
+                const dueDate = new Date(m.due_date);
+                const today = new Date();
+                const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysUntilDue < 0) {
+                  status = "overdue";
+                } else if (daysUntilDue <= 30) {
+                  status = "due_soon";
+                }
+              } else if (m.due_hobbs && m.aircraft?.hobbs_hours) {
+                const hobbsRemaining = m.due_hobbs - m.aircraft.hobbs_hours;
+                if (hobbsRemaining < 0) {
+                  status = "overdue";
+                } else if (hobbsRemaining <= 10) {
+                  status = "due_soon";
+                }
+              }
+
+              // Use database status if available
+              if (m.status === 'overdue') status = 'overdue';
+              if (m.status === 'due_soon') status = 'due_soon';
+
+              return {
+                id: m.id,
+                tailNumber: m.aircraft?.tail_number || 'N/A',
+                title: m.item_name,
+                hobbsDue: m.due_hobbs,
+                hobbsCurrent: m.aircraft?.hobbs_hours,
+                calendarDue: m.due_date,
+                status,
+              };
+            })} />
           </TabsContent>
 
           {/* CFI Schedule */}
