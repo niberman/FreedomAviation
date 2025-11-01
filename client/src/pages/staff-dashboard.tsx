@@ -6,10 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, FileText, DollarSign, Wrench, Plane } from "lucide-react";
 import logoImage from "@assets/freedom-aviation-logo.png";
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 import {
   Select,
   SelectContent,
@@ -46,6 +46,8 @@ interface InstructionInvoice {
 
 export default function StaffDashboard() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>("");
   const [description, setDescription] = useState("");
@@ -161,10 +163,9 @@ export default function StaffDashboard() {
   });
 
   // Fetch instruction invoices for current CFI
-  const { data: invoices = [], isLoading: isLoadingInvoices } = useQuery<InstructionInvoice[]>({
-    queryKey: ['/api/cfi/invoices'],
+  const { data: invoices = [], isLoading: isLoadingInvoices, refetch: refetchInvoices } = useQuery<InstructionInvoice[]>({
+    queryKey: ['/api/cfi/invoices', user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
@@ -180,8 +181,9 @@ export default function StaffDashboard() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as InstructionInvoice[];
+      return (data || []) as InstructionInvoice[];
     },
+    enabled: Boolean(user?.id),
   });
 
   // Create invoice mutation
@@ -205,8 +207,13 @@ export default function StaffDashboard() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cfi/invoices'] });
+    onSuccess: async () => {
+      // Invalidate and refetch invoices to show the newly created invoice
+      await queryClient.invalidateQueries({ 
+        queryKey: ['/api/cfi/invoices'],
+      });
+      // Directly refetch the invoices query
+      await refetchInvoices();
       toast({
         title: "Invoice created",
         description: "Instruction invoice has been created successfully.",
@@ -236,8 +243,13 @@ export default function StaffDashboard() {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cfi/invoices'] });
+    onSuccess: async () => {
+      // Invalidate and refetch invoices to show updated status
+      await queryClient.invalidateQueries({ 
+        queryKey: ['/api/cfi/invoices'],
+      });
+      // Directly refetch the invoices query
+      await refetchInvoices();
       toast({
         title: "Invoice finalized",
         description: "Invoice has been marked as finalized.",

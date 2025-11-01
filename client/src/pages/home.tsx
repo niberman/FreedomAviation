@@ -4,7 +4,6 @@ import { MembershipTiers } from "@/components/membership-tiers";
 import OwnerPortalDemo from "@/components/OwnerPortalDemo";
 import { Testimonials } from "@/components/testimonials";
 import { Footer } from "@/components/footer";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Seo, getLocalBusinessJsonLd } from "@/components/Seo";
 import { allKeywords } from "@/seo/keywords";
 import { Link } from "wouter";
@@ -21,9 +20,6 @@ export default function Home() {
         canonical="/"
         jsonLd={getLocalBusinessJsonLd()}
       />
-      <header className="fixed top-0 right-0 z-50 p-4">
-        <ThemeToggle />
-      </header>
       <HeroSection />
       {/* SEO Keywords - Screen reader only */}
       <div className="sr-only">

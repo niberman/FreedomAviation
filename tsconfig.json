@@ -6,8 +6,8 @@
     "skipLibCheck": true,
     "strict": true,
     "esModuleInterop": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": false,
     "jsx": "react-jsx",
@@ -15,7 +15,7 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
+      "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"]
     }
   },

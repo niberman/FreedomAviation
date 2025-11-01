@@ -1,5 +1,6 @@
 import { MapPin, Phone, Mail } from "lucide-react";
 import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
 import logoImage from "@assets/freedom-aviation-logo.png";
 
 export function Footer() {
@@ -54,6 +55,11 @@ export function Footer() {
 
         <div className="border-t pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <p>© 2024 Freedom Aviation. All rights reserved.</p>
+          <Link href="/staff">
+            <Button variant="ghost" size="sm" className="h-7 text-xs">
+              Staff
+            </Button>
+          </Link>
         </div>
       </div>
     </footer>
