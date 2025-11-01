@@ -76,7 +76,7 @@ export default function StaffDashboard() {
     },
   });
 
-  // Fetch aircraft
+  // Fetch aircraft for invoice dropdown
   const { data: aircraft = [] } = useQuery({
     queryKey: ['/api/aircraft'],
     queryFn: async () => {
@@ -86,6 +86,76 @@ export default function StaffDashboard() {
         .order('tail_number');
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Fetch aircraft with full details for the AircraftTable
+  const { data: aircraftFull = [] } = useQuery({
+    queryKey: ['/api/aircraft/full'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('aircraft')
+        .select(`
+          id,
+          tail_number,
+          make,
+          model,
+          class,
+          owner:owner_id(full_name, email)
+        `)
+        .order('tail_number');
+      if (error) throw error;
+      
+      // Transform to match AircraftTable interface
+      return (data || []).map((ac: any) => ({
+        id: ac.id,
+        tailNumber: ac.tail_number,
+        make: ac.make || 'Unknown',
+        model: ac.model || '',
+        class: ac.class || 'Unknown',
+        baseAirport: 'KAPA', // Default base
+        owner: ac.owner?.full_name || ac.owner?.email || 'Unknown Owner',
+      }));
+    },
+  });
+
+  // Fetch service requests for kanban board
+  const { data: serviceRequests = [] } = useQuery({
+    queryKey: ['/api/service-requests'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('service_requests')
+        .select(`
+          id,
+          service_type,
+          requested_for,
+          notes,
+          status,
+          aircraft:aircraft_id(tail_number)
+        `)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch maintenance items
+  const { data: maintenanceItems = [] } = useQuery({
+    queryKey: ['/api/maintenance'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('maintenance')
+        .select(`
+          id,
+          item_name,
+          due_date,
+          due_hobbs,
+          status,
+          aircraft:aircraft_id(tail_number, hobbs_hours)
+        `)
+        .order('due_date', { ascending: true });
+      if (error) throw error;
+      return data || [];
     },
   });
 
@@ -233,7 +303,7 @@ export default function StaffDashboard() {
 
           {/* Aircraft (Admin) */}
           <TabsContent value="aircraft" className="space-y-4">
-            <AircraftTable />
+            <AircraftTable items={aircraftFull} />
           </TabsContent>
 
           {/* Maintenance (Admin) */}
