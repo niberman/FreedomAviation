@@ -494,6 +494,7 @@ export default function StaffDashboard() {
                         id="flight-date"
                         data-testid="input-flight-date"
                         type="date"
+                        max={new Date().toISOString().split('T')[0]}
                         value={flightDate}
                         onChange={(e) => setFlightDate(e.target.value)}
                       />
