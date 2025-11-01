@@ -1,5 +1,8 @@
 {
-  "builds": [{ "src": "client/package.json", "use": "@vercel/static-build" }],
-  "routes": [{ "src": "/(.*)", "dest": "/client/dist/$1" }],
-  "outputDirectory": "client/dist"
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/public",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ]
 }
