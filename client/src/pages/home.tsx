@@ -46,9 +46,9 @@ export default function Home() {
       </div>
 
       <FeaturesGrid />
-
-      <OwnerPortalDemo />
       <MembershipTiers />
+      <OwnerPortalDemo />
+
       <Testimonials />
       <Footer />
     </div>
