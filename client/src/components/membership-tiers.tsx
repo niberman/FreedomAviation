@@ -2,73 +2,43 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Building2, Plane } from "lucide-react";
-import {
-  FEATURE_PARTNER_SKY_HARBOUR,
-  FEATURE_PARTNER_FA_HANGAR,
-} from "../lib/flags";
-
-const tiers = [
-  {
-    name: "Class I",
-    aircraft: "C172 / C182 / Archer / Cherokee",
-    price: "$199",
-    features: [
-      "Weekly readiness checks",
-      "1 full detail/month",
-      "Fluid top-offs (oil, O₂, TKS)",
-      "Avionics DB updates",
-      "Digital portal access",
-    ],
-  },
-  {
-    name: "Class II",
-    aircraft: "SR20 / SR22 / SR22T / DA40 / Mooney",
-    price: "$599",
-    popular: true,
-    features: [
-      "All Class I features",
-      "Pre-/post-flight cleaning",
-      "Priority scheduling",
-      "Maintenance coordination",
-      "Enhanced readiness",
-    ],
-  },
-  {
-    name: "Class III",
-    aircraft: "Vision Jet / TBM",
-    price: "$999",
-    features: [
-      "All Class II features",
-      "Daily readiness checks",
-      "Unlimited detailing",
-      "Dedicated concierge",
-      "White-glove service",
-    ],
-  },
-];
-
-const hangarPartners = [
-  {
-    name: "Sky Harbour @ KAPA",
-    slug: "sky-harbour",
-    description: "Purpose-built private hangars",
-    price: "$1999/mo",
-    enabled: FEATURE_PARTNER_SKY_HARBOUR,
-    icon: Building2,
-  },
-  {
-    name: "Freedom Aviation Hangar",
-    slug: "freedom-aviation-hangar",
-    description: "Our home base at KAPA",
-    price: "$1499/mo",
-    enabled: FEATURE_PARTNER_FA_HANGAR,
-    icon: Plane,
-  },
-];
+import { Check, Building2, Plane, Loader2 } from "lucide-react";
+import { useClasses, useLocations } from "@/features/pricing/hooks";
 
 export function MembershipTiers() {
-  const activePartners = hangarPartners.filter((p) => p.enabled);
+  // Fetch pricing data from database
+  const { data: pricingClasses, isLoading: isLoadingClasses } = useClasses();
+  const { data: locations, isLoading: isLoadingLocations } = useLocations();
+
+  // Show loading state
+  if (isLoadingClasses || isLoadingLocations) {
+    return (
+      <div className="py-20">
+        <div className="flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // Transform pricing classes to tiers format
+  const tiers = pricingClasses?.map((cls, index) => ({
+    name: cls.name,
+    aircraft: cls.description || '',
+    price: `$${cls.base_monthly.toLocaleString()}`,
+    popular: index === 1 && pricingClasses.length === 3, // Middle tier is popular
+    features: cls.features?.benefits || [],
+  })) || [];
+
+  // Transform locations to hangar partners format
+  const activePartners = locations?.filter(loc => loc.slug !== 'none').map(loc => ({
+    name: loc.name,
+    slug: loc.slug,
+    description: loc.description || 'Premium hangar facility',
+    price: `$${loc.hangar_cost_monthly.toLocaleString()}/mo`,
+    enabled: true,
+    icon: Building2,
+  })) || [];
 
   return (
     <div className="py-20">
