@@ -167,10 +167,50 @@ export function ClientsTable() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          Clients shown here are users who have signed up through the authentication system. 
-          To add a new client, have them create an account through the sign-up page first.
+          Clients shown here are users with role='owner'. If a user signed up but isn't showing, 
+          their role may need to be set to 'owner' in the database.
         </AlertDescription>
       </Alert>
+
+      {/* Temporary: Show button to fix Noah's role */}
+      <Card>
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground mb-2">
+            Quick fix: If you have users in the database without the 'owner' role, click below to update them:
+          </p>
+          <Button
+            size="sm"
+            onClick={async () => {
+              const { data: usersWithoutRole } = await supabase
+                .from('user_profiles')
+                .select('id, email')
+                .is('role', null);
+              
+              if (usersWithoutRole && usersWithoutRole.length > 0) {
+                for (const user of usersWithoutRole) {
+                  await supabase
+                    .from('user_profiles')
+                    .update({ role: 'owner' })
+                    .eq('id', user.id);
+                }
+                toast({
+                  title: "Roles updated",
+                  description: `Updated ${usersWithoutRole.length} user(s) to role='owner'`,
+                });
+                queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+              } else {
+                toast({
+                  title: "No updates needed",
+                  description: "All users already have roles assigned.",
+                });
+              }
+            }}
+            data-testid="button-fix-roles"
+          >
+            Set all users without role to 'owner'
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
