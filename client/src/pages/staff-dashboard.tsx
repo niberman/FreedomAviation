@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { KanbanBoard } from "@/components/kanban-board";
 import { AircraftTable } from "@/components/aircraft-table";
 import { MaintenanceList } from "@/components/maintenance-list";
+import { ClientsTable } from "@/components/clients-table";
 
 interface InstructionInvoice {
   id: string;
@@ -290,6 +291,7 @@ export default function StaffDashboard() {
             <TabsTrigger value="requests" data-testid="tab-requests">Service Requests</TabsTrigger>
             <TabsTrigger value="aircraft" data-testid="tab-aircraft">Aircraft</TabsTrigger>
             <TabsTrigger value="maintenance" data-testid="tab-maintenance">Maintenance</TabsTrigger>
+            <TabsTrigger value="clients" data-testid="tab-clients">Clients</TabsTrigger>
             <TabsTrigger value="schedule" data-testid="tab-schedule">CFI Schedule</TabsTrigger>
             <TabsTrigger value="logs" data-testid="tab-logs">Flight Logs</TabsTrigger>
             <TabsTrigger value="invoices" data-testid="tab-invoices">Invoices</TabsTrigger>
@@ -352,6 +354,11 @@ export default function StaffDashboard() {
                 status,
               };
             })} />
+          </TabsContent>
+
+          {/* Clients */}
+          <TabsContent value="clients" className="space-y-4">
+            <ClientsTable />
           </TabsContent>
 
           {/* CFI Schedule */}
