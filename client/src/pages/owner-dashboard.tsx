@@ -186,7 +186,7 @@ export default function OwnerDashboard() {
       )}
 
       <div className="flex justify-center pt-4">
-        <Link href="/owner-more">
+        <Link href="/dashboard/more">
           <Button variant="outline" size="lg" data-testid="button-view-more">
             View More Details
             <ArrowRight className="ml-2 h-4 w-4" />
