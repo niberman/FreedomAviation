@@ -50,15 +50,7 @@ export function ClientsTable() {
     queryFn: async () => {
       console.log('[ClientsTable] Fetching clients...');
       
-      // First, let's check ALL users to debug
-      const { data: allUsers, error: allError } = await supabase
-        .from('user_profiles')
-        .select('id, full_name, email, role')
-        .order('created_at', { ascending: false });
-      
-      console.log('[ClientsTable] ALL users in database:', allUsers, 'Error:', allError);
-      
-      // Now fetch only owners
+      // Fetch owners - without the problematic aircraft count aggregation
       const { data, error } = await supabase
         .from('user_profiles')
         .select(`
@@ -67,8 +59,7 @@ export function ClientsTable() {
           email,
           phone,
           role,
-          created_at,
-          aircraft:aircraft(count)
+          created_at
         `)
         .eq('role', 'owner')
         .order('created_at', { ascending: false });
@@ -80,13 +71,23 @@ export function ClientsTable() {
         throw error;
       }
       
-      const mapped = (data || []).map((client: any) => ({
-        ...client,
-        aircraft_count: client.aircraft?.[0]?.count || 0,
-      }));
+      // For each client, count their aircraft separately
+      const clientsWithCounts = await Promise.all(
+        (data || []).map(async (client: any) => {
+          const { count } = await supabase
+            .from('aircraft')
+            .select('*', { count: 'exact', head: true })
+            .eq('owner_id', client.id);
+          
+          return {
+            ...client,
+            aircraft_count: count || 0,
+          };
+        })
+      );
       
-      console.log('[ClientsTable] Mapped clients:', mapped);
-      return mapped;
+      console.log('[ClientsTable] Clients with aircraft counts:', clientsWithCounts);
+      return clientsWithCounts;
     },
   });
 
