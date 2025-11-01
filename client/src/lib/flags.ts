@@ -6,4 +6,4 @@ export const FEATURE_PARTNER_FA_HANGAR = true;
 // Set to 'configurator' to use database-driven pricing, or 'fixed' for static packages
 export const PRICING_MODE = (import.meta.env.VITE_PRICING_MODE || 'fixed') as 'fixed' | 'configurator';
 export const isConfigurator = PRICING_MODE === 'configurator';
-export const isFixedPricing = PRICING_MODE === 'fixed';
+export const isFixedPricing = !isConfigurator; // Inverse of configurator mode
