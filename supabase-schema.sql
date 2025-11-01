@@ -317,3 +317,168 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Invoices table
+CREATE TABLE public.invoices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID REFERENCES public.user_profiles(id) NOT NULL,
+  aircraft_id UUID REFERENCES public.aircraft(id) NOT NULL,
+  invoice_number TEXT NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  category TEXT NOT NULL DEFAULT 'membership' CHECK (category IN ('membership', 'instruction')),
+  created_by_cfi_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  due_date DATE,
+  paid_date DATE,
+  line_items JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Invoice lines table
+CREATE TABLE public.invoice_lines (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id UUID REFERENCES public.invoices(id) ON DELETE CASCADE NOT NULL,
+  description TEXT NOT NULL,
+  quantity DECIMAL(10, 2) NOT NULL,
+  unit_cents INTEGER NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invoice_lines ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for invoices
+CREATE POLICY "Owners can view own invoices" ON public.invoices
+  FOR SELECT USING (
+    owner_id = auth.uid() OR
+    created_by_cfi_id = auth.uid() OR
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  );
+
+CREATE POLICY "CFIs can insert instruction invoices" ON public.invoices
+  FOR INSERT WITH CHECK (
+    category = 'instruction' AND
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  );
+
+CREATE POLICY "Admins can manage all invoices" ON public.invoices
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "CFIs can update own instruction invoices" ON public.invoices
+  FOR UPDATE USING (
+    created_by_cfi_id = auth.uid() AND category = 'instruction'
+  );
+
+-- RLS Policies for invoice_lines
+CREATE POLICY "Users can view invoice lines for accessible invoices" ON public.invoice_lines
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.invoices 
+      WHERE id = invoice_id AND (
+        owner_id = auth.uid() OR 
+        created_by_cfi_id = auth.uid() OR
+        EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+      )
+    )
+  );
+
+CREATE POLICY "CFIs and admins can insert invoice lines" ON public.invoice_lines
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  );
+
+CREATE POLICY "Admins can manage all invoice lines" ON public.invoice_lines
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- Create indexes
+CREATE INDEX idx_invoices_owner ON public.invoices(owner_id);
+CREATE INDEX idx_invoices_aircraft ON public.invoices(aircraft_id);
+CREATE INDEX idx_invoices_cfi ON public.invoices(created_by_cfi_id);
+CREATE INDEX idx_invoices_status ON public.invoices(status);
+CREATE INDEX idx_invoices_category ON public.invoices(category);
+CREATE INDEX idx_invoice_lines_invoice ON public.invoice_lines(invoice_id);
+
+-- Add updated_at trigger
+CREATE TRIGGER update_invoices_updated_at BEFORE UPDATE ON public.invoices
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- RPC function to create instruction invoice
+CREATE OR REPLACE FUNCTION public.create_instruction_invoice(
+  p_owner_id UUID,
+  p_aircraft_id UUID,
+  p_description TEXT,
+  p_hours DECIMAL,
+  p_rate_cents INTEGER,
+  p_cfi_id UUID
+)
+RETURNS UUID AS $$
+DECLARE
+  v_invoice_id UUID;
+  v_invoice_number TEXT;
+BEGIN
+  -- Generate invoice number
+  v_invoice_number := 'INV-' || TO_CHAR(NOW(), 'YYYYMMDD') || '-' || SUBSTRING(gen_random_uuid()::TEXT, 1, 8);
+  
+  -- Insert invoice
+  INSERT INTO public.invoices (
+    owner_id,
+    aircraft_id,
+    invoice_number,
+    amount,
+    status,
+    category,
+    created_by_cfi_id
+  ) VALUES (
+    p_owner_id,
+    p_aircraft_id,
+    v_invoice_number,
+    0, -- Will be updated by finalize_invoice
+    'draft',
+    'instruction',
+    p_cfi_id
+  ) RETURNING id INTO v_invoice_id;
+  
+  -- Insert invoice line
+  INSERT INTO public.invoice_lines (
+    invoice_id,
+    description,
+    quantity,
+    unit_cents
+  ) VALUES (
+    v_invoice_id,
+    p_description,
+    p_hours,
+    p_rate_cents
+  );
+  
+  RETURN v_invoice_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RPC function to finalize invoice
+CREATE OR REPLACE FUNCTION public.finalize_invoice(p_invoice_id UUID)
+RETURNS VOID AS $$
+DECLARE
+  v_total_cents INTEGER;
+BEGIN
+  -- Calculate total from invoice lines
+  SELECT COALESCE(SUM(quantity * unit_cents), 0)
+  INTO v_total_cents
+  FROM public.invoice_lines
+  WHERE invoice_id = p_invoice_id;
+  
+  -- Update invoice
+  UPDATE public.invoices
+  SET 
+    amount = v_total_cents / 100.0,
+    status = 'finalized',
+    updated_at = NOW()
+  WHERE id = p_invoice_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
