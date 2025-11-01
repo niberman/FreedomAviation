@@ -15,9 +15,8 @@ import Contact from "./pages/Contact";
 import HangarLocations from "./pages/HangarLocations";
 import OwnerDashboard from "./pages/owner-dashboard";
 import OwnerMore from "./pages/owner-more";
-import AdminDashboard from "./pages/admin-dashboard";
+import StaffDashboard from "./pages/staff-dashboard";
 import UnifiedPricingConfigurator from "./pages/admin/UnifiedPricingConfigurator";
-import CFIDashboard from "./pages/cfi-dashboard";
 import NotFound from "./pages/not-found";
 import SkyHarbour from "./pages/partners/SkyHarbour";
 import FAHangar from "./pages/partners/FAHangar";
@@ -43,7 +42,7 @@ function Router() {
       </Route>
       <Route path="/admin">
         <ProtectedRoute>
-          <AdminDashboard />
+          <StaffDashboard />
         </ProtectedRoute>
       </Route>
       <Route path="/admin/pricing">
@@ -53,7 +52,12 @@ function Router() {
       </Route>
       <Route path="/cfi">
         <ProtectedRoute>
-          <CFIDashboard />
+          <StaffDashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/staff">
+        <ProtectedRoute>
+          <StaffDashboard />
         </ProtectedRoute>
       </Route>
       <Route path="/partners/sky-harbour" component={SkyHarbour} />
