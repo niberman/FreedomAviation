@@ -6,8 +6,8 @@
     "skipLibCheck": true,
     "strict": true,
     "esModuleInterop": true,
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "isolatedModules": false,
     "jsx": "react-jsx",
@@ -19,6 +19,6 @@
       "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["server/**/*.ts", "client/**/*.ts", "client/**/*.tsx"],
+  "include": ["server/**/*.ts", "client/**/*.ts", "client/**/*.tsx", "vite.config.ts"],
   "exclude": ["node_modules"]
 }
