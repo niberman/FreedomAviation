@@ -192,7 +192,7 @@ export default function CFIDashboard() {
   };
 
   const filteredAircraft = selectedOwnerId
-    ? aircraft.filter(a => a.owner_id === selectedOwnerId)
+    ? aircraft.filter((a: any) => a.owner_id === selectedOwnerId)
     : aircraft;
 
   const totalAmount = hours && ratePerHour
@@ -309,7 +309,7 @@ export default function CFIDashboard() {
                           <SelectValue placeholder="Select client" />
                         </SelectTrigger>
                         <SelectContent>
-                          {owners.map((owner) => (
+                          {owners.map((owner: any) => (
                             <SelectItem key={owner.id} value={owner.id}>
                               {owner.full_name || owner.email}
                             </SelectItem>
@@ -329,7 +329,7 @@ export default function CFIDashboard() {
                           <SelectValue placeholder="Select aircraft" />
                         </SelectTrigger>
                         <SelectContent>
-                          {filteredAircraft.map((ac) => (
+                          {filteredAircraft.map((ac: any) => (
                             <SelectItem key={ac.id} value={ac.id}>
                               {ac.tail_number}
                             </SelectItem>
