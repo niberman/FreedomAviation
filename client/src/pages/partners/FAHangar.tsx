@@ -1,14 +1,29 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { useLocations } from "@/features/pricing/hooks";
 
 export default function FAHangar() {
+  const { data: locations, isLoading } = useLocations();
+  
   useEffect(() => {
     // Track page view
     console.log("Freedom Aviation Hangar partner page viewed");
   }, []);
+
+  // Find FA Hangar location pricing
+  const faHangar = locations?.find(loc => loc.slug === 'freedom-aviation-hangar' || loc.slug === 'f9');
+  const hangarCost = faHangar?.hangar_cost_monthly || 1500; // Fallback to 1500
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -59,7 +74,7 @@ export default function FAHangar() {
                   <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
                   <h3 className="font-semibold text-lg mb-2">Cost-Effective Pricing</h3>
                   <p className="text-muted-foreground">
-                    Competitive hangar rate ($1,500/mo) transparently included in management fees
+                    Competitive hangar rate (${hangarCost.toLocaleString()}/mo) transparently included in management fees
                   </p>
                 </CardContent>
               </Card>
@@ -102,7 +117,7 @@ export default function FAHangar() {
               <div className="border-b pb-4">
                 <h3 className="font-semibold text-lg mb-2">How does hangar pricing work?</h3>
                 <p className="text-muted-foreground">
-                  The Freedom Aviation Hangar has a default cost of $1,500/month, which is transparently
+                  The Freedom Aviation Hangar has a cost of ${hangarCost.toLocaleString()}/month, which is transparently
                   reflected in our pricing calculator. This is included in your total monthly management fee.
                 </p>
               </div>
@@ -139,7 +154,7 @@ export default function FAHangar() {
                 name: "How does hangar pricing work?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The Freedom Aviation Hangar has a default cost of $1,500/month, which is transparently reflected in our pricing calculator. This is included in your total monthly management fee.",
+                  text: `The Freedom Aviation Hangar has a cost of $${hangarCost.toLocaleString()}/month, which is transparently reflected in our pricing calculator. This is included in your total monthly management fee.`,
                 },
               },
             ],
