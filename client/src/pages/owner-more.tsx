@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowLeft, Plane } from "lucide-react";
 import { CreditsOverview } from "@/components/owner/CreditsOverview";
 import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
@@ -12,10 +13,40 @@ import { DocsCard } from "@/features/owner/components/DocsCard";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT } from "@/lib/demo-data";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OwnerMore() {
   const { user } = useAuth();
   const { isDemo } = useDemoMode();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Handle payment success/failure redirects from Stripe
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    const invoiceId = params.get("invoice_id");
+
+    if (paymentStatus === "success" && invoiceId) {
+      toast({
+        title: "Payment Successful",
+        description: "Your invoice payment has been processed successfully.",
+      });
+      // Refetch invoices to show updated status
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      // Remove query params from URL
+      setLocation("/dashboard/more");
+    } else if (paymentStatus === "cancelled") {
+      toast({
+        title: "Payment Cancelled",
+        description: "Your payment was cancelled. You can try again anytime.",
+        variant: "destructive",
+      });
+      // Remove query params from URL
+      setLocation("/dashboard/more");
+    }
+  }, [toast, queryClient, setLocation]);
 
   const { data: aircraftList } = useQuery({
     queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }],
@@ -90,7 +121,7 @@ export default function OwnerMore() {
         status: task.status,
         assigned_to: task.assigned_to,
         notes: task.notes,
-        photos: Array.isArray(task.photos) ? task.photos.filter((p): p is string => typeof p === 'string') : [],
+        photos: Array.isArray(task.photos) ? task.photos.filter((p: any): p is string => typeof p === 'string') : [],
         completed_at: task.completed_at,
         created_at: task.created_at,
         updated_at: task.updated_at,
@@ -110,7 +141,10 @@ export default function OwnerMore() {
       
       const { data, error } = await supabase
         .from("invoices")
-        .select("*")
+        .select(`
+          *,
+          invoice_lines(description, quantity, unit_cents)
+        `)
         .eq("aircraft_id", aircraft.id)
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false })
