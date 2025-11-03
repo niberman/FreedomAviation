@@ -28,6 +28,10 @@ if (app.get("env") === "production") {
     return next();
   });
 }
+// Stripe webhook needs raw body for signature verification
+// Register it before JSON middleware
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -69,8 +73,9 @@ app.use((req, res, next) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
 
+      // Log the error but don't throw - response has already been sent
+      console.error("Error handler:", err);
       res.status(status).json({ message });
-      throw err;
     });
 
     // importantly only setup vite in development and after

@@ -1,9 +1,31 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink, DollarSign } from "lucide-react";
-import type { Invoice } from "../types";
+import { ExternalLink, DollarSign, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { createCheckoutSession } from "@/lib/stripe";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+
+// Invoice type matching the database structure
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  amount: number;
+  status: string;
+  category: string;
+  due_date: string | null;
+  paid_date: string | null;
+  created_at: string;
+  invoice_lines?: Array<{
+    description: string;
+    quantity: number;
+    unit_cents: number;
+  }>;
+}
 
 interface BillingCardProps {
   invoices: Invoice[];
@@ -11,33 +33,78 @@ interface BillingCardProps {
 }
 
 export function BillingCard({ invoices, isLoading }: BillingCardProps) {
-  const formatAmount = (cents: number) => {
-    return `$${(cents / 100).toFixed(2)}`;
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
+
+  const formatAmount = (amount: number) => {
+    return `$${amount.toFixed(2)}`;
   };
 
-  const formatPeriod = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    return `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "N/A";
+    return format(new Date(dateString), "MMM d, yyyy");
   };
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case "paid":
         return "default";
-      case "open":
+      case "finalized":
         return "secondary";
       case "draft":
         return "outline";
       case "void":
-      case "uncollectible":
         return "destructive";
       default:
         return "outline";
     }
   };
 
-  const currentInvoice = invoices.find((inv) => inv.status === "open") || invoices[0];
+  const handlePayInvoice = async (invoice: Invoice) => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to pay invoices",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (invoice.status !== "finalized") {
+      toast({
+        title: "Cannot pay invoice",
+        description: `This invoice is ${invoice.status} and cannot be paid yet.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessingInvoiceId(invoice.id);
+
+    try {
+      const { checkoutUrl } = await createCheckoutSession(invoice.id, user.id);
+      
+      // Redirect to Stripe checkout
+      window.location.href = checkoutUrl;
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      toast({
+        title: "Payment Error",
+        description: error.message || "Failed to initiate payment. Please try again.",
+        variant: "destructive",
+      });
+      setProcessingInvoiceId(null);
+    }
+  };
+
+  // Find the most relevant invoice to display (finalized > draft > paid)
+  const currentInvoice = 
+    invoices.find((inv) => inv.status === "finalized") ||
+    invoices.find((inv) => inv.status === "draft") ||
+    invoices.find((inv) => inv.status === "paid") ||
+    invoices[0];
 
   return (
     <Card>
@@ -60,32 +127,51 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
             <div className="p-4 border rounded-lg space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
-                  {formatPeriod(currentInvoice.period_start, currentInvoice.period_end)}
+                  Invoice {currentInvoice.invoice_number}
                 </span>
                 <Badge variant={getStatusVariant(currentInvoice.status) as any}>
                   {currentInvoice.status}
                 </Badge>
               </div>
               <div className="text-2xl font-bold">
-                {formatAmount(currentInvoice.total_cents)}
+                {formatAmount(currentInvoice.amount)}
               </div>
-              {currentInvoice.status === "open" && currentInvoice.hosted_invoice_url && (
+              {currentInvoice.due_date && (
+                <p className="text-sm text-muted-foreground">
+                  Due: {formatDate(currentInvoice.due_date)}
+                </p>
+              )}
+              {currentInvoice.paid_date && (
+                <p className="text-sm text-muted-foreground">
+                  Paid: {formatDate(currentInvoice.paid_date)}
+                </p>
+              )}
+              {currentInvoice.status === "finalized" && (
                 <Button
                   variant="default"
                   size="sm"
                   className="w-full"
-                  asChild
+                  onClick={() => handlePayInvoice(currentInvoice)}
+                  disabled={processingInvoiceId === currentInvoice.id}
                   data-testid="button-pay-invoice"
                 >
-                  <a
-                    href={currentInvoice.hosted_invoice_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Pay Invoice
-                    <ExternalLink className="ml-2 h-3 w-3" />
-                  </a>
+                  {processingInvoiceId === currentInvoice.id ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Pay Invoice
+                      <ExternalLink className="ml-2 h-3 w-3" />
+                    </>
+                  )}
                 </Button>
+              )}
+              {currentInvoice.status === "paid" && (
+                <p className="text-sm text-green-600 font-medium">
+                  ✓ Payment completed
+                </p>
               )}
             </div>
 
@@ -93,18 +179,21 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">Recent Invoices</h4>
                 <div className="space-y-1">
-                  {invoices.slice(1, 6).map((invoice) => (
+                  {invoices
+                    .filter((inv) => inv.id !== currentInvoice?.id)
+                    .slice(0, 5)
+                    .map((invoice) => (
                     <div
                       key={invoice.id}
                       className="flex items-center justify-between text-sm py-1"
                       data-testid={`invoice-${invoice.id}`}
                     >
                       <span className="text-muted-foreground">
-                        {formatPeriod(invoice.period_start, invoice.period_end)}
+                        {invoice.invoice_number}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
-                          {formatAmount(invoice.total_cents)}
+                          {formatAmount(invoice.amount)}
                         </span>
                         <Badge variant={getStatusVariant(invoice.status) as any} className="text-xs">
                           {invoice.status}

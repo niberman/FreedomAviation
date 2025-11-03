@@ -33,6 +33,7 @@ CREATE TABLE public.aircraft (
   tach_hours DECIMAL(10, 2),
   image_url TEXT,
   owner_id UUID REFERENCES public.user_profiles(id),
+  base_location TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -40,15 +41,16 @@ CREATE TABLE public.aircraft (
 -- Memberships table
 CREATE TABLE public.memberships (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.user_profiles(id) NOT NULL,
+  owner_id UUID REFERENCES public.user_profiles(id) NOT NULL,
   aircraft_id UUID REFERENCES public.aircraft(id),
-  class membership_class NOT NULL,
-  monthly_rate DECIMAL(10, 2),
-  benefits JSONB,
-  active BOOLEAN DEFAULT true,
+  tier membership_class NOT NULL,
+  monthly_credits INTEGER,
+  credits_remaining INTEGER,
+  is_active BOOLEAN DEFAULT true,
   start_date TIMESTAMPTZ DEFAULT NOW(),
   end_date TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Maintenance records table
@@ -67,6 +69,18 @@ CREATE TABLE public.maintenance (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Consumable events table
+CREATE TABLE public.consumable_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  aircraft_id UUID REFERENCES public.aircraft(id) NOT NULL,
+  kind TEXT NOT NULL,
+  quantity DECIMAL(10, 2),
+  unit TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Service requests table
 CREATE TABLE public.service_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -77,9 +91,24 @@ CREATE TABLE public.service_requests (
   description TEXT,
   requested_date DATE,
   requested_time TIME,
+  requested_for TEXT,
   status service_status DEFAULT 'pending',
   assigned_to UUID REFERENCES public.user_profiles(id),
   notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Service tasks table
+CREATE TABLE public.service_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  aircraft_id UUID REFERENCES public.aircraft(id) NOT NULL,
+  type TEXT NOT NULL,
+  status service_status DEFAULT 'pending',
+  assigned_to UUID REFERENCES public.user_profiles(id),
+  notes TEXT,
+  photos TEXT[],
+  completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -117,7 +146,9 @@ ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.aircraft ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.maintenance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.consumable_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.service_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.service_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.instructors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pricing_packages ENABLE ROW LEVEL SECURITY;
 
@@ -180,7 +211,7 @@ CREATE POLICY "Admins can delete aircraft" ON public.aircraft
 -- RLS Policies for memberships
 CREATE POLICY "Users can view own memberships" ON public.memberships
   FOR SELECT USING (
-    user_id = auth.uid() OR
+    owner_id = auth.uid() OR
     EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
@@ -209,6 +240,31 @@ CREATE POLICY "Admins can delete maintenance" ON public.maintenance
     EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
+-- RLS Policies for consumable_events
+CREATE POLICY "Aircraft owners can view consumable events" ON public.consumable_events
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.aircraft WHERE id = aircraft_id AND owner_id = auth.uid()) OR
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  );
+
+CREATE POLICY "Admins can insert consumable events" ON public.consumable_events
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  );
+
+CREATE POLICY "Admins can update consumable events" ON public.consumable_events
+  FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  );
+
+CREATE POLICY "Admins can delete consumable events" ON public.consumable_events
+  FOR DELETE USING (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
 -- RLS Policies for service_requests
 CREATE POLICY "Users can view own service requests" ON public.service_requests
   FOR SELECT USING (
@@ -232,6 +288,31 @@ CREATE POLICY "Admins can delete service requests" ON public.service_requests
     EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
+-- RLS Policies for service_tasks
+CREATE POLICY "Aircraft owners can view service tasks" ON public.service_tasks
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.aircraft WHERE id = aircraft_id AND owner_id = auth.uid()) OR
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  );
+
+CREATE POLICY "Admins can insert service tasks" ON public.service_tasks
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  );
+
+CREATE POLICY "Admins can update service tasks" ON public.service_tasks
+  FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  )
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+  );
+
+CREATE POLICY "Admins can delete service tasks" ON public.service_tasks
+  FOR DELETE USING (
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
 -- RLS Policies for instructors
 CREATE POLICY "Everyone can view active instructors" ON public.instructors
   FOR SELECT USING (active = true);
@@ -243,13 +324,16 @@ CREATE POLICY "Everyone can view active packages" ON public.pricing_packages
 -- Create indexes for performance
 CREATE INDEX idx_aircraft_owner ON public.aircraft(owner_id);
 CREATE INDEX idx_aircraft_tail ON public.aircraft(tail_number);
-CREATE INDEX idx_memberships_user ON public.memberships(user_id);
+CREATE INDEX idx_memberships_owner ON public.memberships(owner_id);
 CREATE INDEX idx_memberships_aircraft ON public.memberships(aircraft_id);
 CREATE INDEX idx_maintenance_aircraft ON public.maintenance(aircraft_id);
 CREATE INDEX idx_maintenance_status ON public.maintenance(status);
+CREATE INDEX idx_consumable_events_aircraft ON public.consumable_events(aircraft_id);
 CREATE INDEX idx_service_requests_user ON public.service_requests(user_id);
 CREATE INDEX idx_service_requests_aircraft ON public.service_requests(aircraft_id);
 CREATE INDEX idx_service_requests_status ON public.service_requests(status);
+CREATE INDEX idx_service_tasks_aircraft ON public.service_tasks(aircraft_id);
+CREATE INDEX idx_service_tasks_status ON public.service_tasks(status);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -264,13 +348,22 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON public.user_profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_memberships_updated_at BEFORE UPDATE ON public.memberships
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_aircraft_updated_at BEFORE UPDATE ON public.aircraft
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_maintenance_updated_at BEFORE UPDATE ON public.maintenance
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_consumable_events_updated_at BEFORE UPDATE ON public.consumable_events
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_service_requests_updated_at BEFORE UPDATE ON public.service_requests
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_service_tasks_updated_at BEFORE UPDATE ON public.service_tasks
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_pricing_packages_updated_at BEFORE UPDATE ON public.pricing_packages
@@ -331,6 +424,8 @@ CREATE TABLE public.invoices (
   due_date DATE,
   paid_date DATE,
   line_items JSONB,
+  stripe_checkout_session_id TEXT,
+  stripe_payment_intent_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
