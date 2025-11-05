@@ -1,8 +1,8 @@
 // Vercel serverless function entry point
 // This wraps the Express app for Vercel's serverless environment
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "../server/routes";
-import { serveStatic } from "../server/vite";
+import { registerRoutes } from "../server/routes.js";
+import { serveStatic } from "../server/vite.js";
 import path from "path";
 import fs from "fs";
 
@@ -123,15 +123,17 @@ async function initializeApp(): Promise<express.Express> {
       
       try {
         // Try to find the dist/public directory
-        // In Vercel, the working directory is the project root
+        // In Vercel, the working directory (process.cwd()) is the project root
         // The build output is in dist/public (as specified in vercel.json)
-        // Get the directory of the current file for relative paths
-        const currentDir = path.dirname(new URL(import.meta.url).pathname);
+        const cwd = process.cwd();
+        console.log("🔍 Current working directory:", cwd);
+        
         const possiblePaths = [
-          path.resolve(process.cwd(), "dist", "public"),
-          path.resolve(process.cwd(), "..", "dist", "public"),
-          path.resolve(currentDir, "..", "dist", "public"),
-          path.resolve(currentDir, "..", "..", "dist", "public"),
+          path.resolve(cwd, "dist", "public"),
+          path.resolve(cwd, "..", "dist", "public"),
+          // In Vercel, the function might be in .vercel/output/functions
+          // but the dist is at the project root
+          path.resolve(cwd, "..", "..", "dist", "public"),
         ];
         
         let distPath: string | null = null;
@@ -145,21 +147,20 @@ async function initializeApp(): Promise<express.Express> {
         }
         
         if (distPath) {
-          // Serve static files
-          app.use(express.static(distPath));
+          // Serve static files - express.static will serve files if they exist, 
+          // otherwise it calls next() to continue to the next middleware
+          app.use(express.static(distPath, { 
+            index: false, // Don't auto-serve index.html, we'll handle it manually
+            fallthrough: true // Continue to next middleware if file not found
+          }));
           console.log("✅ Static files configured");
           
           // Fallback to index.html for non-API routes (SPA routing)
+          // This only runs if express.static didn't find a file
           app.use((req, res, next) => {
             // Don't serve index.html for API routes
             if (req.path.startsWith("/api/")) {
               return next();
-            }
-            
-            // Try to serve the actual file first
-            const filePath = path.join(distPath!, req.path);
-            if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-              return res.sendFile(filePath);
             }
             
             // For non-API routes, serve index.html for client-side routing
@@ -168,12 +169,34 @@ async function initializeApp(): Promise<express.Express> {
               return res.sendFile(indexPath);
             }
             
+            // If index.html doesn't exist either, continue (will hit 404)
             next();
           });
         } else {
-          console.warn("⚠️ Could not find dist/public directory, trying serveStatic fallback");
-          // Fallback to original serveStatic
-          serveStatic(app);
+          console.warn("⚠️ Could not find dist/public directory");
+          // Don't call serveStatic - it will throw if directory doesn't exist
+          // Instead, set up a minimal fallback that won't crash
+          app.use((req, res, next) => {
+            if (req.path.startsWith("/api/")) {
+              return next();
+            }
+            // Return a basic response for non-API routes
+            res.status(200).send(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>Freedom Aviation</title>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                </head>
+                <body>
+                  <h1>Freedom Aviation</h1>
+                  <p>Application is loading...</p>
+                  <p>If this page persists, please check the server logs.</p>
+                </body>
+              </html>
+            `);
+          });
         }
       } catch (staticError: any) {
         // If static serving fails, add a minimal fallback

@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { sendInvoiceEmail } from "./lib/email";
+import { sendInvoiceEmail } from "./lib/email.js";
 
 // Initialize Stripe
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -394,6 +394,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/invoices/send-email", async (req: Request, res: Response) => {
     console.log("📧 POST /api/invoices/send-email called");
     console.log("📧 Request body:", req.body);
+    console.log("📧 Email service config:");
+    console.log("  - EMAIL_SERVICE:", process.env.EMAIL_SERVICE || "not set (defaults to 'console')");
+    console.log("  - RESEND_API_KEY:", process.env.RESEND_API_KEY ? "present" : "not set");
+    console.log("  - EMAIL_FROM:", process.env.EMAIL_FROM || "not set (will use default)");
+    
     try {
       if (!supabase) {
         return res.status(503).json({ 
@@ -408,18 +413,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch invoice with all necessary data
-      const { data: invoice, error: invoiceError } = await supabase
+      // Try nested query first, fallback to separate queries if needed
+      let invoice: any;
+      let invoiceError: any;
+      
+      // First attempt: nested query using column-based foreign key references
+      // Try the pattern used in staff-dashboard.tsx
+      const invoiceQuery = await supabase
         .from("invoices")
         .select(`
           *,
           invoice_lines(*),
-          owner:user_profiles!owner_id(id, email, full_name),
-          aircraft(id, tail_number)
+          owner:owner_id(full_name, email),
+          aircraft:aircraft_id(id, tail_number)
         `)
         .eq("id", invoiceId)
         .single();
 
-      if (invoiceError || !invoice) {
+      if (invoiceQuery.error) {
+        console.warn("⚠️ Nested query failed, trying separate queries:", invoiceQuery.error.message);
+        
+        // Fallback: fetch invoice and related data separately
+        const { data: invoiceData, error: invError } = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("id", invoiceId)
+          .single();
+        
+        if (invError || !invoiceData) {
+          return res.status(404).json({ error: "Invoice not found", details: invError?.message });
+        }
+        
+        // Fetch owner
+        const { data: ownerData, error: ownerError } = await supabase
+          .from("user_profiles")
+          .select("id, email, full_name")
+          .eq("id", invoiceData.owner_id)
+          .single();
+        
+        if (ownerError) {
+          console.error("❌ Error fetching owner:", ownerError);
+        }
+        
+        // Fetch aircraft
+        let aircraftData = null;
+        if (invoiceData.aircraft_id) {
+          const { data: acData } = await supabase
+            .from("aircraft")
+            .select("id, tail_number")
+            .eq("id", invoiceData.aircraft_id)
+            .single();
+          aircraftData = acData;
+        }
+        
+        // Fetch invoice lines
+        const { data: linesData } = await supabase
+          .from("invoice_lines")
+          .select("*")
+          .eq("invoice_id", invoiceId);
+        
+        invoice = {
+          ...invoiceData,
+          owner: ownerData,
+          aircraft: aircraftData,
+          invoice_lines: linesData || [],
+        };
+      } else {
+        invoice = invoiceQuery.data;
+      }
+
+      if (!invoice) {
         return res.status(404).json({ error: "Invoice not found" });
       }
 
@@ -433,7 +496,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get owner info
       const owner = invoice.owner as any;
       if (!owner || !owner.email) {
-        return res.status(400).json({ error: "Owner email not found" });
+        console.error("❌ Owner data:", owner);
+        console.error("❌ Invoice owner_id:", invoice.owner_id);
+        return res.status(400).json({ 
+          error: "Owner email not found",
+          details: owner ? "Owner found but email is missing" : "Owner not found"
+        });
       }
 
       // Transform invoice lines
@@ -450,6 +518,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send email
       console.log("📧 Attempting to send invoice email for:", invoice.invoice_number);
       console.log("📧 To:", owner.email);
+      console.log("📧 Owner name:", owner.full_name || "not provided");
+      console.log("📧 Invoice lines count:", invoiceLines.length);
+      console.log("📧 Total amount:", totalAmount);
       
       try {
         await sendInvoiceEmail({
@@ -466,6 +537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("✅ Invoice email sent successfully");
       } catch (emailError: any) {
         console.error("❌ Error in sendInvoiceEmail:", emailError);
+        console.error("❌ Error message:", emailError?.message);
+        console.error("❌ Error stack:", emailError?.stack);
         throw emailError; // Re-throw to be caught by outer try-catch
       }
 
