@@ -98,79 +98,94 @@ export default function StaffDashboard() {
   const { data: aircraftFull = [], isLoading: isLoadingAircraft, error: aircraftError } = useQuery({
     queryKey: ['/api/aircraft/full'],
     queryFn: async () => {
-      // Try nested query first - only select columns that exist
-      let query = supabase
-        .from('aircraft')
-        .select(`
-          id,
-          tail_number,
-          model,
-          class,
-          base_location,
-          owner_id,
-          owner:owner_id(full_name, email)
-        `)
-        .order('tail_number');
-
-      let { data, error } = await query;
-      
-      // If nested query fails, fetch separately
-      if (error) {
-        // Fetch aircraft without nested relations - only columns that exist
-        const aircraftResult = await supabase
+      try {
+        // First, try to fetch aircraft with nested owner relation
+        let query = supabase
           .from('aircraft')
-          .select('id, tail_number, model, class, base_location, owner_id')
+          .select(`
+            id,
+            tail_number,
+            make,
+            model,
+            class,
+            base_location,
+            owner_id,
+            owner:owner_id(full_name, email)
+          `)
           .order('tail_number');
+
+        let { data, error } = await query;
         
-        if (aircraftResult.error) {
-          console.error('❌ Error fetching aircraft:', aircraftResult.error);
-          throw aircraftResult.error;
-        }
-        
-        const aircraftData = aircraftResult.data || [];
-        
-        // Get unique owner IDs
-        const ownerIds = [...new Set(aircraftData.map((ac: any) => ac.owner_id).filter(Boolean))];
-        
-        // Fetch owners separately
-        let ownersMap: Record<string, { full_name?: string; email?: string }> = {};
-        if (ownerIds.length > 0) {
-          const ownersResult = await supabase
-            .from('user_profiles')
-            .select('id, full_name, email')
-            .in('id', ownerIds);
+        // If nested query fails, fetch separately
+        if (error) {
+          console.warn('⚠️ Nested query failed, trying separate queries:', error.message);
           
-          if (ownersResult.data) {
-            ownersMap = ownersResult.data.reduce((acc: any, owner: any) => {
-              acc[owner.id] = { full_name: owner.full_name, email: owner.email };
-              return acc;
-            }, {});
+          // Fetch aircraft without nested relations
+          const aircraftResult = await supabase
+            .from('aircraft')
+            .select('id, tail_number, make, model, class, base_location, owner_id')
+            .order('tail_number');
+          
+          if (aircraftResult.error) {
+            console.error('❌ Error fetching aircraft:', aircraftResult.error);
+            throw aircraftResult.error;
           }
+          
+          const aircraftData = aircraftResult.data || [];
+          
+          // Get unique owner IDs
+          const ownerIds = [...new Set(aircraftData.map((ac: any) => ac.owner_id).filter(Boolean))];
+          
+          // Fetch owners separately
+          let ownersMap: Record<string, { full_name?: string; email?: string }> = {};
+          if (ownerIds.length > 0) {
+            const ownersResult = await supabase
+              .from('user_profiles')
+              .select('id, full_name, email')
+              .in('id', ownerIds);
+            
+            if (ownersResult.error) {
+              console.warn('⚠️ Error fetching owners, continuing without owner data:', ownersResult.error);
+            } else if (ownersResult.data) {
+              ownersMap = ownersResult.data.reduce((acc: any, owner: any) => {
+                acc[owner.id] = { full_name: owner.full_name, email: owner.email };
+                return acc;
+              }, {});
+            }
+          }
+          
+          // Combine data
+          data = aircraftData.map((ac: any) => ({
+            ...ac,
+            owner: ownersMap[ac.owner_id] || null,
+          }));
         }
         
-        // Combine data
-        data = aircraftData.map((ac: any) => ({
-          ...ac,
-          owner: ownersMap[ac.owner_id] || null,
-        }));
+        if (!data) {
+          throw new Error('No aircraft data returned');
+        }
         
-        error = null; // Clear error since we successfully fetched
+        // Transform to match AircraftTable interface
+        return (data || []).map((ac: any) => ({
+          id: ac.id,
+          tailNumber: ac.tail_number,
+          make: ac.make || 'N/A',
+          model: ac.model || '',
+          class: ac.class || 'Unknown',
+          baseAirport: ac.base_location || 'KAPA',
+          owner: ac.owner?.full_name || ac.owner?.email || 'Unknown Owner',
+        }));
+      } catch (err: any) {
+        console.error('❌ Error in aircraft query:', err);
+        // Provide more helpful error message
+        if (err.message?.includes('permission') || err.code === 'PGRST301') {
+          throw new Error('Permission denied. Please check your authentication and try again.');
+        } else if (err.message?.includes('relation') || err.code === 'PGRST116') {
+          throw new Error('Aircraft table not found. Please ensure the database schema is set up correctly.');
+        } else {
+          throw err;
+        }
       }
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Transform to match AircraftTable interface
-      return (data || []).map((ac: any) => ({
-        id: ac.id,
-        tailNumber: ac.tail_number,
-        make: ac.make || 'N/A', // Handle missing make column gracefully
-        model: ac.model || '',
-        class: ac.class || 'Unknown',
-        baseAirport: ac.base_location || 'KAPA', // Use base_location from DB or default to KAPA
-        owner: ac.owner?.full_name || ac.owner?.email || 'Unknown Owner',
-      }));
     },
   });
 
@@ -683,16 +698,35 @@ export default function StaffDashboard() {
               <Card>
                 <CardContent className="py-8 text-center">
                   <p className="text-destructive font-medium mb-2">Error loading aircraft</p>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-muted-foreground mb-2">
                     {aircraftError instanceof Error ? aircraftError.message : 'Unknown error occurred'}
                   </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/aircraft/full'] })}
-                  >
-                    Retry
-                  </Button>
+                  {aircraftError instanceof Error && aircraftError.message.includes('Permission') && (
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Make sure you're logged in as an admin or staff member with proper permissions.
+                    </p>
+                  )}
+                  {aircraftError instanceof Error && aircraftError.message.includes('table not found') && (
+                    <p className="text-xs text-muted-foreground mb-4">
+                      The database schema may need to be set up. Check the SETUP.md guide.
+                    </p>
+                  )}
+                  <div className="flex gap-2 justify-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/aircraft/full'] })}
+                    >
+                      Retry
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => window.location.reload()}
+                    >
+                      Refresh Page
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ) : (
