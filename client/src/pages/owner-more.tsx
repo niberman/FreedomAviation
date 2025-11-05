@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Plane } from "lucide-react";
+import { ArrowLeft, Plane, DollarSign } from "lucide-react";
 import { CreditsOverview } from "@/components/owner/CreditsOverview";
 import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
@@ -288,32 +288,51 @@ export default function OwnerMore() {
         </div>
       </header>
 
-      <main className="container mx-auto p-6 space-y-6">
+      <main className="container mx-auto p-6 space-y-8 max-w-7xl">
         {isDemo && <DemoBanner />}
         
         <div className="space-y-1">
-          <h2 className="text-2xl font-semibold">More Details</h2>
-          <p className="text-muted-foreground">Additional information and options</p>
+          <h2 className="text-3xl font-bold tracking-tight">More Details</h2>
+          <p className="text-muted-foreground">Manage your account, billing, and services</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <BillingCard invoices={invoices} isLoading={invoicesLoading} />
-          <DocsCard />
+        {/* Billing & Invoices Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">Billing & Invoices</h3>
+          </div>
+          <div className="grid grid-cols-1 gap-6">
+            <BillingCard invoices={invoices} isLoading={invoicesLoading} />
+            <CreditsOverview />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <PasswordChangeCard />
+        {/* Service History Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Plane className="h-5 w-5 text-muted-foreground" />
+            <h3 className="text-xl font-semibold">Service History</h3>
+          </div>
+          <div className="grid grid-cols-1 gap-6">
+            <ServiceTimeline 
+              tasks={serviceTasks} 
+              requests={serviceRequests}
+              isLoading={tasksLoading} 
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ServiceTimeline 
-            tasks={serviceTasks} 
-            requests={serviceRequests}
-            isLoading={tasksLoading} 
-          />
+        {/* Account & Settings Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xl font-semibold">Account & Settings</h3>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PasswordChangeCard />
+            <DocsCard />
+          </div>
         </div>
-
-        <CreditsOverview />
       </main>
     </div>
   );

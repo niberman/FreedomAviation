@@ -116,17 +116,32 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
     return invoice.amount;
   };
 
-  // Find the most relevant invoice to display (finalized > draft > paid)
-  const currentInvoice = 
-    invoices.find((inv) => inv.status === "finalized") ||
-    invoices.find((inv) => inv.status === "draft") ||
-    invoices.find((inv) => inv.status === "paid") ||
-    invoices[0];
+  // Sort invoices: finalized first, then paid, then others
+  const sortedInvoices = [...invoices].sort((a, b) => {
+    const statusOrder: Record<string, number> = {
+      finalized: 1,
+      paid: 2,
+      draft: 3,
+      void: 4,
+    };
+    const orderA = statusOrder[a.status.toLowerCase()] || 999;
+    const orderB = statusOrder[b.status.toLowerCase()] || 999;
+    if (orderA !== orderB) return orderA - orderB;
+    // If same status, sort by date (newest first)
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  // Separate invoices by status
+  const finalizedInvoices = sortedInvoices.filter((inv) => inv.status === "finalized");
+  const paidInvoices = sortedInvoices.filter((inv) => inv.status === "paid");
+  const otherInvoices = sortedInvoices.filter(
+    (inv) => inv.status !== "finalized" && inv.status !== "paid"
+  );
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-        <CardTitle>Billing</CardTitle>
+        <CardTitle>Invoices & Billing</CardTitle>
         <DollarSign className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
@@ -135,84 +150,134 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-4 w-32" />
           </div>
-        ) : !currentInvoice ? (
+        ) : invoices.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
             No invoices yet
           </p>
         ) : (
-          <div className="space-y-4">
-            <div className="p-4 border rounded-lg space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Invoice {currentInvoice.invoice_number}
-                </span>
-                <Badge variant={getStatusVariant(currentInvoice.status) as any}>
-                  {currentInvoice.status}
-                </Badge>
+          <div className="space-y-6">
+            {/* Outstanding Invoices (Finalized) */}
+            {finalizedInvoices.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Outstanding Invoices</h4>
+                {finalizedInvoices.map((invoice) => (
+                  <div key={invoice.id} className="p-4 border rounded-lg space-y-3 bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-sm font-medium">
+                          Invoice {invoice.invoice_number}
+                        </span>
+                        {invoice.due_date && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Due: {formatDate(invoice.due_date)}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant={getStatusVariant(invoice.status) as any}>
+                        {invoice.status}
+                      </Badge>
+                    </div>
+                    
+                    <div className="text-2xl font-bold">
+                      {formatAmount(calculateInvoiceTotal(invoice))}
+                    </div>
+                    
+                    {invoice.invoice_lines && invoice.invoice_lines.length > 0 && (
+                      <div className="space-y-1">
+                        {invoice.invoice_lines.length === 1 ? (
+                          <p className="text-sm text-muted-foreground">
+                            {invoice.invoice_lines[0].description}
+                          </p>
+                        ) : (
+                          <div className="space-y-1">
+                            {invoice.invoice_lines.map((line, idx) => (
+                              <div key={idx} className="text-sm text-muted-foreground">
+                                {line.description} - {line.quantity} hrs @ ${(line.unit_cents / 100).toFixed(2)}/hr
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handlePayInvoice(invoice)}
+                      disabled={processingInvoiceId === invoice.id}
+                      data-testid={`button-pay-invoice-${invoice.id}`}
+                    >
+                      {processingInvoiceId === invoice.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          Pay Invoice
+                          <ExternalLink className="ml-2 h-3 w-3" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ))}
               </div>
-              <div className="text-2xl font-bold">
-                {formatAmount(calculateInvoiceTotal(currentInvoice))}
-              </div>
-              {currentInvoice.invoice_lines && currentInvoice.invoice_lines.length > 0 && currentInvoice.invoice_lines.length === 1 && (
-                <p className="text-sm text-muted-foreground">
-                  {currentInvoice.invoice_lines[0].description}
-                </p>
-              )}
-              {currentInvoice.invoice_lines && currentInvoice.invoice_lines.length > 1 && (
-                <p className="text-sm text-muted-foreground">
-                  {currentInvoice.invoice_lines.length} line items
-                </p>
-              )}
-              {currentInvoice.due_date && (
-                <p className="text-sm text-muted-foreground">
-                  Due: {formatDate(currentInvoice.due_date)}
-                </p>
-              )}
-              {currentInvoice.paid_date && (
-                <p className="text-sm text-muted-foreground">
-                  Paid: {formatDate(currentInvoice.paid_date)}
-                </p>
-              )}
-              {currentInvoice.status === "finalized" && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => handlePayInvoice(currentInvoice)}
-                  disabled={processingInvoiceId === currentInvoice.id}
-                  data-testid="button-pay-invoice"
-                >
-                  {processingInvoiceId === currentInvoice.id ? (
-                    <>
-                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      Pay Invoice
-                      <ExternalLink className="ml-2 h-3 w-3" />
-                    </>
-                  )}
-                </Button>
-              )}
-              {currentInvoice.status === "paid" && (
-                <p className="text-sm text-green-600 font-medium">
-                  ✓ Payment completed
-                </p>
-              )}
-            </div>
+            )}
 
-            {invoices.length > 1 && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Recent Invoices</h4>
-                <div className="space-y-1">
-                  {invoices
-                    .filter((inv) => inv.id !== currentInvoice?.id)
-                    .slice(0, 5)
-                    .map((invoice) => (
+            {/* Paid Invoices */}
+            {paidInvoices.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Paid Invoices</h4>
+                <div className="space-y-2">
+                  {paidInvoices.map((invoice) => (
                     <div
                       key={invoice.id}
-                      className="flex items-center justify-between text-sm py-1"
+                      className="p-3 border rounded-lg space-y-2 bg-green-50/50 dark:bg-green-950/20"
+                      data-testid={`invoice-${invoice.id}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-medium">
+                            Invoice {invoice.invoice_number}
+                          </span>
+                          {invoice.paid_date && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Paid: {formatDate(invoice.paid_date)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold">
+                            {formatAmount(calculateInvoiceTotal(invoice))}
+                          </span>
+                          <Badge variant="default" className="text-xs bg-green-600">
+                            ✓ Paid
+                          </Badge>
+                        </div>
+                      </div>
+                      {invoice.invoice_lines && invoice.invoice_lines.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {invoice.invoice_lines.length === 1
+                            ? invoice.invoice_lines[0].description
+                            : `${invoice.invoice_lines.length} line items`}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Other Invoices (Draft, etc.) */}
+            {otherInvoices.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground">Other Invoices</h4>
+                <div className="space-y-2">
+                  {otherInvoices.map((invoice) => (
+                    <div
+                      key={invoice.id}
+                      className="flex items-center justify-between text-sm py-2 px-3 border rounded-lg"
                       data-testid={`invoice-${invoice.id}`}
                     >
                       <span className="text-muted-foreground">
