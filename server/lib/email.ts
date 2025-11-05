@@ -219,7 +219,16 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
     throw new Error("RESEND_API_KEY environment variable is not set. Please configure it in your environment variables.");
   }
 
+  // Use test domain if custom domain not verified, otherwise use configured EMAIL_FROM
+  // Use Resend test domain if custom domain not verified
+  // Default to test domain to avoid verification errors
   const fromEmail = process.env.EMAIL_FROM || "Freedom Aviation <onboarding@resend.dev>";
+  
+  // Check if using custom domain and provide helpful error if domain not verified
+  if (fromEmail.includes("@freedomaviationco.com") && !fromEmail.includes("onboarding@resend.dev")) {
+    console.warn("⚠️  Using custom domain. Make sure freedomaviationco.com is verified in Resend.");
+    console.warn("⚠️  If domain is not verified, emails will fail. Use onboarding@resend.dev for testing.");
+  }
   
   console.log("📧 Sending email via Resend:");
   console.log("  From:", fromEmail);
@@ -254,13 +263,28 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
       
       // Try to parse error for better message
       let errorMessage = `Resend API error (${response.status}): ${responseText}`;
+      let errorJson: any = null;
       try {
-        const errorJson = JSON.parse(responseText);
+        errorJson = JSON.parse(responseText);
         if (errorJson.message) {
           errorMessage = `Resend API error: ${errorJson.message}`;
         }
       } catch (e) {
         // Keep original error message
+      }
+      
+      // Check if it's a domain verification error
+      if (errorJson?.name === "validation_error" && errorJson?.message?.includes("domain is not verified")) {
+        const helpfulMessage = `Domain not verified in Resend. The email address "${fromEmail}" uses a domain that hasn't been verified. 
+        
+To fix this:
+1. Go to https://resend.com/domains and verify freedomaviationco.com, OR
+2. Set EMAIL_FROM to use the test domain: "Freedom Aviation <onboarding@resend.dev>"
+
+For now, update your Vercel environment variable EMAIL_FROM to: Freedom Aviation <onboarding@resend.dev>`;
+        
+        console.error("❌ Domain verification error:", helpfulMessage);
+        throw new Error(helpfulMessage);
       }
       
       throw new Error(errorMessage);
