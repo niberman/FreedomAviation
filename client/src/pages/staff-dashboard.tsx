@@ -405,14 +405,26 @@ export default function StaffDashboard() {
         });
 
         if (!emailResponse.ok) {
-          const error = await emailResponse.json().catch(() => ({ error: "Unknown error" }));
-          console.error("❌ Failed to send invoice email:", error);
+          const errorText = await emailResponse.text();
+          let error: any;
+          try {
+            error = JSON.parse(errorText);
+          } catch {
+            error = { error: errorText || "Unknown error" };
+          }
+          
+          console.error("❌ Failed to send invoice email:");
           console.error("❌ Response status:", emailResponse.status);
+          console.error("❌ Error object:", error);
+          console.error("❌ Error message:", error.message || error.error);
+          console.error("❌ Error details:", error.details);
+          
           // Don't throw - email failure shouldn't prevent invoice creation
-          // But show a warning toast
+          // But show a warning toast with the actual error message
+          const errorMessage = error.message || error.error || "Unknown error";
           toast({
             title: "Invoice created",
-            description: "Invoice created successfully, but email could not be sent. Please check server logs.",
+            description: `Invoice created successfully, but email could not be sent: ${errorMessage}`,
             variant: "destructive",
           });
         } else {
