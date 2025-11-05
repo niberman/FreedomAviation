@@ -432,6 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (invoiceQuery.error) {
         console.warn("⚠️ Nested query failed, trying separate queries:", invoiceQuery.error.message);
+        console.warn("⚠️ Error details:", JSON.stringify(invoiceQuery.error, null, 2));
         
         // Fallback: fetch invoice and related data separately
         const { data: invoiceData, error: invError } = await supabase
@@ -441,6 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .single();
         
         if (invError || !invoiceData) {
+          console.error("❌ Error fetching invoice:", invError);
           return res.status(404).json({ error: "Invoice not found", details: invError?.message });
         }
         
@@ -451,26 +453,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .eq("id", invoiceData.owner_id)
           .single();
         
-        if (ownerError) {
+        if (ownerError || !ownerData) {
           console.error("❌ Error fetching owner:", ownerError);
+          console.error("❌ Owner ID:", invoiceData.owner_id);
+          return res.status(500).json({ 
+            error: "Failed to fetch owner information",
+            details: ownerError?.message || "Owner not found",
+            ownerId: invoiceData.owner_id
+          });
         }
         
         // Fetch aircraft
         let aircraftData = null;
         if (invoiceData.aircraft_id) {
-          const { data: acData } = await supabase
+          const { data: acData, error: acError } = await supabase
             .from("aircraft")
             .select("id, tail_number")
             .eq("id", invoiceData.aircraft_id)
             .single();
+          if (acError) {
+            console.warn("⚠️ Error fetching aircraft:", acError);
+          }
           aircraftData = acData;
         }
         
         // Fetch invoice lines
-        const { data: linesData } = await supabase
+        const { data: linesData, error: linesError } = await supabase
           .from("invoice_lines")
           .select("*")
           .eq("invoice_id", invoiceId);
+        
+        if (linesError) {
+          console.warn("⚠️ Error fetching invoice lines:", linesError);
+        }
         
         invoice = {
           ...invoiceData,
@@ -480,6 +495,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       } else {
         invoice = invoiceQuery.data;
+        // Ensure owner is properly structured
+        if (!invoice.owner) {
+          console.warn("⚠️ Nested query succeeded but owner is missing, fetching separately");
+          const { data: ownerData, error: ownerError } = await supabase
+            .from("user_profiles")
+            .select("id, email, full_name")
+            .eq("id", invoice.owner_id)
+            .single();
+          
+          if (ownerError || !ownerData) {
+            console.error("❌ Error fetching owner:", ownerError);
+            return res.status(500).json({ 
+              error: "Failed to fetch owner information",
+              details: ownerError?.message || "Owner not found"
+            });
+          }
+          invoice.owner = ownerData;
+        }
       }
 
       if (!invoice) {
@@ -512,8 +545,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total: (Number(line.quantity) * Number(line.unit_cents)) / 100,
       }));
 
-      // Calculate total
-      const totalAmount = invoiceLines.reduce((sum: number, line: { total: number }) => sum + line.total, 0);
+      // Calculate total - handle case where invoiceLines might be empty
+      const totalAmount = invoiceLines.length > 0 
+        ? invoiceLines.reduce((sum: number, line: { total: number }) => sum + line.total, 0)
+        : Number(invoice.amount) || 0;
 
       // Send email
       console.log("📧 Attempting to send invoice email for:", invoice.invoice_number);
@@ -553,13 +588,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("❌ Error in sendInvoiceEmail:", emailError);
         console.error("❌ Error message:", emailError?.message);
         console.error("❌ Error stack:", emailError?.stack);
-        throw emailError; // Re-throw to be caught by outer try-catch
+        console.error("❌ Error name:", emailError?.name);
+        console.error("❌ Error constructor:", emailError?.constructor?.name);
+        
+        // Return error response instead of throwing
+        return res.status(500).json({ 
+          error: "Failed to send invoice email",
+          message: emailError?.message || "Unknown error",
+          details: {
+            emailService: process.env.EMAIL_SERVICE || "console",
+            hasResendKey: !!process.env.RESEND_API_KEY,
+            errorType: emailError?.constructor?.name,
+          }
+        });
       }
     } catch (error: any) {
-      console.error("Error sending invoice email:", error);
+      console.error("❌ Error in /api/invoices/send-email endpoint:");
+      console.error("❌ Error type:", error?.constructor?.name);
+      console.error("❌ Error message:", error?.message);
+      console.error("❌ Error stack:", error?.stack);
+      
       res.status(500).json({ 
         error: "Failed to send invoice email",
-        message: error.message 
+        message: error?.message || "Unknown error occurred",
+        details: {
+          errorType: error?.constructor?.name,
+          stack: process.env.NODE_ENV === "development" ? error?.stack : undefined,
+        }
       });
     }
   });
