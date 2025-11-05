@@ -28,10 +28,10 @@
 
 ### 2. Environment Variables
 
-Already configured in Replit Secrets:
-- ✅ `VITE_SUPABASE_URL` - Frontend access to Supabase
-- ✅ `VITE_SUPABASE_ANON_KEY` - Frontend auth key
-- ✅ `DATABASE_URL` - Direct database connection (if needed)
+Configure these in your deployment platform (Vercel, Replit, etc.):
+- `VITE_SUPABASE_URL` - Frontend access to Supabase
+- `VITE_SUPABASE_ANON_KEY` - Frontend auth key
+- `DATABASE_URL` - Direct database connection (optional)
 
 ### 3. First User Setup
 
@@ -80,7 +80,7 @@ Now you can:
 
 To add sample aircraft and memberships, run this in Supabase SQL Editor:
 
-\`\`\`sql
+```sql
 -- Insert a sample aircraft (replace USER_ID with actual user UUID)
 INSERT INTO public.aircraft (tail_number, make, model, year, class, hobbs_hours, tach_hours, owner_id, image_url)
 VALUES (
@@ -122,7 +122,7 @@ SELECT
   550.0,
   'due_soon'
 FROM public.aircraft WHERE tail_number = 'N353DW';
-\`\`\`
+```
 
 ## Application Routes
 
@@ -183,54 +183,26 @@ All tables have RLS enabled. Policies ensure:
 ## Development
 
 ### Running Locally
-\`\`\`bash
+```bash
 npm run dev  # Starts on port 5000
-\`\`\`
+```
 
 ### Type Checking
-\`\`\`bash
+```bash
 npm run check  # TypeScript type check
-\`\`\`
+```
 
 ### Building for Production
-\`\`\`bash
+```bash
 npm run build  # Creates optimized build
 npm start      # Runs production server
-\`\`\`
+```
 
-## Next Steps
+## Additional Setup
 
-### Immediate
-1. ✅ Run `supabase-schema.sql` in Supabase
-2. ✅ Create first user account
-3. ✅ Promote user to admin role (run `scripts/setup-admin.sql`)
-4. ✅ Add sample aircraft data
-5. ✅ Test authentication flow and admin access
-
-### Phase 2 - Data Integration
-1. Update `YourAircraftCard` to fetch real aircraft data
-2. Connect `KanbanBoard` to service_requests table
-3. Wire up `MaintenanceList` to maintenance table
-4. Implement real-time updates with Supabase Realtime
-
-### Phase 3 - Advanced Features
-1. Add sign-up page
-2. Implement password reset flow
-3. Add user profile editing
-4. Create admin user management
-5. Build service request form
-
-### Phase 4 - Stripe Integration
-1. Install Stripe SDK
-2. Create pricing configurator
-3. Implement subscription management
-4. Add payment history
-
-### Phase 5 - PWA & Mobile
-1. Add PWA manifest
-2. Configure service worker
-3. Enable offline support
-4. Test mobile app installation
+For payment processing and email functionality, see:
+- [STRIPE_SETUP.md](STRIPE_SETUP.md) - Stripe payment integration
+- [EMAIL_SETUP.md](EMAIL_SETUP.md) - Email service configuration
 
 ## Troubleshooting
 

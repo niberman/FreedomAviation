@@ -84,6 +84,9 @@ scripts/             # Setup and utility scripts
 
 - [SETUP.md](SETUP.md) - Detailed setup and configuration guide
 - [design_guidelines.md](design_guidelines.md) - Design system guidelines
+- [STRIPE_SETUP.md](STRIPE_SETUP.md) - Stripe payment integration setup
+- [EMAIL_SETUP.md](EMAIL_SETUP.md) - Email service configuration
+- [PRODUCTION_STRIPE_CHECKLIST.md](PRODUCTION_STRIPE_CHECKLIST.md) - Production Stripe verification checklist
 
 ## Routes
 

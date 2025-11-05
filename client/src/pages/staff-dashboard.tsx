@@ -407,14 +407,38 @@ export default function StaffDashboard() {
         if (!emailResponse.ok) {
           const error = await emailResponse.json().catch(() => ({ error: "Unknown error" }));
           console.error("❌ Failed to send invoice email:", error);
+          console.error("❌ Response status:", emailResponse.status);
           // Don't throw - email failure shouldn't prevent invoice creation
+          // But show a warning toast
+          toast({
+            title: "Invoice created",
+            description: "Invoice created successfully, but email could not be sent. Please check server logs.",
+            variant: "destructive",
+          });
         } else {
           const result = await emailResponse.json();
           console.log("✅ Email API response:", result);
+          
+          // Check if email was actually sent or just logged
+          if (result.emailService === "console" || result.sent === false) {
+            console.warn("⚠️ Email service is in console mode - email was NOT actually sent");
+            toast({
+              title: "Invoice created",
+              description: "Invoice created, but email service is in console mode. Email was logged to server console only.",
+              variant: "default",
+            });
+          } else {
+            console.log("✅ Email sent successfully");
+          }
         }
       } catch (emailError) {
         console.error("❌ Error calling email API:", emailError);
         // Don't throw - email failure shouldn't prevent invoice creation
+        toast({
+          title: "Invoice created",
+          description: "Invoice created successfully, but there was an error sending the email. Please check server logs.",
+          variant: "destructive",
+        });
       }
 
       return invoiceId;
