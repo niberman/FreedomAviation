@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,10 +11,19 @@ import { DEMO_AIRCRAFT, DEMO_USER } from "@/lib/demo-data";
 import logoImage from "@assets/falogo.png";
 import { Link } from "wouter";
 import { ArrowRight } from "lucide-react";
+import { EditableField } from "@/components/owner/EditableField";
+import { useUserProfile } from "@/lib/hooks/useUserProfile";
+import { useAircraft } from "@/lib/hooks/useAircraft";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
   const { isDemo } = useDemoMode();
+  const { toast } = useToast();
+  
+  // Use hooks for editing
+  const { aircraftList: hookAircraftList, updateAircraft } = useAircraft();
+  const { userProfile, updateUserProfile } = useUserProfile();
   
   const { data: aircraftList } = useQuery({
     queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }],
@@ -120,6 +129,47 @@ export default function OwnerDashboard() {
   const readinessStatus = hasOpenTask ? "Needs Service" : "Ready";
   const readinessVariant = hasOpenTask ? "destructive" : "default";
 
+  const handleAircraftUpdate = async (field: string, value: string | number | null) => {
+    if (!aircraft?.id || isDemo) return;
+    
+    try {
+      await updateAircraft.mutateAsync({
+        id: aircraft.id,
+        data: { [field]: value },
+      });
+      toast({
+        title: "Aircraft updated",
+        description: "Your aircraft information has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update aircraft",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleProfileUpdate = async (field: string, value: string | number | null) => {
+    if (!user?.id || isDemo) return;
+    
+    try {
+      await updateUserProfile.mutateAsync({
+        [field]: value,
+      });
+      toast({
+        title: "Profile updated",
+        description: "Your profile information has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update profile",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {isDemo && <DemoBanner />}
@@ -128,6 +178,41 @@ export default function OwnerDashboard() {
         <h2 className="text-3xl font-bold tracking-tight" data-testid="text-dashboard-title">Owner Dashboard</h2>
         <p className="text-muted-foreground">Welcome back to Freedom Aviation</p>
       </div>
+
+      {/* User Profile Section */}
+      {!isDemo && userProfile && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+            <CardTitle className="text-base font-medium">My Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <EditableField
+                  value={userProfile.full_name}
+                  onSave={(value) => handleProfileUpdate("full_name", value)}
+                  label="Full Name"
+                  placeholder="Enter your full name"
+                  className="text-lg font-semibold"
+                />
+              </div>
+              <div className="space-y-2">
+                <EditableField
+                  value={userProfile.phone}
+                  onSave={(value) => handleProfileUpdate("phone", value)}
+                  label="Phone"
+                  type="tel"
+                  placeholder="(970) 618-2094"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm text-muted-foreground">Email</div>
+                <div className="text-sm">{userProfile.email}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
@@ -138,24 +223,74 @@ export default function OwnerDashboard() {
           {aircraft ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <div className="text-2xl font-bold" data-testid="text-tail-number">{aircraft.tail_number}</div>
-                  <p className="text-sm text-muted-foreground">{aircraft.model}</p>
-                  <p className="text-xs text-muted-foreground">Base: {aircraft.base_location}</p>
+                <div className="space-y-2">
+                  <div className="text-sm text-muted-foreground">Tail Number</div>
+                  <div className="text-2xl font-bold" data-testid="text-tail-number">
+                    {aircraft.tail_number}
+                  </div>
+                  {!isDemo && (
+                    <>
+                      <EditableField
+                        value={aircraft.make}
+                        onSave={(value) => handleAircraftUpdate("make", value)}
+                        label="Make"
+                        placeholder="e.g., Cirrus"
+                        className="text-sm"
+                      />
+                      <EditableField
+                        value={aircraft.model}
+                        onSave={(value) => handleAircraftUpdate("model", value)}
+                        label="Model"
+                        placeholder="e.g., SR22T"
+                        className="text-sm"
+                      />
+                      <EditableField
+                        value={aircraft.year}
+                        onSave={(value) => handleAircraftUpdate("year", value ? Number(value) : null)}
+                        label="Year"
+                        type="number"
+                        format={(v) => v?.toString() || "N/A"}
+                        parse={(v) => v ? Number(v) : null}
+                        placeholder="2024"
+                        className="text-sm"
+                      />
+                      <EditableField
+                        value={aircraft.base_location}
+                        onSave={(value) => handleAircraftUpdate("base_location", value)}
+                        label="Base Location"
+                        placeholder="e.g., KAPA"
+                        className="text-xs"
+                      />
+                    </>
+                  )}
                 </div>
 
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Hobbs Time</p>
-                  <p className="text-xl font-semibold">
-                    {aircraft.hobbs_hours ? `${aircraft.hobbs_hours.toFixed(1)} hrs` : 'N/A'}
-                  </p>
+                <div className="space-y-2">
+                  <EditableField
+                    value={aircraft.hobbs_hours}
+                    onSave={(value) => handleAircraftUpdate("hobbs_hours", value ? Number(value) : null)}
+                    label="Hobbs Time"
+                    type="number"
+                    format={(v) => v ? `${Number(v).toFixed(1)} hrs` : "N/A"}
+                    parse={(v) => v ? Number(v) : null}
+                    placeholder="0.0"
+                    disabled={isDemo}
+                    className="text-xl font-semibold"
+                  />
                 </div>
 
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Tach Time</p>
-                  <p className="text-xl font-semibold">
-                    {aircraft.tach_hours ? `${aircraft.tach_hours.toFixed(1)} hrs` : 'N/A'}
-                  </p>
+                <div className="space-y-2">
+                  <EditableField
+                    value={aircraft.tach_hours}
+                    onSave={(value) => handleAircraftUpdate("tach_hours", value ? Number(value) : null)}
+                    label="Tach Time"
+                    type="number"
+                    format={(v) => v ? `${Number(v).toFixed(1)} hrs` : "N/A"}
+                    parse={(v) => v ? Number(v) : null}
+                    placeholder="0.0"
+                    disabled={isDemo}
+                    className="text-xl font-semibold"
+                  />
                 </div>
               </div>
 

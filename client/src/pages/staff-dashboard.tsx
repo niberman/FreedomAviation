@@ -3,6 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Calendar, FileText, DollarSign, Wrench, Plane } from "lucide-react";
 import logoImage from "@assets/falogo.png";
 import { useState, useEffect } from "react";
@@ -56,6 +64,7 @@ export default function StaffDashboard() {
   const [flightDate, setFlightDate] = useState("");
   const [hours, setHours] = useState("");
   const [ratePerHour, setRatePerHour] = useState("150");
+  const [showPreview, setShowPreview] = useState(false);
 
 
   // Fetch owners
@@ -351,8 +360,8 @@ export default function StaffDashboard() {
     }
   }, [invoicesError, toast]);
 
-  // Create invoice mutation
-  const createInvoiceMutation = useMutation({
+  // Create invoice and send to client mutation
+  const createAndSendInvoiceMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -360,7 +369,8 @@ export default function StaffDashboard() {
       const rateCents = Math.round(parseFloat(ratePerHour) * 100);
       const hoursDecimal = parseFloat(hours);
 
-      const { data, error } = await supabase.rpc('create_instruction_invoice', {
+      // Create the invoice
+      const { data: invoiceData, error: createError } = await supabase.rpc('create_instruction_invoice', {
         p_owner_id: selectedOwnerId,
         p_aircraft_id: selectedAircraftId,
         p_description: `${description} - ${flightDate}`,
@@ -369,91 +379,67 @@ export default function StaffDashboard() {
         p_cfi_id: user.id,
       });
 
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: async () => {
-      // Invalidate and refetch invoices to show the newly created invoice
-      await queryClient.invalidateQueries({ 
-        queryKey: ['/api/cfi/invoices'],
-      });
-      // Also invalidate with the full query key pattern
-      await queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === '/api/cfi/invoices',
-      });
-      // Directly refetch the invoices query
-      await refetchInvoices();
-      toast({
-        title: "Invoice created",
-        description: "Instruction invoice has been created successfully.",
-      });
-      // Reset form
-      setSelectedOwnerId("");
-      setSelectedAircraftId("");
-      setDescription("");
-      setFlightDate("");
-      setHours("");
-      setRatePerHour("150");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+      if (createError) throw createError;
+      if (!invoiceData) throw new Error('Invoice creation failed');
 
-  // Finalize invoice mutation
-  const finalizeInvoiceMutation = useMutation({
-    mutationFn: async (invoiceId: string) => {
-      // First, finalize the invoice
+      const invoiceId = invoiceData;
+
+      // Finalize the invoice
       const { error: finalizeError } = await supabase.rpc('finalize_invoice', {
         p_invoice_id: invoiceId,
       });
       if (finalizeError) throw finalizeError;
 
-      // Then, send email to client
+      // Send email to client
       try {
-        console.log("📧 Calling email API endpoint for invoice:", invoiceId);
-        const emailResponse = await fetch("/api/invoices/send-email", {
+        const apiUrl = window.location.origin.startsWith("https://www.")
+          ? `${window.location.origin}/api/invoices/send-email`
+          : `https://www.freedomaviationco.com/api/invoices/send-email`;
+        const emailResponse = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify({ invoiceId }),
         });
 
         if (!emailResponse.ok) {
           const error = await emailResponse.json().catch(() => ({ error: "Unknown error" }));
           console.error("❌ Failed to send invoice email:", error);
-          console.error("  Response status:", emailResponse.status);
-          console.error("  Response text:", await emailResponse.text().catch(() => "Could not read response"));
-          // Don't throw - email failure shouldn't prevent finalization, but log it
+          // Don't throw - email failure shouldn't prevent invoice creation
         } else {
           const result = await emailResponse.json();
           console.log("✅ Email API response:", result);
         }
       } catch (emailError) {
         console.error("❌ Error calling email API:", emailError);
-        // Don't throw - email failure shouldn't prevent finalization
+        // Don't throw - email failure shouldn't prevent invoice creation
       }
+
+      return invoiceId;
     },
     onSuccess: async () => {
-      // Invalidate and refetch invoices to show updated status
+      // Invalidate and refetch invoices to show the newly created invoice
       await queryClient.invalidateQueries({ 
         queryKey: ['/api/cfi/invoices'],
       });
-      // Also invalidate with the full query key pattern
       await queryClient.invalidateQueries({ 
         predicate: (query) => query.queryKey[0] === '/api/cfi/invoices',
       });
-      // Directly refetch the invoices query
       await refetchInvoices();
       toast({
-        title: "Invoice finalized",
-        description: "Invoice has been finalized and email sent to client.",
+        title: "Invoice sent",
+        description: "Invoice has been created and sent to the client.",
       });
+      // Reset form and close preview
+      setSelectedOwnerId("");
+      setSelectedAircraftId("");
+      setDescription("");
+      setFlightDate("");
+      setHours("");
+      setRatePerHour("150");
+      setShowPreview(false);
     },
     onError: (error: Error) => {
       toast({
@@ -464,7 +450,8 @@ export default function StaffDashboard() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handlePreview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOwnerId || !selectedAircraftId || !description || !flightDate || !hours || !ratePerHour) {
       toast({
@@ -474,7 +461,7 @@ export default function StaffDashboard() {
       });
       return;
     }
-    createInvoiceMutation.mutate();
+    setShowPreview(true);
   };
 
   const filteredAircraft = selectedOwnerId
@@ -484,6 +471,10 @@ export default function StaffDashboard() {
   const totalAmount = hours && ratePerHour
     ? (parseFloat(hours) * parseFloat(ratePerHour)).toFixed(2)
     : "0.00";
+
+  // Get preview data
+  const selectedOwner = owners.find((o: any) => o.id === selectedOwnerId);
+  const selectedAircraft = aircraft.find((a: any) => a.id === selectedAircraftId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -498,7 +489,7 @@ export default function StaffDashboard() {
       </header>
 
       <main className="max-w-screen-2xl mx-auto px-4 py-8">
-        <Tabs defaultValue="requests" className="space-y-6">
+        <Tabs defaultValue="invoices" className="space-y-6">
           <TabsList>
             <TabsTrigger value="requests" data-testid="tab-requests">Service Requests</TabsTrigger>
             <TabsTrigger value="aircraft" data-testid="tab-aircraft">Aircraft</TabsTrigger>
@@ -669,7 +660,7 @@ export default function StaffDashboard() {
                 <CardTitle>Create Instruction Invoice</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handlePreview} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="owner">Client *</Label>
@@ -766,15 +757,79 @@ export default function StaffDashboard() {
                     </div>
                     <Button 
                       type="submit" 
-                      data-testid="button-create-invoice"
-                      disabled={createInvoiceMutation.isPending}
+                      data-testid="button-preview-invoice"
                     >
-                      {createInvoiceMutation.isPending ? "Creating..." : "Create Invoice"}
+                      Preview Invoice
                     </Button>
                   </div>
                 </form>
               </CardContent>
             </Card>
+
+            {/* Invoice Preview Dialog */}
+            <Dialog open={showPreview} onOpenChange={setShowPreview}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Invoice Preview</DialogTitle>
+                  <DialogDescription>
+                    Review the invoice details before sending to the client.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Client</p>
+                      <p className="text-base">{selectedOwner?.full_name || selectedOwner?.email || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Aircraft</p>
+                      <p className="text-base">{selectedAircraft?.tail_number || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Description</p>
+                      <p className="text-base">{description || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Flight Date</p>
+                      <p className="text-base">{flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Line Items</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                        <div>
+                          <p className="font-medium">{description} - {flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : ''}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {hours} {parseFloat(hours) === 1 ? 'hr' : 'hrs'} × ${parseFloat(ratePerHour).toFixed(2)}/hr
+                          </p>
+                        </div>
+                        <p className="font-bold">${totalAmount}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="border-t pt-4 flex justify-between items-center">
+                    <p className="text-lg font-semibold">Total Amount</p>
+                    <p className="text-2xl font-bold">${totalAmount}</p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPreview(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => createAndSendInvoiceMutation.mutate()}
+                    disabled={createAndSendInvoiceMutation.isPending}
+                    data-testid="button-send-to-client"
+                  >
+                    {createAndSendInvoiceMutation.isPending ? "Sending..." : "Send to Client"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Invoice List */}
             <div className="space-y-4">
@@ -901,20 +956,9 @@ export default function StaffDashboard() {
                                 <p className="text-xl font-bold">${calculatedTotal.toFixed(2)}</p>
                               </div>
                               
-                              {invoice.status === 'draft' && (
-                                <Button
-                                  size="sm"
-                                  data-testid={`button-finalize-${invoice.id}`}
-                                  onClick={() => finalizeInvoiceMutation.mutate(invoice.id)}
-                                  disabled={finalizeInvoiceMutation.isPending}
-                                >
-                                  {finalizeInvoiceMutation.isPending ? "Finalizing..." : "Mark as Finalized"}
-                                </Button>
-                              )}
-                              
                               {invoice.status === 'finalized' && (
                                 <p className="text-sm text-muted-foreground">
-                                  Ready for payment
+                                  Sent to client
                                 </p>
                               )}
                               

@@ -10,6 +10,7 @@ import { CreditsOverview } from "@/components/owner/CreditsOverview";
 import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
 import { DocsCard } from "@/features/owner/components/DocsCard";
+import { PasswordChangeCard } from "@/features/owner/components/PasswordChangeCard";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT } from "@/lib/demo-data";
@@ -298,6 +299,10 @@ export default function OwnerMore() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <BillingCard invoices={invoices} isLoading={invoicesLoading} />
           <DocsCard />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PasswordChangeCard />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
