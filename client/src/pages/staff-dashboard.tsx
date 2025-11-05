@@ -120,45 +120,95 @@ export default function StaffDashboard() {
         if (error) {
           console.warn('⚠️ Nested query failed, trying separate queries:', error.message);
           
-          // Fetch aircraft without nested relations
-          const aircraftResult = await supabase
-            .from('aircraft')
-            .select('id, tail_number, make, model, class, base_location, owner_id')
-            .order('tail_number');
+          // Check if error is about missing columns (make, model, etc.)
+          const isColumnError = error.message?.includes('column') || 
+                               error.message?.includes('does not exist') ||
+                               error.code === '42703';
           
-          if (aircraftResult.error) {
-            console.error('❌ Error fetching aircraft:', aircraftResult.error);
-            throw aircraftResult.error;
-          }
-          
-          const aircraftData = aircraftResult.data || [];
-          
-          // Get unique owner IDs
-          const ownerIds = [...new Set(aircraftData.map((ac: any) => ac.owner_id).filter(Boolean))];
-          
-          // Fetch owners separately
-          let ownersMap: Record<string, { full_name?: string; email?: string }> = {};
-          if (ownerIds.length > 0) {
-            const ownersResult = await supabase
-              .from('user_profiles')
-              .select('id, full_name, email')
-              .in('id', ownerIds);
+          if (isColumnError) {
+            // Missing columns - fetch only basic columns that should always exist
+            const aircraftResult = await supabase
+              .from('aircraft')
+              .select('id, tail_number, base_location, owner_id')
+              .order('tail_number');
             
-            if (ownersResult.error) {
-              console.warn('⚠️ Error fetching owners, continuing without owner data:', ownersResult.error);
-            } else if (ownersResult.data) {
-              ownersMap = ownersResult.data.reduce((acc: any, owner: any) => {
-                acc[owner.id] = { full_name: owner.full_name, email: owner.email };
-                return acc;
-              }, {});
+            if (aircraftResult.error) {
+              console.error('❌ Error fetching aircraft:', aircraftResult.error);
+              throw new Error(`Database schema issue: Missing columns in aircraft table. Please run the fix-aircraft-table.sql script. Original error: ${error.message}`);
             }
+            
+            const aircraftData = aircraftResult.data || [];
+            
+            // Get unique owner IDs
+            const ownerIds = [...new Set(aircraftData.map((ac: any) => ac.owner_id).filter(Boolean))];
+            
+            // Fetch owners separately
+            let ownersMap: Record<string, { full_name?: string; email?: string }> = {};
+            if (ownerIds.length > 0) {
+              const ownersResult = await supabase
+                .from('user_profiles')
+                .select('id, full_name, email')
+                .in('id', ownerIds);
+              
+              if (ownersResult.error) {
+                console.warn('⚠️ Error fetching owners, continuing without owner data:', ownersResult.error);
+              } else if (ownersResult.data) {
+                ownersMap = ownersResult.data.reduce((acc: any, owner: any) => {
+                  acc[owner.id] = { full_name: owner.full_name, email: owner.email };
+                  return acc;
+                }, {});
+              }
+            }
+            
+            // Combine data - add defaults for missing columns
+            data = aircraftData.map((ac: any) => ({
+              ...ac,
+              make: ac.make || null,
+              model: ac.model || null,
+              class: ac.class || null,
+              owner: ownersMap[ac.owner_id] || null,
+            }));
+          } else {
+            // Other error - try fetching without nested relations
+            const aircraftResult = await supabase
+              .from('aircraft')
+              .select('id, tail_number, make, model, class, base_location, owner_id')
+              .order('tail_number');
+            
+            if (aircraftResult.error) {
+              console.error('❌ Error fetching aircraft:', aircraftResult.error);
+              throw aircraftResult.error;
+            }
+            
+            const aircraftData = aircraftResult.data || [];
+            
+            // Get unique owner IDs
+            const ownerIds = [...new Set(aircraftData.map((ac: any) => ac.owner_id).filter(Boolean))];
+            
+            // Fetch owners separately
+            let ownersMap: Record<string, { full_name?: string; email?: string }> = {};
+            if (ownerIds.length > 0) {
+              const ownersResult = await supabase
+                .from('user_profiles')
+                .select('id, full_name, email')
+                .in('id', ownerIds);
+              
+              if (ownersResult.error) {
+                console.warn('⚠️ Error fetching owners, continuing without owner data:', ownersResult.error);
+              } else if (ownersResult.data) {
+                ownersMap = ownersResult.data.reduce((acc: any, owner: any) => {
+                  acc[owner.id] = { full_name: owner.full_name, email: owner.email };
+                  return acc;
+                }, {});
+              }
+            }
+            
+            // Combine data
+            data = aircraftData.map((ac: any) => ({
+              ...ac,
+              owner: ownersMap[ac.owner_id] || null,
+            }));
           }
-          
-          // Combine data
-          data = aircraftData.map((ac: any) => ({
-            ...ac,
-            owner: ownersMap[ac.owner_id] || null,
-          }));
         }
         
         if (!data) {
@@ -210,13 +260,11 @@ export default function StaffDashboard() {
         .select(`
           id,
           service_type,
-          requested_for,
-          requested_date,
-          requested_time,
+          requested_departure,
           description,
-          notes,
           status,
           priority,
+          airport,
           created_at,
           aircraft:aircraft_id(tail_number),
           owner:user_id(full_name, email)
@@ -234,17 +282,44 @@ export default function StaffDashboard() {
     queryKey: ['/api/maintenance'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('maintenance')
+        .from('maintenance_due')
         .select(`
           id,
-          item_name,
-          due_date,
-          due_hobbs,
-          status,
-          aircraft:aircraft_id(tail_number, hobbs_hours)
+          aircraft_id,
+          item,
+          due_at_date,
+          due_at_hours,
+          severity,
+          remaining_hours,
+          remaining_days,
+          aircraft:aircraft_id(tail_number)
         `)
-        .order('due_date', { ascending: true });
+        .order('due_at_date', { ascending: true });
       if (error) throw error;
+      
+      // Fetch hobbs_hours separately for each aircraft
+      if (data && data.length > 0) {
+        const aircraftIds = [...new Set(data.map((m: any) => m.aircraft_id).filter(Boolean))];
+        const { data: aircraftData } = await supabase
+          .from('aircraft')
+          .select('id, hobbs_hours')
+          .in('id', aircraftIds);
+        
+        const hobbsMap = (aircraftData || []).reduce((acc: any, ac: any) => {
+          acc[ac.id] = ac.hobbs_hours;
+          return acc;
+        }, {});
+        
+        // Add hobbs_hours to each maintenance item
+        return data.map((m: any) => ({
+          ...m,
+          aircraft: m.aircraft ? {
+            ...m.aircraft,
+            hobbs_hours: hobbsMap[m.aircraft_id] || null
+          } : null
+        }));
+      }
+      
       return data || [];
     },
   });
@@ -651,18 +726,15 @@ export default function StaffDashboard() {
                 
                 // Format requested date/time
                 let requestedFor = 'TBD';
-                if (sr.requested_date) {
-                  const date = new Date(sr.requested_date);
-                  requestedFor = format(date, 'MMM d, yyyy');
-                  if (sr.requested_time) {
-                    requestedFor += ` ${sr.requested_time}`;
-                  }
-                } else if (sr.requested_for) {
-                  requestedFor = sr.requested_for;
+                if (sr.requested_departure) {
+                  const date = new Date(sr.requested_departure);
+                  requestedFor = format(date, 'MMM d, yyyy HH:mm');
+                } else if (sr.airport) {
+                  requestedFor = sr.airport;
                 }
                 
-                // Combine description and notes for display
-                const displayNotes = sr.description || sr.notes || '';
+                // Use description for display
+                const displayNotes = sr.description || '';
                 
                 return {
                   id: sr.id,
@@ -747,10 +819,22 @@ export default function StaffDashboard() {
             </div>
             <MaintenanceList items={maintenanceItems.map((m: any) => {
               // Calculate status based on due dates and hobbs
+              // Use severity from database, or calculate from remaining_days/hours
               let status: "ok" | "due_soon" | "overdue" = "ok";
               
-              if (m.due_date) {
-                const dueDate = new Date(m.due_date);
+              if (m.severity === 'high' || m.severity === 'critical') {
+                status = "overdue";
+              } else if (m.severity === 'medium') {
+                status = "due_soon";
+              } else if (m.remaining_days !== null && m.remaining_days !== undefined) {
+                // Use remaining_days if available
+                if (m.remaining_days < 0) {
+                  status = "overdue";
+                } else if (m.remaining_days <= 30) {
+                  status = "due_soon";
+                }
+              } else if (m.due_at_date) {
+                const dueDate = new Date(m.due_at_date);
                 const today = new Date();
                 const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                 
@@ -759,8 +843,15 @@ export default function StaffDashboard() {
                 } else if (daysUntilDue <= 30) {
                   status = "due_soon";
                 }
-              } else if (m.due_hobbs && m.aircraft?.hobbs_hours) {
-                const hobbsRemaining = m.due_hobbs - m.aircraft.hobbs_hours;
+              } else if (m.remaining_hours !== null && m.remaining_hours !== undefined) {
+                // Use remaining_hours if available
+                if (m.remaining_hours < 0) {
+                  status = "overdue";
+                } else if (m.remaining_hours <= 10) {
+                  status = "due_soon";
+                }
+              } else if (m.due_at_hours && m.aircraft?.hobbs_hours) {
+                const hobbsRemaining = m.due_at_hours - m.aircraft.hobbs_hours;
                 if (hobbsRemaining < 0) {
                   status = "overdue";
                 } else if (hobbsRemaining <= 10) {
@@ -768,17 +859,13 @@ export default function StaffDashboard() {
                 }
               }
 
-              // Use database status if available
-              if (m.status === 'overdue') status = 'overdue';
-              if (m.status === 'due_soon') status = 'due_soon';
-
               return {
                 id: m.id,
                 tailNumber: m.aircraft?.tail_number || 'N/A',
-                title: m.item_name,
-                hobbsDue: m.due_hobbs,
+                title: m.item,
+                hobbsDue: m.due_at_hours,
                 hobbsCurrent: m.aircraft?.hobbs_hours,
-                calendarDue: m.due_date,
+                calendarDue: m.due_at_date,
                 status,
               };
             })} />
