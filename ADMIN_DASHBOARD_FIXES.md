@@ -1,5 +1,7 @@
 # Admin Dashboard Data Accuracy Fixes
 
+> **Note:** This document describes historical fixes that have been applied. It's kept for reference regarding database schema changes and migrations.
+
 ## Summary
 Fixed all data accuracy issues in the admin dashboard to ensure proper integration with Supabase.
 
@@ -68,11 +70,12 @@ All queries now properly:
 - ✅ Support proper owner/aircraft relationships
 - ✅ Work with RLS policies
 
-## Next Steps
+## Migration
+
 For existing databases, run:
 ```sql
 -- In Supabase SQL Editor, run:
-\i scripts/add-missing-tables.sql
+-- See: scripts/add-missing-tables.sql
 ```
 
 Or manually apply the schema changes from `supabase-schema.sql` for new setups.

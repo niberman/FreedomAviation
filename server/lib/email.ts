@@ -178,10 +178,12 @@ Freedom Aviation
   switch (emailService) {
     case "console":
       // Development: just log
-      console.log("📧 INVOICE EMAIL (would send):");
+      console.log("📧 INVOICE EMAIL (CONSOLE MODE - Email NOT actually sent):");
       console.log("To:", data.ownerEmail);
       console.log("Subject:", `Invoice ${data.invoiceNumber} - Freedom Aviation`);
-      console.log("HTML:", html);
+      console.log("⚠️  To actually send emails, set EMAIL_SERVICE=resend and RESEND_API_KEY");
+      console.log("HTML length:", html.length, "characters");
+      // Don't throw - console mode is valid for development
       return;
 
     case "smtp":
@@ -193,7 +195,9 @@ Freedom Aviation
       return sendViaResend(data.ownerEmail, `Invoice ${data.invoiceNumber} - Freedom Aviation`, html, text);
 
     default:
-      console.warn(`Unknown email service: ${emailService}, using console`);
+      console.warn(`⚠️ Unknown email service: ${emailService}, using console mode`);
+      console.warn(`⚠️ Valid options: 'console', 'resend', 'smtp'`);
+      console.warn(`⚠️ Email will NOT be sent - only logged to console`);
       return;
   }
 }
@@ -210,16 +214,19 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
     console.error("❌ RESEND_API_KEY not set, cannot send email");
-    throw new Error("RESEND_API_KEY environment variable is not set");
+    console.error("❌ Please set RESEND_API_KEY environment variable");
+    console.error("❌ Get your API key from: https://resend.com/api-keys");
+    throw new Error("RESEND_API_KEY environment variable is not set. Please configure it in your environment variables.");
   }
 
-  const fromEmail = process.env.EMAIL_FROM || "Freedom Aviation <invoices@freedomaviationco.com>";
+  const fromEmail = process.env.EMAIL_FROM || "Freedom Aviation <onboarding@resend.dev>";
   
   console.log("📧 Sending email via Resend:");
   console.log("  From:", fromEmail);
   console.log("  To:", to);
   console.log("  Subject:", subject);
   console.log("  API Key present:", !!resendApiKey);
+  console.log("  API Key length:", resendApiKey.length, "characters");
 
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -240,8 +247,23 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
     const responseText = await response.text();
     
     if (!response.ok) {
-      console.error("❌ Resend API error response:", response.status, responseText);
-      throw new Error(`Resend API error (${response.status}): ${responseText}`);
+      console.error("❌ Resend API error response:");
+      console.error("  Status:", response.status);
+      console.error("  Status Text:", response.statusText);
+      console.error("  Response Body:", responseText);
+      
+      // Try to parse error for better message
+      let errorMessage = `Resend API error (${response.status}): ${responseText}`;
+      try {
+        const errorJson = JSON.parse(responseText);
+        if (errorJson.message) {
+          errorMessage = `Resend API error: ${errorJson.message}`;
+        }
+      } catch (e) {
+        // Keep original error message
+      }
+      
+      throw new Error(errorMessage);
     }
 
     let result;
@@ -255,10 +277,23 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
     console.log("✅ Invoice email sent successfully via Resend");
     console.log("  Email ID:", result.id);
     console.log("  Response:", JSON.stringify(result, null, 2));
+    
+    if (!result.id) {
+      console.warn("⚠️  Warning: Resend response missing email ID");
+    }
   } catch (error: any) {
     console.error("❌ Failed to send invoice email via Resend:");
-    console.error("  Error:", error.message);
-    console.error("  Stack:", error.stack);
+    console.error("  Error type:", error.constructor.name);
+    console.error("  Error message:", error.message);
+    if (error.stack) {
+      console.error("  Error stack:", error.stack);
+    }
+    
+    // Provide helpful error message
+    if (error.message?.includes("RESEND_API_KEY")) {
+      throw new Error("Email service not configured. Please set RESEND_API_KEY environment variable. See EMAIL_SETUP.md for instructions.");
+    }
+    
     throw error;
   }
 }

@@ -521,6 +521,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📧 Owner name:", owner.full_name || "not provided");
       console.log("📧 Invoice lines count:", invoiceLines.length);
       console.log("📧 Total amount:", totalAmount);
+      console.log("📧 Email service:", process.env.EMAIL_SERVICE || "console (default)");
+      console.log("📧 RESEND_API_KEY:", process.env.RESEND_API_KEY ? "✅ Set" : "❌ Not set");
+      console.log("📧 EMAIL_FROM:", process.env.EMAIL_FROM || "not set");
       
       try {
         await sendInvoiceEmail({
@@ -535,17 +538,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log("✅ Invoice email sent successfully");
+        
+        // Return more detailed response
+        const emailService = process.env.EMAIL_SERVICE || "console";
+        res.json({ 
+          success: true,
+          message: emailService === "console" 
+            ? "Email logged to console (EMAIL_SERVICE=console mode)" 
+            : "Invoice email sent successfully",
+          emailService,
+          sent: emailService !== "console",
+        });
       } catch (emailError: any) {
         console.error("❌ Error in sendInvoiceEmail:", emailError);
         console.error("❌ Error message:", emailError?.message);
         console.error("❌ Error stack:", emailError?.stack);
         throw emailError; // Re-throw to be caught by outer try-catch
       }
-
-      res.json({ 
-        success: true,
-        message: "Invoice email sent successfully" 
-      });
     } catch (error: any) {
       console.error("Error sending invoice email:", error);
       res.status(500).json({ 
