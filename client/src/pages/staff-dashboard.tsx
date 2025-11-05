@@ -100,13 +100,12 @@ export default function StaffDashboard() {
     queryFn: async () => {
       console.log('🔍 Fetching aircraft for staff dashboard...');
       
-      // Try nested query first
+      // Try nested query first - only select columns that exist
       let query = supabase
         .from('aircraft')
         .select(`
           id,
           tail_number,
-          make,
           model,
           class,
           base_location,
@@ -121,10 +120,10 @@ export default function StaffDashboard() {
       if (error) {
         console.warn('⚠️ Nested query failed, trying separate queries:', error?.message);
         
-        // Fetch aircraft without nested relations
+        // Fetch aircraft without nested relations - only columns that exist
         const aircraftResult = await supabase
           .from('aircraft')
-          .select('id, tail_number, make, model, class, base_location, owner_id')
+          .select('id, tail_number, model, class, base_location, owner_id')
           .order('tail_number');
         
         if (aircraftResult.error) {
@@ -173,7 +172,7 @@ export default function StaffDashboard() {
       return (data || []).map((ac: any) => ({
         id: ac.id,
         tailNumber: ac.tail_number,
-        make: ac.make || 'Unknown',
+        make: ac.make || 'N/A', // Handle missing make column gracefully
         model: ac.model || '',
         class: ac.class || 'Unknown',
         baseAirport: ac.base_location || 'KAPA', // Use base_location from DB or default to KAPA
