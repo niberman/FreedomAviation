@@ -206,8 +206,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (isNaN(quantity) || quantity <= 0) {
             throw new Error(`Invalid quantity: ${line.quantity}`);
           }
-          // Stripe accepts decimal quantities, but ensure it's a proper number
-          const stripeQuantity = Math.round(quantity * 100) / 100; // Round to 2 decimal places
+          // Stripe accepts decimal quantities up to 8 decimal places
+          // Round to 8 decimal places to avoid precision issues
+          const stripeQuantity = Math.round(quantity * 100000000) / 100000000;
+          
+          // Ensure unit_amount is valid
+          const unitAmount = Number(line.unit_cents);
+          if (isNaN(unitAmount) || unitAmount <= 0) {
+            throw new Error(`Invalid unit amount: ${line.unit_cents}`);
+          }
           
           return {
             price_data: {
@@ -215,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               product_data: {
                 name: line.description || "Flight Instruction",
               },
-              unit_amount: line.unit_cents,
+              unit_amount: unitAmount,
             },
             quantity: stripeQuantity,
           };
