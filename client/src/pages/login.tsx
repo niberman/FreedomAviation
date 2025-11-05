@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 import logoImage from "@assets/falogo.png";
 
 export default function Login() {
@@ -16,10 +17,40 @@ export default function Login() {
   const { signIn, user } = useAuth();
   const { toast } = useToast();
 
+  // Helper function to determine redirect based on user role
+  const getRedirectPath = async (userId: string): Promise<string> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        // Default to dashboard if we can't fetch the role
+        return "/dashboard";
+      }
+      
+      // Redirect staff (admin or cfi) to staff dashboard
+      if (data?.role === 'admin' || data?.role === 'cfi') {
+        return "/staff";
+      }
+      
+      // Regular users go to owner dashboard
+      return "/dashboard";
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      return "/dashboard";
+    }
+  };
+
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      setLocation("/dashboard");
+      getRedirectPath(user.id).then((path) => {
+        setLocation(path);
+      });
     }
   }, [user, setLocation]);
 
@@ -29,11 +60,22 @@ export default function Login() {
     
     try {
       await signIn(email, password);
-      toast({
-        title: "Welcome back!",
-        description: "Successfully signed in to Freedom Aviation",
-      });
-      setLocation("/dashboard");
+      
+      // Get the current user to check their role
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (currentUser) {
+        // Determine redirect path based on user role
+        const redirectPath = await getRedirectPath(currentUser.id);
+        toast({
+          title: "Welcome back!",
+          description: "Successfully signed in to Freedom Aviation",
+        });
+        setLocation(redirectPath);
+      } else {
+        // Fallback if user is not available immediately
+        setLocation("/dashboard");
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
