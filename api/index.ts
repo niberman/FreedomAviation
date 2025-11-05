@@ -3,6 +3,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "../server/routes";
 import { serveStatic } from "../server/vite";
+import path from "path";
+import fs from "fs";
 
 const app = express();
 
@@ -88,11 +90,20 @@ async function initializeApp(): Promise<express.Express> {
       console.log("  - STRIPE_SECRET_KEY:", !!process.env.STRIPE_SECRET_KEY);
       console.log("  - RESEND_API_KEY:", !!process.env.RESEND_API_KEY);
       console.log("  - EMAIL_SERVICE:", process.env.EMAIL_SERVICE || "not set");
+      console.log("  - NODE_ENV:", process.env.NODE_ENV);
+      console.log("  - VERCEL_ENV:", process.env.VERCEL_ENV);
       
       // Register routes (returns Server, but we don't need it for serverless)
       console.log("🚀 Registering routes...");
-      await registerRoutes(app);
-      console.log("✅ Routes registered");
+      try {
+        const server = await registerRoutes(app);
+        console.log("✅ Routes registered, server created (not used in serverless)");
+        // In serverless, we don't call server.listen(), we just use the Express app
+      } catch (routeError: any) {
+        console.error("❌ Error registering routes:", routeError);
+        console.error("❌ Route error stack:", routeError?.stack);
+        throw routeError;
+      }
       
       // Error handler
       app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -105,21 +116,90 @@ async function initializeApp(): Promise<express.Express> {
         }
       });
 
-      // Serve static files in production (but only if not in Vercel, which handles static files separately)
-      // In Vercel, static files are served from outputDirectory, so we only need to handle API routes
-      // For non-API routes, Vercel will serve the index.html from the build output
+      // Serve static files in production
+      // In Vercel, we need to handle static files because the rewrite rule sends all requests here
+      const isVercel = !!process.env.VERCEL;
+      console.log("🚀 Is Vercel environment:", isVercel);
+      
       try {
-        serveStatic(app);
+        // Try to find the dist/public directory
+        // In Vercel, the working directory is the project root
+        // The build output is in dist/public (as specified in vercel.json)
+        // Get the directory of the current file for relative paths
+        const currentDir = path.dirname(new URL(import.meta.url).pathname);
+        const possiblePaths = [
+          path.resolve(process.cwd(), "dist", "public"),
+          path.resolve(process.cwd(), "..", "dist", "public"),
+          path.resolve(currentDir, "..", "dist", "public"),
+          path.resolve(currentDir, "..", "..", "dist", "public"),
+        ];
+        
+        let distPath: string | null = null;
+        for (const possiblePath of possiblePaths) {
+          console.log("🔍 Checking path:", possiblePath);
+          if (fs.existsSync(possiblePath)) {
+            distPath = possiblePath;
+            console.log("✅ Found dist directory:", distPath);
+            break;
+          }
+        }
+        
+        if (distPath) {
+          // Serve static files
+          app.use(express.static(distPath));
+          console.log("✅ Static files configured");
+          
+          // Fallback to index.html for non-API routes (SPA routing)
+          app.use((req, res, next) => {
+            // Don't serve index.html for API routes
+            if (req.path.startsWith("/api/")) {
+              return next();
+            }
+            
+            // Try to serve the actual file first
+            const filePath = path.join(distPath!, req.path);
+            if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+              return res.sendFile(filePath);
+            }
+            
+            // For non-API routes, serve index.html for client-side routing
+            const indexPath = path.join(distPath!, "index.html");
+            if (fs.existsSync(indexPath)) {
+              return res.sendFile(indexPath);
+            }
+            
+            next();
+          });
+        } else {
+          console.warn("⚠️ Could not find dist/public directory, trying serveStatic fallback");
+          // Fallback to original serveStatic
+          serveStatic(app);
+        }
       } catch (staticError: any) {
-        // If static serving fails, log but don't crash - Vercel handles static files
-        console.warn("⚠️ Static file serving failed (expected in Vercel):", staticError.message);
+        // If static serving fails, add a minimal fallback
+        console.error("❌ Static file serving failed:", staticError.message);
+        console.error("❌ Static error stack:", staticError.stack);
+        
         // Add a fallback route handler for non-API routes
         app.use((req, res, next) => {
           if (req.path.startsWith("/api/")) {
             return next();
           }
-          // For non-API routes, return 404 or let Vercel handle it
-          res.status(404).json({ error: "Not found" });
+          // For non-API routes, try to return a basic HTML response
+          // This at least allows the app to load
+          res.status(200).send(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>Freedom Aviation</title>
+                <meta http-equiv="refresh" content="0; url=${req.url}">
+              </head>
+              <body>
+                <p>Loading...</p>
+                <script>window.location.reload();</script>
+              </body>
+            </html>
+          `);
         });
       }
 
