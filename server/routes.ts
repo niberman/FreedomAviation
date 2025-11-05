@@ -41,6 +41,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: "API routes are working!", timestamp: new Date().toISOString() });
   });
 
+  // Test email endpoint - sends a test email
+  app.post("/api/test-email", async (req: Request, res: Response) => {
+    console.log("📧 POST /api/test-email called");
+    try {
+      const { toEmail } = req.body;
+      const testEmail = toEmail || process.env.TEST_EMAIL || "test@example.com";
+      
+      console.log("📧 Sending test email to:", testEmail);
+      
+      // Send test email with sample invoice data
+      await sendInvoiceEmail({
+        invoiceNumber: "TEST-001",
+        ownerName: "Test User",
+        ownerEmail: testEmail,
+        invoiceId: "test-invoice-id",
+        totalAmount: 250.00,
+        invoiceLines: [
+          {
+            description: "Flight Instruction - Ground School",
+            quantity: 2.0,
+            unitPrice: 75.00,
+            total: 150.00,
+          },
+          {
+            description: "Flight Instruction - Air Time",
+            quantity: 1.0,
+            unitPrice: 100.00,
+            total: 100.00,
+          },
+        ],
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        aircraftTailNumber: "N123FA",
+      });
+      
+      res.json({ 
+        success: true,
+        message: "Test email sent successfully",
+        to: testEmail,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("❌ Error sending test email:", error);
+      res.status(500).json({ 
+        error: "Failed to send test email",
+        message: error.message,
+      });
+    }
+  });
+
   // Stripe: Create checkout session for invoice payment
   app.post("/api/stripe/create-checkout-session", async (req: Request, res: Response) => {
     try {
