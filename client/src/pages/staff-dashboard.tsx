@@ -392,8 +392,17 @@ export default function StaffDashboard() {
 
       // Send email to client
       try {
-        // Use relative URL to avoid CORS issues - always uses same origin
-        const emailResponse = await fetch("/api/invoices/send-email", {
+        // Always use www domain in production to avoid CORS issues from redirects
+        // Vercel redirects non-www to www, which breaks CORS during redirect
+        let apiUrl: string;
+        if (window.location.hostname === "freedomaviationco.com") {
+          // If on non-www, explicitly use www to avoid redirect CORS issues
+          apiUrl = "https://www.freedomaviationco.com/api/invoices/send-email";
+        } else {
+          // Use current origin (localhost, www, or other)
+          apiUrl = `${window.location.origin}/api/invoices/send-email`;
+        }
+        const emailResponse = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
