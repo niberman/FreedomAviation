@@ -8,6 +8,7 @@ interface InvoiceEmailData {
   ownerName: string;
   ownerEmail: string;
   invoiceId: string;
+  ownerId: string;
   totalAmount: number;
   invoiceLines: Array<{
     description: string;
@@ -17,6 +18,7 @@ interface InvoiceEmailData {
   }>;
   dueDate?: string | null;
   aircraftTailNumber?: string;
+  paymentUrl?: string | null;
 }
 
 /**
@@ -103,6 +105,19 @@ function generateInvoiceEmailHTML(data: InvoiceEmailData): string {
               
               ${data.dueDate ? `<p style="margin: 16px 0 0; color: #6b7280; font-size: 14px;"><strong>Due Date:</strong> ${new Date(data.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>` : ""}
               
+              ${data.paymentUrl ? `
+              <!-- Payment Button -->
+              <div style="margin: 32px 0; text-align: center;">
+                <a href="${data.paymentUrl}" style="display: inline-block; padding: 14px 32px; background-color: #1f2937; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                  Pay Invoice ${escapeHtml(data.invoiceNumber)}
+                </a>
+              </div>
+              <p style="margin: 16px 0 0; color: #6b7280; font-size: 14px; text-align: center;">
+                Or copy and paste this link into your browser:<br>
+                <a href="${data.paymentUrl}" style="color: #3b82f6; word-break: break-all;">${data.paymentUrl}</a>
+              </p>
+              ` : ""}
+              
               <p style="margin: 32px 0 0; color: #4b5563; font-size: 16px; line-height: 1.5;">
                 Thank you for your business!
               </p>
@@ -169,6 +184,10 @@ ${data.invoiceLines.map(line => `${line.description} - ${line.quantity} hours @ 
 Total: $${data.totalAmount.toFixed(2)}
 
 ${data.dueDate ? `Due Date: ${new Date(data.dueDate).toLocaleDateString()}` : ''}
+
+${data.paymentUrl ? `
+Pay Invoice: ${data.paymentUrl}
+` : ''}
 
 Thank you for your business!
 
