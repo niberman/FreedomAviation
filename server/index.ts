@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -7,9 +8,46 @@ const CANONICAL = "www.freedomaviationco.com";
 
 app.enable("trust proxy"); // important when behind a proxy/load balancer
 
+// CORS configuration - allow both www and non-www origins
+const allowedOrigins = [
+  "https://freedomaviationco.com",
+  "https://www.freedomaviationco.com",
+  "http://localhost:5000",
+  "http://localhost:5173",
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list or starts with allowed domain
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.startsWith("https://freedomaviationco.com") ||
+        origin.startsWith("http://localhost:")
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  })
+);
+
 // Only enforce canonical domain and HTTPS in production
+// Skip redirect for API routes to avoid CORS issues
 if (app.get("env") === "production") {
   app.use((req, res, next) => {
+    // Skip redirect for API routes - they should work from both domains
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
+    
     const host = (req.headers.host || "").toLowerCase();
     const proto =
       (req.headers["x-forwarded-proto"] as string) ||

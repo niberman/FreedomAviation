@@ -252,15 +252,21 @@ export default function OwnerMore() {
       
       return transformedInvoices;
     },
-    onError: (error: any) => {
-      console.error("Invoice query error:", error);
+  });
+
+  // Handle invoice query errors
+  useEffect(() => {
+    if (invoicesError) {
+      console.error("Invoice query error:", invoicesError);
       toast({
         title: "Error loading invoices",
-        description: error.message || "Failed to load invoices. Please try refreshing the page.",
+        description: invoicesError instanceof Error 
+          ? invoicesError.message 
+          : "Failed to load invoices. Please try refreshing the page.",
         variant: "destructive",
       });
-    },
-  });
+    }
+  }, [invoicesError, toast]);
 
   return (
     <div className="min-h-screen bg-background">

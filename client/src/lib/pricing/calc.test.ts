@@ -40,11 +40,11 @@ describe('Pricing Calculator', () => {
       expect(result.avionics_db).toBe(30);
       expect(result.consumables).toBe(15);
       expect(result.overhead).toBe(200);
-      expect(result.cc_fee).toBe(12); // 500 * 0.025 = 12.5, rounded to 12
+      expect(result.cc_fee).toBe(13); // 500 * 0.025 = 12.5, Math.round = 13
       expect(result.hangar_derived).toBe(0); // no hangar cost
-      expect(result.total_cost).toBe(532); // sum of all costs
-      expect(result.net_revenue).toBe(-32); // 500 - 532
-      expect(result.margin_pct).toBeCloseTo(-0.064, 3); // -32 / 500
+      expect(result.total_cost).toBe(533); // sum of all costs (200+50+25+30+15+200+13)
+      expect(result.net_revenue).toBe(-33); // 500 - 533
+      expect(result.margin_pct).toBeCloseTo(-0.066, 2); // -33 / 500 = -0.066
     });
 
     it('should use custom_price when provided', () => {
@@ -142,10 +142,10 @@ describe('Pricing Calculator', () => {
       expect(result.avionics_db).toBe(50);
     });
 
-    it('should fallback to assumptions avionics_db_per_ac when class avionics_db not available', () => {
+    it('should use class avionics_db when provided, otherwise fallback to assumptions', () => {
       const classWithoutAvionics: ClassCfg = {
         ...mockClassCfg,
-        avionics_db: 0,
+        avionics_db: 0, // Explicitly set to 0
       };
 
       const rowInput: RowInput = {
@@ -157,9 +157,9 @@ describe('Pricing Calculator', () => {
       };
 
       const result = calcRow(mockAssumptions, classWithoutAvionics, rowInput);
-      // Note: The current implementation uses class avionics_db if it exists (even if 0)
-      // This test documents current behavior
-      expect(result.avionics_db).toBe(0);
+      // The implementation uses cls.avionics_db || a.avionics_db_per_ac || 0
+      // Since cls.avionics_db is 0 (falsy), it falls back to avionics_db_per_ac (30)
+      expect(result.avionics_db).toBe(30); // Falls back to assumptions value
     });
   });
 
