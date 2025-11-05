@@ -12,7 +12,6 @@ import logoImage from "@assets/falogo.png";
 import { Link } from "wouter";
 import { ArrowRight } from "lucide-react";
 import { EditableField } from "@/components/owner/EditableField";
-import { useUserProfile } from "@/lib/hooks/useUserProfile";
 import { useAircraft } from "@/lib/hooks/useAircraft";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,7 +22,6 @@ export default function OwnerDashboard() {
   
   // Use hooks for editing
   const { aircraftList: hookAircraftList, updateAircraft } = useAircraft();
-  const { userProfile, updateUserProfile } = useUserProfile();
   
   const { data: aircraftList } = useQuery({
     queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }],
@@ -150,25 +148,6 @@ export default function OwnerDashboard() {
     }
   };
 
-  const handleProfileUpdate = async (field: string, value: string | number | null) => {
-    if (!user?.id || isDemo) return;
-    
-    try {
-      await updateUserProfile.mutateAsync({
-        [field]: value,
-      });
-      toast({
-        title: "Profile updated",
-        description: "Your profile information has been updated successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update profile",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -179,40 +158,6 @@ export default function OwnerDashboard() {
         <p className="text-muted-foreground">Welcome back to Freedom Aviation</p>
       </div>
 
-      {/* User Profile Section */}
-      {!isDemo && userProfile && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-            <CardTitle className="text-base font-medium">My Profile</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <EditableField
-                  value={userProfile.full_name}
-                  onSave={(value) => handleProfileUpdate("full_name", value)}
-                  label="Full Name"
-                  placeholder="Enter your full name"
-                  className="text-lg font-semibold"
-                />
-              </div>
-              <div className="space-y-2">
-                <EditableField
-                  value={userProfile.phone}
-                  onSave={(value) => handleProfileUpdate("phone", value)}
-                  label="Phone"
-                  type="tel"
-                  placeholder="(970) 618-2094"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="text-sm text-muted-foreground">Email</div>
-                <div className="text-sm">{userProfile.email}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
