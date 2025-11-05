@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Plane, Wrench } from "lucide-react";
+import { Plane, Wrench, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,6 +32,7 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
   const queryClient = useQueryClient();
   const [openPrep, setOpenPrep] = useState(false);
   const [openService, setOpenService] = useState(false);
+  const [openInstruction, setOpenInstruction] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [prepForm, setPrepForm] = useState({
@@ -77,6 +78,13 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
     type: "preflight",
     notes: "",
     requested_for: "",
+  });
+
+  const [instructionForm, setInstructionForm] = useState({
+    instruction_type: "flight_instruction",
+    requested_date: "",
+    requested_time: "",
+    notes: "",
   });
 
   useEffect(() => {
@@ -235,6 +243,82 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
       toast({
         title: "Error",
         description: "Failed to submit service request",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestInstruction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isDemo) {
+      toast({
+        title: "Demo Mode",
+        description: "Actions are disabled in demo mode",
+        variant: "default",
+      });
+      return;
+    }
+    
+    if (!instructionForm.requested_date || !instructionForm.requested_time) {
+      toast({
+        title: "Missing fields",
+        description: "Please select a date and time for your flight instruction.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // Build description with instruction details
+      const descriptionParts = [
+        `Flight Instruction Request - ${instructionForm.instruction_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
+        `Preferred Date: ${new Date(instructionForm.requested_date).toLocaleDateString()}`,
+        `Preferred Time: ${instructionForm.requested_time}`,
+        instructionForm.notes ? `Notes: ${instructionForm.notes}` : null,
+      ].filter(Boolean).join(" | ");
+
+      const payload: any = {
+        service_type: "Flight Instruction",
+        priority: "medium",
+        status: "pending",
+        user_id: userId,
+        aircraft_id: aircraftId,
+        description: descriptionParts,
+        requested_date: instructionForm.requested_date,
+        requested_time: instructionForm.requested_time,
+        requested_for: `${instructionForm.requested_date} ${instructionForm.requested_time}`,
+        notes: instructionForm.notes || null,
+      };
+      
+      const { data, error } = await supabase.from("service_requests").insert(payload).select();
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Flight instruction request submitted successfully!",
+      });
+      
+      setOpenInstruction(false);
+      setInstructionForm({
+        instruction_type: "flight_instruction",
+        requested_date: "",
+        requested_time: "",
+        notes: "",
+      });
+      
+      await queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "service-requests"
+      });
+    } catch (error) {
+      console.error("Error submitting flight instruction request:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit flight instruction request",
         variant: "destructive",
       });
     } finally {
@@ -486,6 +570,92 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
                   Cancel
                 </Button>
                 <Button type="submit" disabled={loading} data-testid="button-submit-service">
+                  {loading ? "Submitting..." : "Submit Request"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={openInstruction} onOpenChange={setOpenInstruction}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="w-full justify-start" data-testid="button-request-instruction">
+              <GraduationCap className="mr-2 h-4 w-4" />
+              Request Flight Instruction
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Flight Instruction</DialogTitle>
+              <DialogDescription>
+                Request a flight instruction block with a CFI. Our team will coordinate scheduling.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleRequestInstruction} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="instruction_type">Instruction Type *</Label>
+                <Select
+                  value={instructionForm.instruction_type}
+                  onValueChange={(v) => setInstructionForm({ ...instructionForm, instruction_type: v })}
+                >
+                  <SelectTrigger id="instruction_type" data-testid="select-instruction-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="flight_instruction">Flight Instruction</SelectItem>
+                    <SelectItem value="ipc">IPC (Instrument Proficiency Check)</SelectItem>
+                    <SelectItem value="bfr">BFR (Biennial Flight Review)</SelectItem>
+                    <SelectItem value="checkout">Aircraft Checkout</SelectItem>
+                    <SelectItem value="currency_training">Currency Training</SelectItem>
+                    <SelectItem value="advanced_training">Advanced Training</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="instruction_date">Preferred Date *</Label>
+                  <Input
+                    id="instruction_date"
+                    type="date"
+                    value={instructionForm.requested_date}
+                    onChange={(e) => setInstructionForm({ ...instructionForm, requested_date: e.target.value })}
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                    data-testid="input-instruction-date"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="instruction_time">Preferred Time *</Label>
+                  <Input
+                    id="instruction_time"
+                    type="time"
+                    value={instructionForm.requested_time}
+                    onChange={(e) => setInstructionForm({ ...instructionForm, requested_time: e.target.value })}
+                    required
+                    data-testid="input-instruction-time"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="instruction_notes">Additional Notes</Label>
+                <Textarea
+                  id="instruction_notes"
+                  placeholder="Any specific requirements or goals for this instruction session..."
+                  value={instructionForm.notes}
+                  onChange={(e) => setInstructionForm({ ...instructionForm, notes: e.target.value })}
+                  rows={4}
+                  data-testid="textarea-instruction-notes"
+                />
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpenInstruction(false)} data-testid="button-cancel-instruction">
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={loading} data-testid="button-submit-instruction">
                   {loading ? "Submitting..." : "Submit Request"}
                 </Button>
               </DialogFooter>

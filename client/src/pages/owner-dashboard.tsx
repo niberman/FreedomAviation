@@ -8,7 +8,7 @@ import { QuickActions } from "@/features/owner/components/QuickActions";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT, DEMO_USER } from "@/lib/demo-data";
-import logoImage from "@assets/freedom-aviation-logo.png";
+import logoImage from "@assets/falogo.png";
 import { Link } from "wouter";
 import { ArrowRight } from "lucide-react";
 
@@ -64,7 +64,7 @@ export default function OwnerDashboard() {
         status: task.status,
         assigned_to: task.assigned_to,
         notes: task.notes,
-        photos: Array.isArray(task.photos) ? task.photos.filter((p): p is string => typeof p === 'string') : [],
+        photos: Array.isArray(task.photos) ? task.photos.filter((p: any): p is string => typeof p === 'string') : [],
         completed_at: task.completed_at,
         created_at: task.created_at,
         updated_at: task.updated_at,
@@ -87,7 +87,7 @@ export default function OwnerDashboard() {
         .from("memberships")
         .select("*")
         .eq("owner_id", user.id)
-        .eq("active", true)
+        .eq("is_active", true)
         .maybeSingle();
       
       if (error) {

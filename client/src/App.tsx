@@ -15,6 +15,7 @@ import Login from "./pages/login";
 import Pricing from "./pages/Pricing";
 import Contact from "./pages/Contact";
 import HangarLocations from "./pages/HangarLocations";
+import About from "./pages/About";
 import OwnerDashboard from "./pages/owner-dashboard";
 import OwnerMore from "./pages/owner-more";
 import StaffDashboard from "./pages/staff-dashboard";
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/contact" component={Contact} />
+      <Route path="/about" component={About} />
       <Route path="/hangar-locations" component={HangarLocations} />
       <Route path="/demo" component={OwnerDashboard} />
       <Route path="/dashboard">
@@ -43,14 +45,14 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/admin">
-        <ProtectedRoute>
+        <StaffProtectedRoute>
           <StaffDashboard />
-        </ProtectedRoute>
+        </StaffProtectedRoute>
       </Route>
       <Route path="/admin/pricing">
-        <ProtectedRoute>
+        <StaffProtectedRoute>
           <UnifiedPricingConfigurator />
-        </ProtectedRoute>
+        </StaffProtectedRoute>
       </Route>
       <Route path="/staff">
         <StaffProtectedRoute>

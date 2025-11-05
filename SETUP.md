@@ -48,7 +48,35 @@ Already configured in Replit Secrets:
 3. Enter email and password
 4. User will automatically get a profile in `user_profiles` table
 
-### 4. Sample Data (Optional)
+### 4. Create Admin Account
+
+**CRITICAL**: To access the admin dashboard at `/admin`, you need to promote a user to admin role.
+
+1. First, create a user account (via UI or Supabase Dashboard)
+2. Go to Supabase Dashboard → SQL Editor
+3. Copy the contents of `scripts/setup-admin.sql`
+4. Replace `YOUR_EMAIL@example.com` with your actual email
+5. Run the script to promote your user to admin role
+
+**Quick Admin Setup:**
+```sql
+-- Replace with your actual email address
+UPDATE public.user_profiles 
+SET role = 'admin'
+WHERE email = 'your-email@example.com';
+
+-- Verify the update
+SELECT id, email, full_name, role 
+FROM public.user_profiles 
+WHERE email = 'your-email@example.com';
+```
+
+Now you can:
+- Access `/admin` dashboard (requires admin or CFI role)
+- Manage all aircraft, maintenance, and service requests
+- Configure pricing and view all client data
+
+### 5. Sample Data (Optional)
 
 To add sample aircraft and memberships, run this in Supabase SQL Editor:
 
@@ -105,10 +133,11 @@ FROM public.aircraft WHERE tail_number = 'N353DW';
 - `/login` - Sign in page
 
 ### Dashboard (Protected - Requires Auth)
-- `/dashboard` - Owner aircraft portal
-- `/dashboard/more` - Settings and preferences
-- `/admin` - Admin kanban and management
-- `/cfi` - CFI panel
+- `/dashboard` - Owner aircraft portal (any authenticated user)
+- `/dashboard/more` - Settings and preferences (any authenticated user)
+- `/admin` - Admin kanban and management (requires admin or CFI role)
+- `/admin/pricing` - Pricing configurator (requires auth)
+- `/staff` - Alternative staff dashboard (requires admin or CFI role)
 
 ## Architecture Overview
 
@@ -174,8 +203,9 @@ npm start      # Runs production server
 ### Immediate
 1. ✅ Run `supabase-schema.sql` in Supabase
 2. ✅ Create first user account
-3. ✅ Add sample aircraft data
-4. ✅ Test authentication flow
+3. ✅ Promote user to admin role (run `scripts/setup-admin.sql`)
+4. ✅ Add sample aircraft data
+5. ✅ Test authentication flow and admin access
 
 ### Phase 2 - Data Integration
 1. Update `YourAircraftCard` to fetch real aircraft data
@@ -204,6 +234,26 @@ npm start      # Runs production server
 
 ## Troubleshooting
 
+### Can't Access Admin Dashboard
+
+If you're being redirected when trying to access `/admin`:
+
+1. **Run the diagnostic script**: Execute `scripts/check-setup.sql` in Supabase SQL Editor to identify issues
+2. **Verify user profile exists**: Make sure your user has a profile in `user_profiles` table
+3. **Check your role**: Confirm your user has `role = 'admin'` in `user_profiles`
+4. **Verify trigger exists**: The `on_auth_user_created` trigger should auto-create profiles
+
+**Quick Fix:**
+```sql
+-- Check your current role
+SELECT email, role FROM public.user_profiles WHERE email = 'your-email@example.com';
+
+-- If role is not admin, promote yourself
+UPDATE public.user_profiles 
+SET role = 'admin'
+WHERE email = 'your-email@example.com';
+```
+
 ### "Invalid login credentials"
 - Verify user exists in Supabase Auth
 - Check email is confirmed
@@ -218,6 +268,26 @@ npm start      # Runs production server
 - Verify RLS policies allow access
 - Check user role in user_profiles table
 - Ensure sample data is inserted correctly
+
+### Profile Missing After Signup
+
+If you sign up but don't have a `user_profiles` entry:
+
+1. Check if the trigger exists:
+```sql
+SELECT * FROM pg_trigger WHERE tgname = 'on_auth_user_created';
+```
+
+2. If trigger is missing, recreate it by running the trigger section from `supabase-schema.sql`
+
+3. Manually create the profile:
+```sql
+-- Replace with your actual user UUID from auth.users
+INSERT INTO public.user_profiles (id, email, full_name)
+SELECT id, email, raw_user_meta_data->>'full_name'
+FROM auth.users
+WHERE email = 'your-email@example.com';
+```
 
 ## Support
 

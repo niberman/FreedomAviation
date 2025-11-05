@@ -80,6 +80,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invoice is already paid" });
       }
 
+      // Check if invoice already has an active checkout session
+      if (invoice.stripe_checkout_session_id) {
+        // Try to retrieve the session to see if it's still valid
+        try {
+          const existingSession = await stripe.checkout.sessions.retrieve(invoice.stripe_checkout_session_id);
+          if (existingSession.status === "open" || existingSession.status === "complete") {
+            // Return existing session URL if it's still valid
+            return res.json({ 
+              checkoutUrl: existingSession.url,
+              sessionId: existingSession.id 
+            });
+          }
+        } catch (err) {
+          // Session doesn't exist or is expired, continue to create new one
+          console.log("Existing session not found or expired, creating new session");
+        }
+      }
+
       // Calculate total amount in cents
       let totalCents = 0;
       if (invoice.invoice_lines && Array.isArray(invoice.invoice_lines)) {
@@ -196,16 +214,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const invoiceId = session.metadata?.invoice_id;
           
           if (invoiceId) {
-            await supabase
+            // First, verify the invoice exists and is not already paid
+            const { data: invoice, error: fetchError } = await supabase
               .from("invoices")
-              .update({
+              .select("id, status, paid_date")
+              .eq("id", invoiceId)
+              .single();
+            
+            if (fetchError || !invoice) {
+              console.error(`❌ Invoice ${invoiceId} not found:`, fetchError);
+              break;
+            }
+            
+            // Only update if not already paid
+            if (invoice.status !== "paid" && !invoice.paid_date) {
+              const updateData: any = {
                 status: "paid",
                 paid_date: new Date().toISOString().split("T")[0],
-                stripe_payment_intent_id: session.payment_intent as string,
-              })
-              .eq("id", invoiceId);
-            
-            console.log(`✅ Invoice ${invoiceId} marked as paid`);
+              };
+              
+              if (session.payment_intent) {
+                updateData.stripe_payment_intent_id = session.payment_intent as string;
+              }
+              
+              const { error: updateError } = await supabase
+                .from("invoices")
+                .update(updateData)
+                .eq("id", invoiceId);
+              
+              if (updateError) {
+                console.error(`❌ Failed to update invoice ${invoiceId}:`, updateError);
+              } else {
+                console.log(`✅ Invoice ${invoiceId} (${session.metadata?.invoice_number || 'N/A'}) marked as paid`);
+              }
+            } else {
+              console.log(`ℹ️ Invoice ${invoiceId} already marked as paid, skipping update`);
+            }
+          } else {
+            console.warn("⚠️ checkout.session.completed event missing invoice_id in metadata");
           }
           break;
         }
@@ -213,17 +259,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case "payment_intent.succeeded": {
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
           console.log(`✅ Payment succeeded: ${paymentIntent.id}`);
+          
+          // If payment_intent.succeeded fires before checkout.session.completed,
+          // try to find and update the invoice by payment_intent_id
+          if (paymentIntent.id) {
+            const { data: invoices } = await supabase
+              .from("invoices")
+              .select("id, status, paid_date")
+              .eq("stripe_payment_intent_id", paymentIntent.id)
+              .limit(1);
+            
+            // Also check by checkout session metadata if available
+            if (!invoices || invoices.length === 0) {
+              // Try to find by checkout session
+              const sessions = await stripe.checkout.sessions.list({
+                payment_intent: paymentIntent.id,
+                limit: 1,
+              });
+              
+              if (sessions.data.length > 0) {
+                const session = sessions.data[0];
+                const invoiceId = session.metadata?.invoice_id;
+                
+                if (invoiceId) {
+                  const { data: invoice } = await supabase
+                    .from("invoices")
+                    .select("id, status, paid_date")
+                    .eq("id", invoiceId)
+                    .single();
+                  
+                  if (invoice && invoice.status !== "paid" && !invoice.paid_date) {
+                    await supabase
+                      .from("invoices")
+                      .update({
+                        status: "paid",
+                        paid_date: new Date().toISOString().split("T")[0],
+                        stripe_payment_intent_id: paymentIntent.id,
+                      })
+                      .eq("id", invoiceId);
+                    
+                    console.log(`✅ Invoice ${invoiceId} marked as paid via payment_intent.succeeded`);
+                  }
+                }
+              }
+            }
+          }
           break;
         }
 
         case "payment_intent.payment_failed": {
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
           console.error(`❌ Payment failed: ${paymentIntent.id}`);
+          
+          // Optionally, you could update invoice status or send notification
+          // For now, we'll just log it
           break;
         }
 
         default:
-          console.log(`Unhandled event type: ${event.type}`);
+          console.log(`ℹ️ Unhandled event type: ${event.type}`);
       }
 
       res.json({ received: true });
