@@ -82,7 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPasswordForEmail = async (email: string) => {
-    const redirectUrl = `${window.location.origin}/reset-password`;
+    // Use the full URL with hash support - Supabase will append tokens to the hash
+    // Make sure we use www domain in production to match the redirect URL configured in Supabase
+    let baseUrl = window.location.origin;
+    
+    // In production, ensure we use www domain
+    if (window.location.hostname === 'freedomaviationco.com') {
+      baseUrl = 'https://www.freedomaviationco.com';
+    }
+    
+    const redirectUrl = `${baseUrl}/reset-password`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
     });

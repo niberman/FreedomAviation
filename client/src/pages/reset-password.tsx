@@ -20,21 +20,45 @@ export default function ResetPassword() {
   const { updatePassword, session, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  // Check if we have a valid session (which means the reset token was processed)
+  // Check for password recovery tokens in URL hash and process them
   useEffect(() => {
-    if (!authLoading) {
-      // If no session after loading, the token might be invalid or expired
-      if (!session) {
-        toast({
-          variant: "destructive",
-          title: "Invalid or expired link",
-          description: "This password reset link is invalid or has expired. Please request a new one.",
-        });
-        // Redirect to forgot password page after a delay
-        setTimeout(() => {
-          setLocation("/forgot-password");
-        }, 3000);
-      }
+    // Supabase tokens come in the URL hash (e.g., #access_token=...&type=recovery)
+    // The auth state change listener should handle this, but we need to ensure
+    // the hash is processed before checking for session
+    const hash = window.location.hash;
+    
+    if (hash && hash.includes('access_token') && hash.includes('type=recovery')) {
+      // The PASSWORD_RECOVERY event should be triggered by Supabase automatically
+      // Wait a bit for Supabase to process the hash and set the session
+      // Give it up to 3 seconds to process
+      const timeout = setTimeout(() => {
+        if (!session && !authLoading) {
+          // Hash is present but session wasn't set - token might be invalid
+          toast({
+            variant: "destructive",
+            title: "Invalid or expired link",
+            description: "This password reset link is invalid or has expired. Please request a new one.",
+          });
+          setTimeout(() => {
+            setLocation("/forgot-password");
+          }, 2000);
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timeout);
+    }
+
+    // If no hash and no session after loading, the link is invalid
+    if (!authLoading && !hash && !session) {
+      toast({
+        variant: "destructive",
+        title: "Invalid or expired link",
+        description: "This password reset link is invalid or has expired. Please request a new one.",
+      });
+      // Redirect to forgot password page after a delay
+      setTimeout(() => {
+        setLocation("/forgot-password");
+      }, 3000);
     }
   }, [session, authLoading, toast, setLocation]);
 
