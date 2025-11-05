@@ -1,6 +1,83 @@
 -- Migration to add missing tables and columns for admin dashboard
 -- Run this in Supabase SQL Editor if you already have the base schema
 
+-- Add make column to aircraft if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='aircraft' AND column_name='make'
+  ) THEN
+    ALTER TABLE public.aircraft ADD COLUMN make TEXT;
+  END IF;
+END $$;
+
+-- Add model column to aircraft if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='aircraft' AND column_name='model'
+  ) THEN
+    ALTER TABLE public.aircraft ADD COLUMN model TEXT;
+  END IF;
+END $$;
+
+-- Add year column to aircraft if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='aircraft' AND column_name='year'
+  ) THEN
+    ALTER TABLE public.aircraft ADD COLUMN year INTEGER;
+  END IF;
+END $$;
+
+-- Add class column to aircraft if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='aircraft' AND column_name='class'
+  ) THEN
+    ALTER TABLE public.aircraft ADD COLUMN class TEXT;
+  END IF;
+END $$;
+
+-- Add hobbs_hours column to aircraft if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='aircraft' AND column_name='hobbs_hours'
+  ) THEN
+    ALTER TABLE public.aircraft ADD COLUMN hobbs_hours DECIMAL(10, 2);
+  END IF;
+END $$;
+
+-- Add tach_hours column to aircraft if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='aircraft' AND column_name='tach_hours'
+  ) THEN
+    ALTER TABLE public.aircraft ADD COLUMN tach_hours DECIMAL(10, 2);
+  END IF;
+END $$;
+
+-- Add image_url column to aircraft if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='aircraft' AND column_name='image_url'
+  ) THEN
+    ALTER TABLE public.aircraft ADD COLUMN image_url TEXT;
+  END IF;
+END $$;
+
 -- Add base_location column to aircraft if it doesn't exist
 DO $$ 
 BEGIN
