@@ -445,7 +445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // Calculate total
-      const totalAmount = invoiceLines.reduce((sum, line) => sum + line.total, 0);
+      const totalAmount = invoiceLines.reduce((sum: number, line: { total: number }) => sum + line.total, 0);
 
       // Send email
       console.log("📧 Attempting to send invoice email for:", invoice.invoice_number);
