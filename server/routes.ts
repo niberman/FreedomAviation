@@ -32,6 +32,48 @@ const supabase = supabaseUrl && supabaseServiceKey
     })
   : null;
 
+// 🧮 Utility: Normalize Stripe line items - fold fractional quantities into price
+function normalizeLineItem(item: {
+  price_data: {
+    currency: string;
+    product_data: { name: string };
+    unit_amount: number;
+  };
+  quantity: number | string;
+}): {
+  price_data: {
+    currency: string;
+    product_data: { name: string };
+    unit_amount: number;
+  };
+  quantity: number;
+} {
+  const qty = parseFloat(String(item.quantity));
+  
+  if (!Number.isFinite(qty) || qty <= 0) {
+    throw new Error(`Invalid quantity: ${item.quantity}`);
+  }
+  
+  // If quantity is fractional, fold it into the price
+  if (!Number.isInteger(qty)) {
+    const adjustedPrice = Math.round(item.price_data.unit_amount * qty);
+    return {
+      ...item,
+      price_data: {
+        ...item.price_data,
+        unit_amount: adjustedPrice,
+      },
+      quantity: 1,
+    };
+  }
+  
+  // Already integer, return as-is
+  return {
+    ...item,
+    quantity: qty,
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // put application routes here
   // prefix all routes with /api
@@ -63,12 +105,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Test email endpoint - sends a test email
   app.post("/api/test-email", async (req: Request, res: Response) => {
-    console.log("📧 POST /api/test-email called");
     try {
       const { toEmail } = req.body;
       const testEmail = toEmail || process.env.TEST_EMAIL || "test@example.com";
-      
-      console.log("📧 Sending test email to:", testEmail);
       
       // Send test email with sample invoice data
       await sendInvoiceEmail({
@@ -171,7 +210,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (err) {
           // Session doesn't exist or is expired, continue to create new one
-          console.log("Existing session not found or expired, creating new session");
         }
       }
 
@@ -201,14 +239,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: invoice.invoice_lines?.map((line: any) => {
-          // Ensure quantity is a valid number and handle decimals properly
+          // Ensure quantity is a valid number
           const quantity = Number(line.quantity);
           if (isNaN(quantity) || quantity <= 0) {
             throw new Error(`Invalid quantity: ${line.quantity}`);
           }
-          // Stripe accepts decimal quantities up to 8 decimal places
-          // Round to 8 decimal places to avoid precision issues
-          const stripeQuantity = Math.round(quantity * 100000000) / 100000000;
           
           // Ensure unit_amount is valid
           const unitAmount = Number(line.unit_cents);
@@ -216,7 +251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             throw new Error(`Invalid unit amount: ${line.unit_cents}`);
           }
           
-          return {
+          // Create line item (will be normalized to handle decimals)
+          const lineItem = {
             price_data: {
               currency: "usd",
               product_data: {
@@ -224,8 +260,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               },
               unit_amount: unitAmount,
             },
-            quantity: stripeQuantity,
+            quantity: quantity,
           };
+          
+          // Normalize: fold fractional quantities into price
+          return normalizeLineItem(lineItem);
         }) || [
           {
             price_data: {
@@ -337,12 +376,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 .eq("id", invoiceId);
               
               if (updateError) {
-                console.error(`❌ Failed to update invoice ${invoiceId}:`, updateError);
-              } else {
-                console.log(`✅ Invoice ${invoiceId} (${session.metadata?.invoice_number || 'N/A'}) marked as paid`);
+                console.error(`Failed to update invoice ${invoiceId}:`, updateError);
               }
-            } else {
-              console.log(`ℹ️ Invoice ${invoiceId} already marked as paid, skipping update`);
             }
           } else {
             console.warn("⚠️ checkout.session.completed event missing invoice_id in metadata");
@@ -352,7 +387,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case "payment_intent.succeeded": {
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
-          console.log(`✅ Payment succeeded: ${paymentIntent.id}`);
           
           // If payment_intent.succeeded fires before checkout.session.completed,
           // try to find and update the invoice by payment_intent_id
@@ -391,8 +425,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         stripe_payment_intent_id: paymentIntent.id,
                       })
                       .eq("id", invoiceId);
-                    
-                    console.log(`✅ Invoice ${invoiceId} marked as paid via payment_intent.succeeded`);
                   }
                 }
               }
@@ -411,7 +443,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         default:
-          console.log(`ℹ️ Unhandled event type: ${event.type}`);
+          // Unhandled event type
+          break;
       }
 
       res.json({ received: true });
@@ -465,13 +498,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader("Access-Control-Allow-Credentials", "true");
     }
     
-    console.log("📧 POST /api/invoices/send-email called");
-    console.log("📧 Request body:", req.body);
-    console.log("📧 Email service config:");
-    console.log("  - EMAIL_SERVICE:", process.env.EMAIL_SERVICE || "not set (defaults to 'console')");
-    console.log("  - RESEND_API_KEY:", process.env.RESEND_API_KEY ? "present" : "not set");
-    console.log("  - EMAIL_FROM:", process.env.EMAIL_FROM || "not set (will use default)");
-    
     try {
       if (!supabase) {
         return res.status(503).json({ 
@@ -504,9 +530,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .single();
 
       if (invoiceQuery.error) {
-        console.warn("⚠️ Nested query failed, trying separate queries:", invoiceQuery.error.message);
-        console.warn("⚠️ Error details:", JSON.stringify(invoiceQuery.error, null, 2));
-        
         // Fallback: fetch invoice and related data separately
         const { data: invoiceData, error: invError } = await supabase
           .from("invoices")
@@ -566,11 +589,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           aircraft: aircraftData,
           invoice_lines: linesData || [],
         };
-      } else {
+        } else {
         invoice = invoiceQuery.data;
         // Ensure owner is properly structured
         if (!invoice.owner) {
-          console.warn("⚠️ Nested query succeeded but owner is missing, fetching separately");
           const { data: ownerData, error: ownerError } = await supabase
             .from("user_profiles")
             .select("id, email, full_name")
@@ -627,18 +649,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let paymentUrl: string | null = null;
       if (stripe && invoice.owner_id) {
         try {
-          console.log("💳 Creating Stripe checkout session for invoice:", invoice.invoice_number);
-          
           // Check if invoice already has an active checkout session
           if (invoice.stripe_checkout_session_id) {
             try {
               const existingSession = await stripe.checkout.sessions.retrieve(invoice.stripe_checkout_session_id);
               if (existingSession.status === "open" || existingSession.status === "complete") {
                 paymentUrl = existingSession.url;
-                console.log("✅ Using existing Stripe checkout session:", existingSession.id);
               }
             } catch (err) {
-              console.log("⚠️ Existing session not found or expired, creating new session");
+              // Session doesn't exist or is expired, continue to create new one
             }
           }
           
@@ -655,27 +674,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Prepare line items with proper decimal handling
               let lineItems: any[];
               if (invoiceLines.length > 0) {
-                console.log("💳 Preparing line items for Stripe:", invoiceLines);
                 lineItems = invoiceLines.map((line: any, idx: number) => {
-                  // Ensure quantity is a valid number and handle decimals properly
+                  // Ensure quantity is a valid number
                   const quantity = Number(line.quantity);
                   if (isNaN(quantity) || quantity <= 0) {
-                    console.error(`❌ Invalid quantity for line ${idx}:`, line.quantity);
+                    console.error(`Invalid quantity for line ${idx}:`, line.quantity);
                     throw new Error(`Invalid quantity: ${line.quantity}`);
                   }
-                  // Stripe accepts decimal quantities up to 8 decimal places
-                  // Round to 8 decimal places to avoid precision issues
-                  const stripeQuantity = Math.round(quantity * 100000000) / 100000000;
                   
                   const unitAmount = Math.round(line.unitPrice * 100);
                   if (unitAmount <= 0) {
-                    console.error(`❌ Invalid unit amount for line ${idx}:`, line.unitPrice);
+                    console.error(`Invalid unit amount for line ${idx}:`, line.unitPrice);
                     throw new Error(`Invalid unit price: ${line.unitPrice}`);
                   }
                   
-                  console.log(`💳 Line ${idx}: quantity=${stripeQuantity}, unit_amount=${unitAmount}, description="${line.description}"`);
-                  
-                  return {
+                  // Create line item (will be normalized to handle decimals)
+                  const lineItem = {
                     price_data: {
                       currency: "usd",
                       product_data: {
@@ -683,8 +697,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       },
                       unit_amount: unitAmount,
                     },
-                    quantity: stripeQuantity,
+                    quantity: quantity,
                   };
+                  
+                  // Normalize: fold fractional quantities into price
+                  return normalizeLineItem(lineItem);
                 });
               } else {
                 // Fallback to single line item
@@ -701,8 +718,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   },
                 ];
               }
-              
-              console.log("💳 Creating Stripe checkout session with line items:", JSON.stringify(lineItems, null, 2));
               
               const session = await stripe.checkout.sessions.create({
                 payment_method_types: ["card"],
@@ -725,35 +740,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 .from("invoices")
                 .update({ stripe_checkout_session_id: session.id })
                 .eq("id", invoice.id);
-              
-              console.log("✅ Created Stripe checkout session:", session.id);
-              console.log("💳 Payment URL:", paymentUrl);
-            } else {
-              console.warn("⚠️ Invoice amount is zero, skipping Stripe checkout session creation");
             }
           }
         } catch (stripeError: any) {
-          console.error("❌ Error creating Stripe checkout session:", stripeError);
-          console.error("⚠️ Email will be sent without payment link");
+          console.error("Error creating Stripe checkout session:", stripeError);
           // Don't fail email sending if Stripe fails - just log the error
-        }
-      } else {
-        if (!stripe) {
-          console.warn("⚠️ Stripe not configured, email will be sent without payment link");
         }
       }
 
       // Send email
-      console.log("📧 Attempting to send invoice email for:", invoice.invoice_number);
-      console.log("📧 To:", owner.email);
-      console.log("📧 Owner name:", owner.full_name || "not provided");
-      console.log("📧 Invoice lines count:", invoiceLines.length);
-      console.log("📧 Total amount:", totalAmount);
-      console.log("📧 Payment URL:", paymentUrl || "not available");
-      console.log("📧 Email service:", process.env.EMAIL_SERVICE || "console (default)");
-      console.log("📧 RESEND_API_KEY:", process.env.RESEND_API_KEY ? "✅ Set" : "❌ Not set");
-      console.log("📧 EMAIL_FROM:", process.env.EMAIL_FROM || "not set");
-      
       try {
         await sendInvoiceEmail({
           invoiceNumber: invoice.invoice_number,
@@ -768,8 +763,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           paymentUrl,
         });
         
-        console.log("✅ Invoice email sent successfully");
-        
         // Return more detailed response
         const emailService = process.env.EMAIL_SERVICE || "console";
         res.json({ 
@@ -781,11 +774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sent: emailService !== "console",
         });
       } catch (emailError: any) {
-        console.error("❌ Error in sendInvoiceEmail:", emailError);
-        console.error("❌ Error message:", emailError?.message);
-        console.error("❌ Error stack:", emailError?.stack);
-        console.error("❌ Error name:", emailError?.name);
-        console.error("❌ Error constructor:", emailError?.constructor?.name);
+        console.error("Error in sendInvoiceEmail:", emailError);
         
         // Return error response instead of throwing
         return res.status(500).json({ 
@@ -799,10 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     } catch (error: any) {
-      console.error("❌ Error in /api/invoices/send-email endpoint:");
-      console.error("❌ Error type:", error?.constructor?.name);
-      console.error("❌ Error message:", error?.message);
-      console.error("❌ Error stack:", error?.stack);
+      console.error("Error in /api/invoices/send-email endpoint:", error);
       
       res.status(500).json({ 
         error: "Failed to send invoice email",

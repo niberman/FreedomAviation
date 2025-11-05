@@ -148,8 +148,6 @@ export default function OwnerMore() {
       }
       if (!aircraft?.id || !user?.id) return [];
       
-      console.log("Fetching invoices for aircraft:", aircraft.id, "owner:", user.id);
-      
       // Try to fetch invoices with nested invoice_lines first
       let { data, error } = await supabase
         .from("invoices")
@@ -164,8 +162,6 @@ export default function OwnerMore() {
       
       // If nested query fails, try fetching invoices separately and then invoice_lines
       if (error && error.message?.includes('invoice_lines')) {
-        console.warn("Nested query failed, trying separate queries:", error.message);
-        
         // Fetch invoices first
         const invoicesResult = await supabase
           .from("invoices")
@@ -187,10 +183,6 @@ export default function OwnerMore() {
               .from("invoice_lines")
               .select("id, invoice_id, description, quantity, unit_cents")
               .in("invoice_id", invoiceIds);
-            
-            if (linesResult.error) {
-              console.warn("Error fetching invoice lines separately:", linesResult.error);
-            }
             
             // Combine invoices with their lines
             const linesByInvoiceId = (linesResult.data || []).reduce((acc: any, line: any) => {
@@ -235,8 +227,6 @@ export default function OwnerMore() {
         // Throw the error so react-query can handle it
         throw new Error(error.message || 'Failed to load invoices. Please try again.');
       }
-      
-      console.log("Fetched invoices:", data?.length || 0, data);
       
       // Transform the data to ensure invoice_lines is properly formatted
       const transformedInvoices = (data || []).map((invoice: any) => ({

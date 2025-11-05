@@ -167,10 +167,6 @@ function escapeHtml(text: string): string {
 export async function sendInvoiceEmail(data: InvoiceEmailData): Promise<void> {
   const emailService = process.env.EMAIL_SERVICE || "console"; // 'console', 'smtp', 'resend'
   
-  console.log("📧 Email service configured:", emailService);
-  console.log("📧 RESEND_API_KEY present:", !!process.env.RESEND_API_KEY);
-  console.log("📧 EMAIL_FROM:", process.env.EMAIL_FROM || "not set");
-  
   const html = generateInvoiceEmailHTML(data);
   const text = `
 Invoice ${data.invoiceNumber}
@@ -197,11 +193,8 @@ Freedom Aviation
   switch (emailService) {
     case "console":
       // Development: just log
-      console.log("📧 INVOICE EMAIL (CONSOLE MODE - Email NOT actually sent):");
-      console.log("To:", data.ownerEmail);
-      console.log("Subject:", `Invoice ${data.invoiceNumber} - Freedom Aviation`);
-      console.log("⚠️  To actually send emails, set EMAIL_SERVICE=resend and RESEND_API_KEY");
-      console.log("HTML length:", html.length, "characters");
+      console.log(`[CONSOLE MODE] Invoice email would be sent to ${data.ownerEmail} for invoice ${data.invoiceNumber}`);
+      console.log("To actually send emails, set EMAIL_SERVICE=resend and RESEND_API_KEY");
       // Don't throw - console mode is valid for development
       return;
 
@@ -224,17 +217,13 @@ Freedom Aviation
 async function sendViaSMTP(to: string, subject: string, html: string, text: string): Promise<void> {
   // TODO: Implement nodemailer if needed
   // For now, just log
-  console.log("📧 SMTP email (not implemented, using console):");
-  console.log("To:", to);
-  console.log("Subject:", subject);
+  console.log(`[SMTP] Email would be sent to ${to}: ${subject} (not implemented)`);
 }
 
 async function sendViaResend(to: string, subject: string, html: string, text: string): Promise<void> {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
-    console.error("❌ RESEND_API_KEY not set, cannot send email");
-    console.error("❌ Please set RESEND_API_KEY environment variable");
-    console.error("❌ Get your API key from: https://resend.com/api-keys");
+    console.error("RESEND_API_KEY not set, cannot send email");
     throw new Error("RESEND_API_KEY environment variable is not set. Please configure it in your environment variables.");
   }
 
@@ -245,16 +234,8 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
   
   // Check if using custom domain and provide helpful error if domain not verified
   if (fromEmail.includes("@freedomaviationco.com") && !fromEmail.includes("onboarding@resend.dev")) {
-    console.warn("⚠️  Using custom domain. Make sure freedomaviationco.com is verified in Resend.");
-    console.warn("⚠️  If domain is not verified, emails will fail. Use onboarding@resend.dev for testing.");
+    console.warn("Using custom domain. Make sure freedomaviationco.com is verified in Resend.");
   }
-  
-  console.log("📧 Sending email via Resend:");
-  console.log("  From:", fromEmail);
-  console.log("  To:", to);
-  console.log("  Subject:", subject);
-  console.log("  API Key present:", !!resendApiKey);
-  console.log("  API Key length:", resendApiKey.length, "characters");
 
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -275,11 +256,6 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
     const responseText = await response.text();
     
     if (!response.ok) {
-      console.error("❌ Resend API error response:");
-      console.error("  Status:", response.status);
-      console.error("  Status Text:", response.statusText);
-      console.error("  Response Body:", responseText);
-      
       // Try to parse error for better message
       let errorMessage = `Resend API error (${response.status}): ${responseText}`;
       let errorJson: any = null;
@@ -302,7 +278,7 @@ To fix this:
 
 For now, update your Vercel environment variable EMAIL_FROM to: Freedom Aviation <onboarding@resend.dev>`;
         
-        console.error("❌ Domain verification error:", helpfulMessage);
+        console.error("Domain verification error:", helpfulMessage);
         throw new Error(helpfulMessage);
       }
       
@@ -313,24 +289,15 @@ For now, update your Vercel environment variable EMAIL_FROM to: Freedom Aviation
     try {
       result = JSON.parse(responseText);
     } catch (parseError) {
-      console.error("❌ Failed to parse Resend response:", responseText);
+      console.error("Failed to parse Resend response:", responseText);
       throw new Error(`Invalid JSON response from Resend: ${responseText}`);
     }
     
-    console.log("✅ Invoice email sent successfully via Resend");
-    console.log("  Email ID:", result.id);
-    console.log("  Response:", JSON.stringify(result, null, 2));
-    
     if (!result.id) {
-      console.warn("⚠️  Warning: Resend response missing email ID");
+      console.warn("Warning: Resend response missing email ID");
     }
   } catch (error: any) {
-    console.error("❌ Failed to send invoice email via Resend:");
-    console.error("  Error type:", error.constructor.name);
-    console.error("  Error message:", error.message);
-    if (error.stack) {
-      console.error("  Error stack:", error.stack);
-    }
+    console.error("Failed to send invoice email via Resend:", error);
     
     // Provide helpful error message
     if (error.message?.includes("RESEND_API_KEY")) {
