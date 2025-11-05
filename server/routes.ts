@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { sendInvoiceEmail } from "./lib/email";
 
 // Initialize Stripe
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -325,6 +326,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Webhook error:", error);
       res.status(500).json({ 
         error: "Webhook handler failed",
+        message: error.message 
+      });
+    }
+  });
+
+  // Send invoice email endpoint
+  app.post("/api/invoices/send-email", async (req: Request, res: Response) => {
+    try {
+      if (!supabase) {
+        return res.status(503).json({ 
+          error: "Supabase not configured" 
+        });
+      }
+
+      const { invoiceId } = req.body;
+
+      if (!invoiceId) {
+        return res.status(400).json({ error: "Missing invoiceId" });
+      }
+
+      // Fetch invoice with all necessary data
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .select(`
+          *,
+          invoice_lines(*),
+          owner:user_profiles!owner_id(id, email, full_name),
+          aircraft(id, tail_number)
+        `)
+        .eq("id", invoiceId)
+        .single();
+
+      if (invoiceError || !invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Only send email for finalized invoices
+      if (invoice.status !== "finalized") {
+        return res.status(400).json({ 
+          error: `Can only send email for finalized invoices. Current status: ${invoice.status}` 
+        });
+      }
+
+      // Get owner info
+      const owner = invoice.owner as any;
+      if (!owner || !owner.email) {
+        return res.status(400).json({ error: "Owner email not found" });
+      }
+
+      // Transform invoice lines
+      const invoiceLines = (invoice.invoice_lines || []).map((line: any) => ({
+        description: line.description,
+        quantity: Number(line.quantity),
+        unitPrice: Number(line.unit_cents) / 100,
+        total: (Number(line.quantity) * Number(line.unit_cents)) / 100,
+      }));
+
+      // Calculate total
+      const totalAmount = invoiceLines.reduce((sum, line) => sum + line.total, 0);
+
+      // Send email
+      console.log("📧 Attempting to send invoice email for:", invoice.invoice_number);
+      console.log("📧 To:", owner.email);
+      
+      try {
+        await sendInvoiceEmail({
+          invoiceNumber: invoice.invoice_number,
+          ownerName: owner.full_name || owner.email,
+          ownerEmail: owner.email,
+          invoiceId: invoice.id,
+          totalAmount,
+          invoiceLines,
+          dueDate: invoice.due_date,
+          aircraftTailNumber: (invoice.aircraft as any)?.tail_number,
+        });
+        
+        console.log("✅ Invoice email sent successfully");
+      } catch (emailError: any) {
+        console.error("❌ Error in sendInvoiceEmail:", emailError);
+        throw emailError; // Re-throw to be caught by outer try-catch
+      }
+
+      res.json({ 
+        success: true,
+        message: "Invoice email sent successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error sending invoice email:", error);
+      res.status(500).json({ 
+        error: "Failed to send invoice email",
         message: error.message 
       });
     }

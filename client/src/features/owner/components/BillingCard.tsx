@@ -90,9 +90,16 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
       window.location.href = checkoutUrl;
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
+      const errorMessage = error?.message || error?.toString() || "Failed to initiate payment. Please try again.";
+      console.error("Full error details:", {
+        error,
+        message: errorMessage,
+        invoiceId: invoice.id,
+        userId: user?.id,
+      });
       toast({
         title: "Payment Error",
-        description: error.message || "Failed to initiate payment. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       setProcessingInvoiceId(null);

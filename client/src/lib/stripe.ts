@@ -23,8 +23,25 @@ export async function createCheckoutSession(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+    let errorMessage = "Unknown error";
+    try {
+      const error = await response.json();
+      errorMessage = error.error || error.message || `HTTP ${response.status}: ${response.statusText}`;
+    } catch (e) {
+      // If response isn't JSON, try to get text
+      try {
+        const text = await response.text();
+        errorMessage = text || `HTTP ${response.status}: ${response.statusText}`;
+      } catch (textError) {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+    }
+    console.error("Stripe checkout session error:", {
+      status: response.status,
+      statusText: response.statusText,
+      message: errorMessage,
+    });
+    throw new Error(errorMessage);
   }
 
   return response.json();

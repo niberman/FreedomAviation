@@ -407,10 +407,37 @@ export default function StaffDashboard() {
   // Finalize invoice mutation
   const finalizeInvoiceMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
-      const { error } = await supabase.rpc('finalize_invoice', {
+      // First, finalize the invoice
+      const { error: finalizeError } = await supabase.rpc('finalize_invoice', {
         p_invoice_id: invoiceId,
       });
-      if (error) throw error;
+      if (finalizeError) throw finalizeError;
+
+      // Then, send email to client
+      try {
+        console.log("📧 Calling email API endpoint for invoice:", invoiceId);
+        const emailResponse = await fetch("/api/invoices/send-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ invoiceId }),
+        });
+
+        if (!emailResponse.ok) {
+          const error = await emailResponse.json().catch(() => ({ error: "Unknown error" }));
+          console.error("❌ Failed to send invoice email:", error);
+          console.error("  Response status:", emailResponse.status);
+          console.error("  Response text:", await emailResponse.text().catch(() => "Could not read response"));
+          // Don't throw - email failure shouldn't prevent finalization, but log it
+        } else {
+          const result = await emailResponse.json();
+          console.log("✅ Email API response:", result);
+        }
+      } catch (emailError) {
+        console.error("❌ Error calling email API:", emailError);
+        // Don't throw - email failure shouldn't prevent finalization
+      }
     },
     onSuccess: async () => {
       // Invalidate and refetch invoices to show updated status
@@ -425,7 +452,7 @@ export default function StaffDashboard() {
       await refetchInvoices();
       toast({
         title: "Invoice finalized",
-        description: "Invoice has been marked as finalized.",
+        description: "Invoice has been finalized and email sent to client.",
       });
     },
     onError: (error: Error) => {
