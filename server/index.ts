@@ -39,6 +39,19 @@ app.use(
   })
 );
 
+// Handle OPTIONS preflight requests BEFORE other middleware
+app.options("/api/*", (req: Request, res: Response) => {
+  const origin = req.headers.origin;
+  if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Max-Age", "86400");
+  }
+  res.status(204).end();
+});
+
 // Only enforce canonical domain and HTTPS in production
 // Skip redirect for API routes to avoid CORS issues
 if (app.get("env") === "production") {

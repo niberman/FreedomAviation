@@ -36,6 +36,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // put application routes here
   // prefix all routes with /api
 
+  // Handle OPTIONS preflight requests for CORS
+  app.options("/api/*", (req: Request, res: Response) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+    
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
+    }
+    res.status(204).end();
+  });
+
   // Test endpoint to verify routing works
   app.get("/api/test", (_req: Request, res: Response) => {
     res.json({ message: "API routes are working!", timestamp: new Date().toISOString() });
@@ -391,7 +411,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: "Email endpoint is accessible", method: "GET test" });
   });
   
+  // Handle OPTIONS preflight for email endpoint specifically
+  app.options("/api/invoices/send-email", (req: Request, res: Response) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+    
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Max-Age", "86400");
+    }
+    res.status(204).end();
+  });
+  
   app.post("/api/invoices/send-email", async (req: Request, res: Response) => {
+    // Set CORS headers manually as backup
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+    
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+    
     console.log("📧 POST /api/invoices/send-email called");
     console.log("📧 Request body:", req.body);
     console.log("📧 Email service config:");

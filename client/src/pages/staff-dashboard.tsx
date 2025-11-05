@@ -95,10 +95,13 @@ export default function StaffDashboard() {
   });
 
   // Fetch aircraft with full details for the AircraftTable
-  const { data: aircraftFull = [] } = useQuery({
+  const { data: aircraftFull = [], isLoading: isLoadingAircraft, error: aircraftError } = useQuery({
     queryKey: ['/api/aircraft/full'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log('🔍 Fetching aircraft for staff dashboard...');
+      
+      // Try nested query first
+      let query = supabase
         .from('aircraft')
         .select(`
           id,
@@ -106,12 +109,65 @@ export default function StaffDashboard() {
           make,
           model,
           class,
-
           base_location,
+          owner_id,
           owner:owner_id(full_name, email)
         `)
         .order('tail_number');
-      if (error) throw error;
+
+      let { data, error } = await query;
+      
+      // If nested query fails, fetch separately
+      if (error) {
+        console.warn('⚠️ Nested query failed, trying separate queries:', error?.message);
+        
+        // Fetch aircraft without nested relations
+        const aircraftResult = await supabase
+          .from('aircraft')
+          .select('id, tail_number, make, model, class, base_location, owner_id')
+          .order('tail_number');
+        
+        if (aircraftResult.error) {
+          console.error('❌ Error fetching aircraft:', aircraftResult.error);
+          throw aircraftResult.error;
+        }
+        
+        const aircraftData = aircraftResult.data || [];
+        
+        // Get unique owner IDs
+        const ownerIds = [...new Set(aircraftData.map((ac: any) => ac.owner_id).filter(Boolean))];
+        
+        // Fetch owners separately
+        let ownersMap: Record<string, { full_name?: string; email?: string }> = {};
+        if (ownerIds.length > 0) {
+          const ownersResult = await supabase
+            .from('user_profiles')
+            .select('id, full_name, email')
+            .in('id', ownerIds);
+          
+          if (ownersResult.data) {
+            ownersMap = ownersResult.data.reduce((acc: any, owner: any) => {
+              acc[owner.id] = { full_name: owner.full_name, email: owner.email };
+              return acc;
+            }, {});
+          }
+        }
+        
+        // Combine data
+        data = aircraftData.map((ac: any) => ({
+          ...ac,
+          owner: ownersMap[ac.owner_id] || null,
+        }));
+        
+        error = null; // Clear error since we successfully fetched
+      }
+      
+      if (error) {
+        console.error('❌ Error fetching aircraft:', error);
+        throw error;
+      }
+      
+      console.log('✅ Fetched aircraft:', data?.length || 0, 'aircraft');
       
       // Transform to match AircraftTable interface
       return (data || []).map((ac: any) => ({
@@ -125,6 +181,18 @@ export default function StaffDashboard() {
       }));
     },
   });
+
+  // Handle aircraft loading errors
+  useEffect(() => {
+    if (aircraftError) {
+      console.error('Aircraft query error:', aircraftError);
+      toast({
+        title: 'Error loading aircraft',
+        description: aircraftError instanceof Error ? aircraftError.message : 'Failed to load aircraft. Please try refreshing the page.',
+        variant: 'destructive',
+      });
+    }
+  }, [aircraftError, toast]);
 
   // Fetch service requests for kanban board
   const { data: serviceRequests = [], refetch: refetchServiceRequests } = useQuery({
@@ -605,7 +673,31 @@ export default function StaffDashboard() {
 
           {/* Aircraft (Admin) */}
           <TabsContent value="aircraft" className="space-y-4">
-            <AircraftTable items={aircraftFull} />
+            {isLoadingAircraft ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">Loading aircraft...</p>
+                </CardContent>
+              </Card>
+            ) : aircraftError ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <p className="text-destructive font-medium mb-2">Error loading aircraft</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {aircraftError instanceof Error ? aircraftError.message : 'Unknown error occurred'}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/aircraft/full'] })}
+                  >
+                    Retry
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <AircraftTable items={aircraftFull} />
+            )}
           </TabsContent>
 
           {/* Maintenance (Admin) */}
