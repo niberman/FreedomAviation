@@ -200,16 +200,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create Stripe checkout session
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
-        line_items: invoice.invoice_lines?.map((line: any) => ({
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: line.description || "Flight Instruction",
+        line_items: invoice.invoice_lines?.map((line: any) => {
+          // Ensure quantity is a valid number and handle decimals properly
+          const quantity = Number(line.quantity);
+          if (isNaN(quantity) || quantity <= 0) {
+            throw new Error(`Invalid quantity: ${line.quantity}`);
+          }
+          // Stripe accepts decimal quantities, but ensure it's a proper number
+          const stripeQuantity = Math.round(quantity * 100) / 100; // Round to 2 decimal places
+          
+          return {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: line.description || "Flight Instruction",
+              },
+              unit_amount: line.unit_cents,
             },
-            unit_amount: line.unit_cents,
-          },
-          quantity: Math.round(line.quantity * 100) / 100, // Ensure quantity is properly formatted
-        })) || [
+            quantity: stripeQuantity,
+          };
+        }) || [
           {
             price_data: {
               currency: "usd",
@@ -635,31 +645,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (totalCents > 0) {
               const frontendUrl = process.env.FRONTEND_URL || "https://www.freedomaviationco.com";
               
+              // Prepare line items with proper decimal handling
+              let lineItems: any[];
+              if (invoiceLines.length > 0) {
+                console.log("💳 Preparing line items for Stripe:", invoiceLines);
+                lineItems = invoiceLines.map((line: any, idx: number) => {
+                  // Ensure quantity is a valid number and handle decimals properly
+                  const quantity = Number(line.quantity);
+                  if (isNaN(quantity) || quantity <= 0) {
+                    console.error(`❌ Invalid quantity for line ${idx}:`, line.quantity);
+                    throw new Error(`Invalid quantity: ${line.quantity}`);
+                  }
+                  // Stripe accepts decimal quantities up to 8 decimal places
+                  // Round to 8 decimal places to avoid precision issues
+                  const stripeQuantity = Math.round(quantity * 100000000) / 100000000;
+                  
+                  const unitAmount = Math.round(line.unitPrice * 100);
+                  if (unitAmount <= 0) {
+                    console.error(`❌ Invalid unit amount for line ${idx}:`, line.unitPrice);
+                    throw new Error(`Invalid unit price: ${line.unitPrice}`);
+                  }
+                  
+                  console.log(`💳 Line ${idx}: quantity=${stripeQuantity}, unit_amount=${unitAmount}, description="${line.description}"`);
+                  
+                  return {
+                    price_data: {
+                      currency: "usd",
+                      product_data: {
+                        name: line.description || "Flight Instruction",
+                      },
+                      unit_amount: unitAmount,
+                    },
+                    quantity: stripeQuantity,
+                  };
+                });
+              } else {
+                // Fallback to single line item
+                lineItems = [
+                  {
+                    price_data: {
+                      currency: "usd",
+                      product_data: {
+                        name: `Invoice ${invoice.invoice_number}`,
+                      },
+                      unit_amount: totalCents,
+                    },
+                    quantity: 1,
+                  },
+                ];
+              }
+              
+              console.log("💳 Creating Stripe checkout session with line items:", JSON.stringify(lineItems, null, 2));
+              
               const session = await stripe.checkout.sessions.create({
                 payment_method_types: ["card"],
-                line_items: invoiceLines.length > 0
-                  ? invoiceLines.map((line: any) => ({
-                      price_data: {
-                        currency: "usd",
-                        product_data: {
-                          name: line.description || "Flight Instruction",
-                        },
-                        unit_amount: Math.round(line.unitPrice * 100),
-                      },
-                      quantity: line.quantity,
-                    }))
-                  : [
-                      {
-                        price_data: {
-                          currency: "usd",
-                          product_data: {
-                            name: `Invoice ${invoice.invoice_number}`,
-                          },
-                          unit_amount: totalCents,
-                        },
-                        quantity: 1,
-                      },
-                    ],
+                line_items: lineItems,
                 mode: "payment",
                 success_url: `${frontendUrl}/dashboard/more?payment=success&invoice_id=${invoice.id}`,
                 cancel_url: `${frontendUrl}/dashboard/more?payment=cancelled&invoice_id=${invoice.id}`,
@@ -681,6 +721,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               console.log("✅ Created Stripe checkout session:", session.id);
               console.log("💳 Payment URL:", paymentUrl);
+            } else {
+              console.warn("⚠️ Invoice amount is zero, skipping Stripe checkout session creation");
             }
           }
         } catch (stripeError: any) {
