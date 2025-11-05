@@ -36,6 +36,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // put application routes here
   // prefix all routes with /api
 
+  // Test endpoint to verify routing works
+  app.get("/api/test", (_req: Request, res: Response) => {
+    res.json({ message: "API routes are working!", timestamp: new Date().toISOString() });
+  });
+
   // Stripe: Create checkout session for invoice payment
   app.post("/api/stripe/create-checkout-session", async (req: Request, res: Response) => {
     try {
@@ -332,7 +337,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Send invoice email endpoint
+  // Also allow GET for testing
+  app.get("/api/invoices/send-email/test", (_req: Request, res: Response) => {
+    res.json({ message: "Email endpoint is accessible", method: "GET test" });
+  });
+  
   app.post("/api/invoices/send-email", async (req: Request, res: Response) => {
+    console.log("📧 POST /api/invoices/send-email called");
+    console.log("📧 Request body:", req.body);
     try {
       if (!supabase) {
         return res.status(503).json({ 
