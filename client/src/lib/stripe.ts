@@ -14,12 +14,28 @@ export async function createCheckoutSession(
   invoiceId: string,
   userId: string
 ): Promise<CreateCheckoutSessionResponse> {
-  const response = await fetch("/api/stripe/create-checkout-session", {
+  // Use absolute URL to avoid CORS issues with redirects
+  // In production, always use canonical domain to avoid www redirect issues
+  let apiUrl: string;
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+    // If on non-www in production, use www to avoid redirect CORS issues
+    if (origin === "https://freedomaviationco.com") {
+      apiUrl = "https://www.freedomaviationco.com/api/stripe/create-checkout-session";
+    } else {
+      apiUrl = `${origin}/api/stripe/create-checkout-session`;
+    }
+  } else {
+    apiUrl = "/api/stripe/create-checkout-session";
+  }
+  
+  const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ invoiceId, userId }),
+    credentials: "include",
   });
 
   if (!response.ok) {
