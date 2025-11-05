@@ -12,6 +12,7 @@ interface ServiceRequest {
   requestedFor: string;
   notes?: string;
   status: "new" | "in_progress" | "done";
+  ownerName?: string;
 }
 
 interface KanbanBoardProps {
@@ -41,15 +42,24 @@ export function KanbanBoard({ items = [] }: KanbanBoardProps) {
     e.preventDefault();
     const requestId = e.dataTransfer.getData("requestId");
     
+    // Map Kanban statuses back to database statuses
+    const statusMap: Record<string, 'pending' | 'in_progress' | 'completed'> = {
+      'new': 'pending',
+      'in_progress': 'in_progress',
+      'done': 'completed',
+    };
+    
+    const dbStatus = statusMap[newStatus] || 'pending';
+    
     // Optimistically update UI
     setRequests(prev => prev.map(req => 
       req.id === requestId ? { ...req, status: newStatus } : req
     ));
 
-    // Update in database
+    // Update in database with mapped status
     const { error } = await supabase
       .from('service_requests')
-      .update({ status: newStatus })
+      .update({ status: dbStatus })
       .eq('id', requestId);
 
     if (error) {
@@ -81,6 +91,8 @@ export function KanbanBoard({ items = [] }: KanbanBoardProps) {
       oil: "Oil",
       staging: "Staging",
       maintenance: "Maintenance",
+      "Pre-Flight Concierge": "Pre-Flight",
+      "Flight Instruction": "Flight Instruction",
       other: "Other"
     };
     return labels[type] || type;
@@ -125,6 +137,11 @@ export function KanbanBoard({ items = [] }: KanbanBoardProps) {
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-2">
+                    {request.ownerName && (
+                      <p className="text-xs font-medium mb-1.5">
+                        {request.ownerName}
+                      </p>
+                    )}
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       {request.requestedFor}

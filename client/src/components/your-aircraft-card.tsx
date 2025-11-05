@@ -24,7 +24,7 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
   const [serviceSheetOpen, setServiceSheetOpen] = useState(false);
 
   // TODO: remove mock functionality
-  const mockAircraft = aircraft || {
+  const mockAircraftData = aircraft || {
     tailNumber: "N847SR",
     make: "Cirrus",
     model: "SR22T",
@@ -32,6 +32,14 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
     hoursPerMonth: 22,
     membershipClass: "Class II",
     planCode: "class_ii_standard"
+  };
+  
+  // For PrepareAircraftSheet which requires id
+  const mockAircraft = {
+    id: "mock-id",
+    tailNumber: mockAircraftData.tailNumber,
+    make: mockAircraftData.make,
+    model: mockAircraftData.model,
   };
 
   const includedServices = [
@@ -64,7 +72,7 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
               </p>
             </div>
             <Badge variant="secondary" className="text-sm">
-              {mockAircraft.membershipClass}
+              {mockAircraftData.membershipClass}
             </Badge>
           </div>
         </CardHeader>
@@ -73,11 +81,11 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground mb-1">Base Airport</p>
-              <p className="font-mono font-semibold">{mockAircraft.baseAirport}</p>
+              <p className="font-mono font-semibold">{mockAircraftData.baseAirport}</p>
             </div>
             <div>
               <p className="text-muted-foreground mb-1">Hours/Month</p>
-              <p className="font-semibold">{mockAircraft.hoursPerMonth}</p>
+              <p className="font-semibold">{mockAircraftData.hoursPerMonth}</p>
             </div>
           </div>
           
@@ -127,7 +135,12 @@ export function YourAircraftCard({ aircraft }: YourAircraftCardProps) {
       <RequestServiceSheet 
         open={serviceSheetOpen} 
         onOpenChange={setServiceSheetOpen}
-        aircraft={mockAircraft}
+        aircraft={{
+          id: "mock-aircraft-id",
+          tailNumber: mockAircraft.tailNumber,
+          make: mockAircraft.make,
+          model: mockAircraft.model,
+        }}
       />
     </>
   );

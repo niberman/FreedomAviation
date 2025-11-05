@@ -58,41 +58,86 @@ export default function FAHangar() {
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-center">Home Base Advantages</h2>
+            <h2 className="text-3xl font-bold mb-8 text-center">Premium Hangar Benefits</h2>
             <div className="grid md:grid-cols-2 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Climate Controlled</h3>
+                  <p className="text-muted-foreground">
+                    Protect your investment with professional-grade climate-controlled hangar space
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">24/7 Access</h3>
+                  <p className="text-muted-foreground">
+                    Round-the-clock access to your aircraft whenever you need it
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Secure Facility</h3>
+                  <p className="text-muted-foreground">
+                    State-of-the-art security measures to keep your aircraft safe
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Concierge Service</h3>
+                  <p className="text-muted-foreground">
+                    Premium concierge support for all your aircraft management needs
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Aircraft Detailing</h3>
+                  <p className="text-muted-foreground">
+                    Professional aircraft detailing services to keep your aircraft looking pristine
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Direct Ramp Access</h3>
+                  <p className="text-muted-foreground">
+                    Convenient direct access to the ramp for quick turnarounds
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Maintenance Support</h3>
+                  <p className="text-muted-foreground">
+                    On-site maintenance support and coordination services
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Fuel Discount</h3>
+                  <p className="text-muted-foreground">
+                    Competitive fuel pricing with discount benefits
+                  </p>
+                </CardContent>
+              </Card>
               <Card>
                 <CardContent className="p-6">
                   <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
                   <h3 className="font-semibold text-lg mb-2">Streamlined Operations</h3>
                   <p className="text-muted-foreground">
                     Located at our operational base for fastest service turnaround times
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Cost-Effective Pricing</h3>
-                  <p className="text-muted-foreground">
-                    Competitive hangar rate (${hangarCost.toLocaleString()}/mo) transparently included in management fees
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Priority Access</h3>
-                  <p className="text-muted-foreground">
-                    Direct access to our maintenance and service teams on-site
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Integrated Management</h3>
-                  <p className="text-muted-foreground">
-                    Seamless coordination between aircraft management and hangar services
                   </p>
                 </CardContent>
               </Card>
@@ -124,8 +169,11 @@ export default function FAHangar() {
               <div className="border-b pb-4">
                 <h3 className="font-semibold text-lg mb-2">Why choose FA Hangar over other options?</h3>
                 <p className="text-muted-foreground">
-                  Being housed at our home base facility means faster service response times, direct
-                  coordination with our team, and competitive pricing compared to premium hangar partners.
+                  Being housed at our home base facility means faster service response times and direct
+                  coordination with our team. Both our hangar and Sky Harbour offer the same premium amenities 
+                  and benefits, with the main difference being pricing and location. The Freedom Aviation Hangar 
+                  provides the same climate control, 24/7 access, secure facilities, concierge service, and all 
+                  other premium benefits at a competitive rate of ${hangarCost.toLocaleString()}/month.
                 </p>
               </div>
             </div>

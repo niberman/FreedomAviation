@@ -60,9 +60,72 @@ export default function SkyHarbour() {
               <Card>
                 <CardContent className="p-6">
                   <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Purpose-Built Infrastructure</h3>
+                  <h3 className="font-semibold text-lg mb-2">Climate Controlled</h3>
                   <p className="text-muted-foreground">
-                    Modern facilities designed specifically for Centennial Airport operations
+                    Protect your investment with professional-grade climate-controlled hangar space
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">24/7 Access</h3>
+                  <p className="text-muted-foreground">
+                    Round-the-clock access to your aircraft whenever you need it
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Secure Facility</h3>
+                  <p className="text-muted-foreground">
+                    State-of-the-art security measures to keep your aircraft safe
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Concierge Service</h3>
+                  <p className="text-muted-foreground">
+                    Premium concierge support for all your aircraft management needs
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Aircraft Detailing</h3>
+                  <p className="text-muted-foreground">
+                    Professional aircraft detailing services to keep your aircraft looking pristine
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Direct Ramp Access</h3>
+                  <p className="text-muted-foreground">
+                    Convenient direct access to the ramp for quick turnarounds
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Maintenance Support</h3>
+                  <p className="text-muted-foreground">
+                    On-site maintenance support and coordination services
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
+                  <h3 className="font-semibold text-lg mb-2">Fuel Discount</h3>
+                  <p className="text-muted-foreground">
+                    Competitive fuel pricing with discount benefits
                   </p>
                 </CardContent>
               </Card>
@@ -72,24 +135,6 @@ export default function SkyHarbour() {
                   <h3 className="font-semibold text-lg mb-2">Transparent Pricing</h3>
                   <p className="text-muted-foreground">
                     Hangar costs (${hangarCost.toLocaleString()}/mo) included in your monthly management fee
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Secure & Climate-Controlled</h3>
-                  <p className="text-muted-foreground">
-                    Protect your investment with professional-grade hangar space
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Streamlined Management</h3>
-                  <p className="text-muted-foreground">
-                    Single point of contact for aircraft management and hangar coordination
                   </p>
                 </CardContent>
               </Card>
@@ -114,15 +159,17 @@ export default function SkyHarbour() {
               <div className="border-b pb-4">
                 <h3 className="font-semibold text-lg mb-2">Do prices vary by hangar location?</h3>
                 <p className="text-muted-foreground">
-                  Yes. Our pricing engine accounts for different hangar partnerships. Sky Harbour
-                  has different economics than our Freedom Aviation Hangar or tie-down options.
+                  Yes. Both hangar locations offer the same premium amenities and benefits, but pricing varies 
+                  based on location. Sky Harbour hangar costs are ${hangarCost.toLocaleString()}/month, while 
+                  the Freedom Aviation Hangar is priced at $1,500/month. Both include all the same amenities.
                 </p>
               </div>
               <div className="border-b pb-4">
                 <h3 className="font-semibold text-lg mb-2">What makes Sky Harbour a preferred partner?</h3>
                 <p className="text-muted-foreground">
-                  Sky Harbour provides purpose-built, high-quality infrastructure at Centennial Airport,
-                  allowing us to deliver premium service with predictable costs and excellent security.
+                  Sky Harbour provides purpose-built, high-quality infrastructure at Centennial Airport with 
+                  the same premium amenities as our Freedom Aviation Hangar. Both locations offer climate control, 
+                  24/7 access, secure facilities, concierge service, and all other premium benefits.
                 </p>
               </div>
             </div>
@@ -151,7 +198,7 @@ export default function SkyHarbour() {
                 name: "Do prices vary by hangar location?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Yes. Our pricing engine accounts for different hangar partnerships. Sky Harbour has different economics than our Freedom Aviation Hangar or tie-down options.",
+                  text: "Yes. Both hangar locations offer the same premium amenities and benefits, but pricing varies based on location. Sky Harbour hangar costs are $2,000/month, while the Freedom Aviation Hangar is priced at $1,500/month. Both include all the same amenities.",
                 },
               },
             ],

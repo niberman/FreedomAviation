@@ -15,17 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 import { useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!,
-);
+import { supabase } from "@/lib/supabase";
 
 type HourRangeValue = "0-10" | "10-25" | "25-40" | "40+";
 
@@ -85,7 +78,6 @@ const hourRanges: Array<{
   },
 ];
 
-const FREEDOM_PLUS_PRICE = 200;
 const fmtUSD = (n: number) =>
   n.toLocaleString(undefined, {
     style: "currency",
@@ -100,7 +92,6 @@ export function FreedomConfigurator({
   const [aircraftClass, setAircraftClass] =
     useState<keyof typeof classPricing>("class_ii");
   const [hourRange, setHourRange] = useState<HourRangeValue>("10-25");
-  const [concierge, setConcierge] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -108,9 +99,7 @@ export function FreedomConfigurator({
   const selectedClass = classPricing[aircraftClass];
   const selectedRange = hourRanges.find((r) => r.value === hourRange)!;
   const basePrice = selectedClass.base * selectedRange.multiplier;
-  const totalPrice = Math.round(
-    basePrice + (concierge ? FREEDOM_PLUS_PRICE : 0),
-  );
+  const totalPrice = Math.round(basePrice);
 
   const alwaysIncluded = [
     "Fluid top-offs (Oil, O₂, TKS)",
@@ -136,7 +125,6 @@ export function FreedomConfigurator({
       const payload = {
         aircraft_class: aircraftClass, // 'class_i' | 'class_ii' | 'class_iii'
         hour_range: hourRange, // '0-10' | '10-25' | '25-40' | '40+'
-        concierge,
         quoted_price: totalPrice,
       };
 
@@ -228,30 +216,6 @@ export function FreedomConfigurator({
               </SelectContent>
             </Select>
           </div>
-
-          {/* Freedom+ */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="concierge"
-                    checked={concierge}
-                    onCheckedChange={(c) => setConcierge(Boolean(c))}
-                    data-testid="checkbox-concierge"
-                  />
-                  <label htmlFor="concierge" className="font-semibold">
-                    Freedom+ Concierge
-                  </label>
-                </div>
-                <Badge>+{fmtUSD(FREEDOM_PLUS_PRICE)}/mo</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                24-hour SLA, cabin provisioning, trip planning & priority
-                support.
-              </p>
-            </CardContent>
-          </Card>
 
           {/* Summary */}
           <div className="border-t pt-4 space-y-4">

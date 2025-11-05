@@ -142,7 +142,7 @@ INSERT INTO public.pricing_locations (name, slug, hangar_cost_monthly, descripti
     'sky-harbour',
     2000.00,
     'Premium hangar facility with full-service amenities',
-    '{"amenities": ["Climate controlled", "24/7 access", "Concierge service", "Aircraft detailing"]}'::jsonb,
+    '{"amenities": ["Climate controlled", "24/7 access", "Secure facility", "Concierge service", "Aircraft detailing", "Direct ramp access", "Maintenance support", "Fuel discount"]}'::jsonb,
     true
   ),
   (
@@ -150,7 +150,7 @@ INSERT INTO public.pricing_locations (name, slug, hangar_cost_monthly, descripti
     'freedom-aviation-hangar',
     1500.00,
     'Fox 9 hangar with direct ramp access',
-    '{"amenities": ["Direct ramp access", "Secure facility", "Maintenance support", "Fuel discount"]}'::jsonb,
+    '{"amenities": ["Climate controlled", "24/7 access", "Secure facility", "Concierge service", "Aircraft detailing", "Direct ramp access", "Maintenance support", "Fuel discount"]}'::jsonb,
     true
   ),
   (

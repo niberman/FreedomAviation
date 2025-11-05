@@ -129,33 +129,136 @@ export default function OwnerMore() {
     },
   });
 
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
+  const { data: invoices = [], isLoading: invoicesLoading, error: invoicesError } = useQuery({
     queryKey: ["invoices", aircraft?.id, isDemo ? "demo" : user?.id],
     enabled: isDemo || Boolean(aircraft?.id && user?.id),
     queryFn: async () => {
       if (isDemo) {
         const { DEMO_INVOICES } = await import("@/lib/demo-data");
-        return DEMO_INVOICES;
+        // Transform demo data to match expected format
+        return DEMO_INVOICES.map(inv => ({
+          ...inv,
+          invoice_lines: inv.line_items?.map((item: any) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unit_cents: Math.round(item.unit_price * 100),
+          })) || [],
+        }));
       }
       if (!aircraft?.id || !user?.id) return [];
       
-      const { data, error } = await supabase
+      console.log("Fetching invoices for aircraft:", aircraft.id, "owner:", user.id);
+      
+      // Try to fetch invoices with nested invoice_lines first
+      let { data, error } = await supabase
         .from("invoices")
         .select(`
           *,
-          invoice_lines(description, quantity, unit_cents)
+          invoice_lines(id, description, quantity, unit_cents)
         `)
         .eq("aircraft_id", aircraft.id)
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false })
         .limit(6);
       
-      if (error) {
-        console.error("Error fetching invoices:", error);
-        return [];
+      // If nested query fails, try fetching invoices separately and then invoice_lines
+      if (error && error.message?.includes('invoice_lines')) {
+        console.warn("Nested query failed, trying separate queries:", error.message);
+        
+        // Fetch invoices first
+        const invoicesResult = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("aircraft_id", aircraft.id)
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(6);
+        
+        if (invoicesResult.error) {
+          error = invoicesResult.error;
+          data = null;
+        } else {
+          // Fetch invoice_lines separately for each invoice
+          const invoiceIds = (invoicesResult.data || []).map((inv: any) => inv.id);
+          
+          if (invoiceIds.length > 0) {
+            const linesResult = await supabase
+              .from("invoice_lines")
+              .select("id, invoice_id, description, quantity, unit_cents")
+              .in("invoice_id", invoiceIds);
+            
+            if (linesResult.error) {
+              console.warn("Error fetching invoice lines separately:", linesResult.error);
+            }
+            
+            // Combine invoices with their lines
+            const linesByInvoiceId = (linesResult.data || []).reduce((acc: any, line: any) => {
+              if (!acc[line.invoice_id]) {
+                acc[line.invoice_id] = [];
+              }
+              acc[line.invoice_id].push({
+                id: line.id,
+                description: line.description,
+                quantity: Number(line.quantity),
+                unit_cents: Number(line.unit_cents),
+              });
+              return acc;
+            }, {});
+            
+            data = (invoicesResult.data || []).map((invoice: any) => ({
+              ...invoice,
+              invoice_lines: linesByInvoiceId[invoice.id] || [],
+            }));
+            
+            error = null; // Clear error since we successfully fetched
+          } else {
+            data = invoicesResult.data || [];
+            error = null;
+          }
+        }
       }
       
-      return data;
+      if (error) {
+        console.error("Error fetching invoices:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        
+        // Check for specific error types
+        if (error.message?.includes('JWT') || error.message?.includes('authentication') || error.code === 'PGRST301') {
+          throw new Error('Authentication required. Please log in to view invoices.');
+        }
+        
+        if (error.code === 'PGRST116') {
+          throw new Error('No invoices found. This might be a permissions issue.');
+        }
+        
+        // Throw the error so react-query can handle it
+        throw new Error(error.message || 'Failed to load invoices. Please try again.');
+      }
+      
+      console.log("Fetched invoices:", data?.length || 0, data);
+      
+      // Transform the data to ensure invoice_lines is properly formatted
+      const transformedInvoices = (data || []).map((invoice: any) => ({
+        ...invoice,
+        invoice_lines: Array.isArray(invoice.invoice_lines) 
+          ? invoice.invoice_lines.map((line: any) => ({
+              id: line.id,
+              description: line.description,
+              quantity: Number(line.quantity),
+              unit_cents: Number(line.unit_cents),
+            }))
+          : [],
+      }));
+      
+      return transformedInvoices;
+    },
+    onError: (error: any) => {
+      console.error("Invoice query error:", error);
+      toast({
+        title: "Error loading invoices",
+        description: error.message || "Failed to load invoices. Please try refreshing the page.",
+        variant: "destructive",
+      });
     },
   });
 

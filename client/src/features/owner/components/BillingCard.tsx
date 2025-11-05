@@ -16,7 +16,7 @@ interface Invoice {
   invoice_number: string;
   amount: number;
   status: string;
-  category: string;
+  category?: string;
   due_date: string | null;
   paid_date: string | null;
   created_at: string;
@@ -99,6 +99,16 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
     }
   };
 
+  // Calculate total amount for display (use invoice_lines if available, otherwise use amount)
+  const calculateInvoiceTotal = (invoice: Invoice): number => {
+    if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
+      return invoice.invoice_lines.reduce((sum, line) => {
+        return sum + (line.quantity * line.unit_cents / 100);
+      }, 0);
+    }
+    return invoice.amount;
+  };
+
   // Find the most relevant invoice to display (finalized > draft > paid)
   const currentInvoice = 
     invoices.find((inv) => inv.status === "finalized") ||
@@ -134,8 +144,18 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
                 </Badge>
               </div>
               <div className="text-2xl font-bold">
-                {formatAmount(currentInvoice.amount)}
+                {formatAmount(calculateInvoiceTotal(currentInvoice))}
               </div>
+              {currentInvoice.invoice_lines && currentInvoice.invoice_lines.length > 0 && currentInvoice.invoice_lines.length === 1 && (
+                <p className="text-sm text-muted-foreground">
+                  {currentInvoice.invoice_lines[0].description}
+                </p>
+              )}
+              {currentInvoice.invoice_lines && currentInvoice.invoice_lines.length > 1 && (
+                <p className="text-sm text-muted-foreground">
+                  {currentInvoice.invoice_lines.length} line items
+                </p>
+              )}
               {currentInvoice.due_date && (
                 <p className="text-sm text-muted-foreground">
                   Due: {formatDate(currentInvoice.due_date)}
@@ -193,7 +213,7 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
-                          {formatAmount(invoice.amount)}
+                          {formatAmount(calculateInvoiceTotal(invoice))}
                         </span>
                         <Badge variant={getStatusVariant(invoice.status) as any} className="text-xs">
                           {invoice.status}

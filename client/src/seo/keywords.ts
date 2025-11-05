@@ -80,8 +80,9 @@ export function allKeywords(): string {
  */
 export function airportKeywords(airportCode?: string): string {
   const base = [...SEO_KEYWORDS.services, ...SEO_KEYWORDS.modifiers];
-  if (airportCode && SEO_KEYWORDS.airports.includes(airportCode.toUpperCase())) {
-    return [...base, airportCode, `${airportCode} aircraft services`].join(", ");
+  const upperCode = airportCode?.toUpperCase();
+  if (upperCode && SEO_KEYWORDS.airports.includes(upperCode as typeof SEO_KEYWORDS.airports[number])) {
+    return [...base, upperCode, `${upperCode} aircraft services`].join(", ");
   }
   return base.join(", ");
 }

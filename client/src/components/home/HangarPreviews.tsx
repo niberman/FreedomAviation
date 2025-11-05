@@ -201,7 +201,11 @@ export default function HangarPreviews() {
       {/* */}
       {/* */}
       {user && (
-        <RequestServiceSheet open={requestOpen} onOpenChange={setRequestOpen} />
+        <RequestServiceSheet 
+          open={requestOpen} 
+          onOpenChange={setRequestOpen}
+          aircraft={{ id: undefined, tailNumber: "N/A", make: "Unknown", model: "Unknown" }}
+        />
       )}
     </section>
   );

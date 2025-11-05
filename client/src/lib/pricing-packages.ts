@@ -59,18 +59,6 @@ export const PACKAGES: Package[] = [
     baseMonthly: 200,
     includes: ALWAYS_INCLUDED,
     hours: HOURS_BANDS,
-    addons: [
-      {
-        name: "Freedom+ Concierge",
-        priceDeltaMonthly: 200,
-        bullets: [
-          "24-hour guaranteed turnaround",
-          "Cabin provisioning",
-          "Trip planning + fuel coordination",
-          "Dedicated personal concierge contact",
-        ],
-      },
-    ],
   },
   {
     id: "class-ii",
@@ -79,9 +67,6 @@ export const PACKAGES: Package[] = [
     baseMonthly: 550,
     includes: ALWAYS_INCLUDED,
     hours: HOURS_BANDS,
-    addons: [
-      { name: "Freedom+ Concierge", priceDeltaMonthly: 200, bullets: [] },
-    ],
   },
   {
     id: "class-iii",
@@ -90,8 +75,5 @@ export const PACKAGES: Package[] = [
     baseMonthly: 1000,
     includes: ALWAYS_INCLUDED,
     hours: HOURS_BANDS,
-    addons: [
-      { name: "Freedom+ Concierge", priceDeltaMonthly: 200, bullets: [] },
-    ],
   },
 ];

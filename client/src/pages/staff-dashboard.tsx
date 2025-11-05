@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, FileText, DollarSign, Wrench, Plane } from "lucide-react";
-import logoImage from "@assets/freedom-aviation-logo.png";
-import { useState } from "react";
+import logoImage from "@assets/falogo.png";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
@@ -35,6 +35,8 @@ interface InstructionInvoice {
   category: string;
   created_by_cfi_id: string;
   created_at: string;
+  due_date?: string | null;
+  paid_date?: string | null;
   aircraft?: { tail_number: string };
   owner?: { full_name: string; email: string };
   invoice_lines?: Array<{
@@ -55,15 +57,6 @@ export default function StaffDashboard() {
   const [hours, setHours] = useState("");
   const [ratePerHour, setRatePerHour] = useState("150");
 
-  // TODO: remove mock functionality
-  const reservations = [
-    { id: "1", date: "2024-10-15 10:00", student: "John Doe", aircraft: "N847SR", type: "IPC" },
-    { id: "2", date: "2024-10-16 14:00", student: "Jane Smith", aircraft: "N123JA", type: "BFR" },
-  ];
-
-  const flightLogs = [
-    { id: "1", date: "2024-10-14", student: "Mike Johnson", aircraft: "N456AB", hobbsStart: 1200, hobbsEnd: 1202.5, notes: "Pattern work, 5 landings" },
-  ];
 
   // Fetch owners
   const { data: owners = [] } = useQuery({
@@ -104,6 +97,8 @@ export default function StaffDashboard() {
           make,
           model,
           class,
+
+          base_location,
           owner:owner_id(full_name, email)
         `)
         .order('tail_number');
@@ -116,14 +111,14 @@ export default function StaffDashboard() {
         make: ac.make || 'Unknown',
         model: ac.model || '',
         class: ac.class || 'Unknown',
-        baseAirport: 'KAPA', // Default base
+        baseAirport: ac.base_location || 'KAPA', // Use base_location from DB or default to KAPA
         owner: ac.owner?.full_name || ac.owner?.email || 'Unknown Owner',
       }));
     },
   });
 
   // Fetch service requests for kanban board
-  const { data: serviceRequests = [] } = useQuery({
+  const { data: serviceRequests = [], refetch: refetchServiceRequests } = useQuery({
     queryKey: ['/api/service-requests'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -132,14 +127,22 @@ export default function StaffDashboard() {
           id,
           service_type,
           requested_for,
+          requested_date,
+          requested_time,
+          description,
           notes,
           status,
-          aircraft:aircraft_id(tail_number)
+          priority,
+          created_at,
+          aircraft:aircraft_id(tail_number),
+          owner:user_id(full_name, email)
         `)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
+    // Refetch every 30 seconds to catch new requests
+    refetchInterval: 30000,
   });
 
   // Fetch maintenance items
@@ -162,13 +165,48 @@ export default function StaffDashboard() {
     },
   });
 
-  // Fetch instruction invoices for current CFI
-  const { data: invoices = [], isLoading: isLoadingInvoices, refetch: refetchInvoices } = useQuery<InstructionInvoice[]>({
-    queryKey: ['/api/cfi/invoices', user?.id],
-    queryFn: async () => {
-      if (!user) throw new Error('Not authenticated');
+  const isDev = !import.meta.env.PROD;
 
+  // Check if user is admin
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
       const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+    retry: false,
+  });
+
+  const isAdmin = userProfile?.role === 'admin';
+
+  // Fetch instruction invoices for current CFI
+  const { data: invoices = [], isLoading: isLoadingInvoices, refetch: refetchInvoices, error: invoicesError } = useQuery<InstructionInvoice[]>({
+    queryKey: ['/api/cfi/invoices', user?.id, isDev, isAdmin],
+    queryFn: async () => {
+      console.log('🔍 Fetching invoices - User:', user?.id, 'isAdmin:', isAdmin, 'isDev:', isDev);
+      
+      // In dev mode without user, return empty array (RLS will block anyway)
+      // User should log in to see invoices
+      if (!user && isDev) {
+        console.warn('⚠️ DEV MODE: No authenticated user. Please log in to view invoices.');
+        return [];
+      }
+
+      // In production, require authentication
+      if (!user) {
+        console.error('❌ Not authenticated');
+        throw new Error('Not authenticated. Please log in to view invoices.');
+      }
+
+      // Build the query - try nested query first
+      let query = supabase
         .from('invoices')
         .select(`
           *,
@@ -176,15 +214,142 @@ export default function StaffDashboard() {
           owner:owner_id(full_name, email),
           invoice_lines(description, quantity, unit_cents)
         `)
-        .eq('category', 'instruction')
-        .eq('created_by_cfi_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('category', 'instruction');
+
+      // Admins see all invoices, CFIs see only their own
+      if (!isAdmin) {
+        console.log('🔍 Filtering by CFI ID:', user.id);
+        query = query.eq('created_by_cfi_id', user.id);
+      } else {
+        console.log('🔍 Showing all invoices (admin mode)');
+      }
+
+      let { data, error } = await query.order('created_at', { ascending: false });
       
-      if (error) throw error;
+      // If nested query fails, try fetching separately
+      if (error && (error.message?.includes('invoice_lines') || error.message?.includes('aircraft') || error.message?.includes('owner'))) {
+        console.warn('⚠️ Nested query failed, trying separate queries:', error.message);
+        
+        // Build base query without nested relations
+        let baseQuery = supabase
+          .from('invoices')
+          .select('*')
+          .eq('category', 'instruction');
+
+        if (!isAdmin) {
+          baseQuery = baseQuery.eq('created_by_cfi_id', user.id);
+        }
+
+        const invoicesResult = await baseQuery.order('created_at', { ascending: false });
+        
+        if (invoicesResult.error) {
+          error = invoicesResult.error;
+          data = null;
+        } else {
+          const invoiceData = invoicesResult.data || [];
+          const invoiceIds = invoiceData.map((inv: any) => inv.id);
+          const aircraftIds = [...new Set(invoiceData.map((inv: any) => inv.aircraft_id))];
+          const ownerIds = [...new Set(invoiceData.map((inv: any) => inv.owner_id))];
+          
+          // Fetch related data separately
+          const [linesResult, aircraftResult, ownerResult] = await Promise.all([
+            invoiceIds.length > 0 
+              ? supabase
+                  .from('invoice_lines')
+                  .select('id, invoice_id, description, quantity, unit_cents')
+                  .in('invoice_id', invoiceIds)
+              : { data: [], error: null },
+            aircraftIds.length > 0
+              ? supabase
+                  .from('aircraft')
+                  .select('id, tail_number')
+                  .in('id', aircraftIds)
+              : { data: [], error: null },
+            ownerIds.length > 0
+              ? supabase
+                  .from('user_profiles')
+                  .select('id, full_name, email')
+                  .in('id', ownerIds)
+              : { data: [], error: null },
+          ]);
+          
+          // Combine data
+          const linesByInvoiceId = (linesResult.data || []).reduce((acc: any, line: any) => {
+            if (!acc[line.invoice_id]) {
+              acc[line.invoice_id] = [];
+            }
+            acc[line.invoice_id].push({
+              description: line.description,
+              quantity: Number(line.quantity),
+              unit_cents: Number(line.unit_cents),
+            });
+            return acc;
+          }, {});
+          
+          const aircraftById = (aircraftResult.data || []).reduce((acc: any, ac: any) => {
+            acc[ac.id] = { tail_number: ac.tail_number };
+            return acc;
+          }, {});
+          
+          const ownerById = (ownerResult.data || []).reduce((acc: any, owner: any) => {
+            acc[owner.id] = { full_name: owner.full_name, email: owner.email };
+            return acc;
+          }, {});
+          
+          // Combine everything
+          data = invoiceData.map((invoice: any) => ({
+            ...invoice,
+            invoice_lines: linesByInvoiceId[invoice.id] || [],
+            aircraft: aircraftById[invoice.aircraft_id] || null,
+            owner: ownerById[invoice.owner_id] || null,
+          }));
+          
+          error = null; // Clear error since we successfully fetched
+        }
+      }
+      
+      if (error) {
+        console.error('❌ Error fetching invoices:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        
+        // Check for authentication/RLS errors
+        if (error.message?.includes('JWT') || error.message?.includes('authentication') || error.code === 'PGRST301') {
+          throw new Error('Authentication required. Please log in to view invoices.');
+        }
+        
+        if (error.code === 'PGRST116') {
+          throw new Error('No invoices found. This might be a permissions issue.');
+        }
+        
+        throw new Error(error.message || 'Failed to load invoices. Please try again.');
+      }
+      
+      console.log('✅ Fetched invoices:', data?.length || 0, 'invoices');
+      console.log('📋 Invoice data:', data);
+      
+      // Also log what we're returning
+      if (data && data.length > 0) {
+        console.log('📄 First invoice sample:', data[0]);
+      }
+      
       return (data || []) as InstructionInvoice[];
     },
+    // Only enable query if user exists (or in dev mode, but we'll handle that in the function)
     enabled: Boolean(user?.id),
+    retry: false, // Don't retry on auth errors
   });
+
+  // Handle invoice loading errors with toast
+  useEffect(() => {
+    if (invoicesError) {
+      console.error('Invoice query error:', invoicesError);
+      toast({
+        title: 'Error loading invoices',
+        description: invoicesError instanceof Error ? invoicesError.message : 'Failed to load invoices. Please try refreshing the page.',
+        variant: 'destructive',
+      });
+    }
+  }, [invoicesError, toast]);
 
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
@@ -211,6 +376,10 @@ export default function StaffDashboard() {
       // Invalidate and refetch invoices to show the newly created invoice
       await queryClient.invalidateQueries({ 
         queryKey: ['/api/cfi/invoices'],
+      });
+      // Also invalidate with the full query key pattern
+      await queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === '/api/cfi/invoices',
       });
       // Directly refetch the invoices query
       await refetchInvoices();
@@ -247,6 +416,10 @@ export default function StaffDashboard() {
       // Invalidate and refetch invoices to show updated status
       await queryClient.invalidateQueries({ 
         queryKey: ['/api/cfi/invoices'],
+      });
+      // Also invalidate with the full query key pattern
+      await queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === '/api/cfi/invoices',
       });
       // Directly refetch the invoices query
       await refetchInvoices();
@@ -309,17 +482,64 @@ export default function StaffDashboard() {
             <TabsTrigger value="invoices" data-testid="tab-invoices">Invoices</TabsTrigger>
           </TabsList>
 
-          {/* Service Requests (Admin) */}
+          {/* Service Requests */}
           <TabsContent value="requests" className="space-y-4">
-            <h2 className="text-2xl font-semibold">Service Requests</h2>
-            <KanbanBoard items={serviceRequests.map((sr: any) => ({
-              id: sr.id,
-              tailNumber: sr.aircraft?.tail_number || 'N/A',
-              type: sr.service_type,
-              requestedFor: sr.requested_for || 'TBD',
-              notes: sr.notes,
-              status: sr.status || 'new',
-            }))} />
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Service Requests</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Manage service requests from aircraft owners
+                </p>
+              </div>
+              <Badge variant="secondary">
+                {serviceRequests.length} total
+              </Badge>
+            </div>
+            {serviceRequests.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">No service requests yet.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Service requests from owners will appear here.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <KanbanBoard items={serviceRequests.map((sr: any) => {
+                // Map database statuses to Kanban board statuses
+                const statusMap: Record<string, 'new' | 'in_progress' | 'done'> = {
+                  'pending': 'new',
+                  'in_progress': 'in_progress',
+                  'completed': 'done',
+                  'cancelled': 'done', // Treat cancelled as done
+                };
+                
+                // Format requested date/time
+                let requestedFor = 'TBD';
+                if (sr.requested_date) {
+                  const date = new Date(sr.requested_date);
+                  requestedFor = format(date, 'MMM d, yyyy');
+                  if (sr.requested_time) {
+                    requestedFor += ` ${sr.requested_time}`;
+                  }
+                } else if (sr.requested_for) {
+                  requestedFor = sr.requested_for;
+                }
+                
+                // Combine description and notes for display
+                const displayNotes = sr.description || sr.notes || '';
+                
+                return {
+                  id: sr.id,
+                  tailNumber: sr.aircraft?.tail_number || 'N/A',
+                  type: sr.service_type,
+                  requestedFor,
+                  notes: displayNotes,
+                  status: statusMap[sr.status] || 'new',
+                  ownerName: sr.owner?.full_name || sr.owner?.email || undefined,
+                };
+              })} />
+            )}
           </TabsContent>
 
           {/* Aircraft (Admin) */}
@@ -376,66 +596,37 @@ export default function StaffDashboard() {
           {/* CFI Schedule */}
           <TabsContent value="schedule" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Schedule</h2>
+              <div>
+                <h2 className="text-2xl font-semibold">CFI Schedule</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  View and manage flight instruction schedules
+                </p>
+              </div>
               <Calendar className="h-5 w-5 text-muted-foreground" />
             </div>
-            
-            <div className="space-y-3">
-              {reservations.map((reservation) => (
-                <Card key={reservation.id} data-testid={`reservation-${reservation.id}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-semibold">{reservation.student}</p>
-                        <p className="text-sm text-muted-foreground">{reservation.date}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline" className="font-mono">{reservation.aircraft}</Badge>
-                          <Badge variant="secondary">{reservation.type}</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Schedule functionality coming soon.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Flight Logs */}
           <TabsContent value="logs" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Flight Logs</h2>
+              <div>
+                <h2 className="text-2xl font-semibold">Flight Logs</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Review and sign off on flight logs
+                </p>
+              </div>
               <FileText className="h-5 w-5 text-muted-foreground" />
             </div>
-            
-            <div className="space-y-3">
-              {flightLogs.map((log) => (
-                <Card key={log.id} data-testid={`log-${log.id}`}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{log.student}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{log.date}</p>
-                      </div>
-                      <Badge variant="outline" className="font-mono">{log.aircraft}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Hobbs Start</p>
-                        <p className="font-mono font-semibold">{log.hobbsStart}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Hobbs End</p>
-                        <p className="font-mono font-semibold">{log.hobbsEnd}</p>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-3">{log.notes}</p>
-                    <Button size="sm" data-testid={`button-sign-${log.id}`}>Sign Off</Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">Flight logs functionality coming soon.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Invoices */}
@@ -560,19 +751,70 @@ export default function StaffDashboard() {
 
             {/* Invoice List */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">My Instruction Invoices</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">My Instruction Invoices</h3>
+                {invoices.length > 0 && (
+                  <Badge variant="secondary">{invoices.length} invoice{invoices.length !== 1 ? 's' : ''}</Badge>
+                )}
+              </div>
               
-              {isLoadingInvoices ? (
-                <p className="text-muted-foreground">Loading invoices...</p>
+              {invoicesError ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-destructive font-medium mb-2">Error loading invoices</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {invoicesError instanceof Error ? invoicesError.message : 'Unknown error occurred'}
+                    </p>
+                    {!user && (
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Please log in to view invoices.
+                      </p>
+                    )}
+                    {user && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => refetchInvoices()}
+                      >
+                        Retry
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : isLoadingInvoices ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-muted-foreground">Loading invoices...</p>
+                  </CardContent>
+                </Card>
+              ) : !user ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-muted-foreground mb-2">Authentication required</p>
+                    <p className="text-sm text-muted-foreground">
+                      Please log in to view and manage invoices.
+                    </p>
+                  </CardContent>
+                </Card>
               ) : invoices.length === 0 ? (
-                <p className="text-muted-foreground">No instruction invoices yet.</p>
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-muted-foreground mb-2">No instruction invoices yet.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Create an invoice using the form above to get started.
+                    </p>
+                  </CardContent>
+                </Card>
               ) : (
                 <div className="space-y-3">
                   {invoices.map((invoice) => {
-                    const lineItem = invoice.invoice_lines?.[0];
-                    const calculatedTotal = lineItem 
-                      ? (lineItem.quantity * lineItem.unit_cents / 100).toFixed(2)
-                      : invoice.amount.toFixed(2);
+                    // Calculate total from all invoice lines
+                    let calculatedTotal = invoice.amount;
+                    if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
+                      calculatedTotal = invoice.invoice_lines.reduce((sum, line) => {
+                        return sum + (line.quantity * line.unit_cents / 100);
+                      }, 0);
+                    }
                     
                     return (
                       <Card key={invoice.id} data-testid={`invoice-${invoice.id}`}>
@@ -588,11 +830,20 @@ export default function StaffDashboard() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge 
-                                variant={invoice.status === 'finalized' ? 'default' : 'secondary'}
+                                variant={
+                                  invoice.status === 'paid' ? 'default' :
+                                  invoice.status === 'finalized' ? 'secondary' :
+                                  'outline'
+                                }
                                 data-testid={`badge-status-${invoice.id}`}
                               >
                                 {invoice.status}
                               </Badge>
+                              {invoice.category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {invoice.category}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </CardHeader>
@@ -603,20 +854,24 @@ export default function StaffDashboard() {
                               <p className="font-mono">{invoice.invoice_number}</p>
                             </div>
                             
-                            {lineItem && (
-                              <div>
-                                <p className="text-sm text-muted-foreground">Description</p>
-                                <p>{lineItem.description}</p>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {lineItem.quantity} hrs × ${(lineItem.unit_cents / 100).toFixed(2)}/hr
-                                </p>
+                            {invoice.invoice_lines && invoice.invoice_lines.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm text-muted-foreground">Line Items</p>
+                                {invoice.invoice_lines.map((line, idx) => (
+                                  <div key={idx} className="pl-2 border-l-2">
+                                    <p className="text-sm font-medium">{line.description}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {line.quantity} {line.quantity === 1 ? 'hr' : 'hrs'} × ${(line.unit_cents / 100).toFixed(2)}/hr = ${(line.quantity * line.unit_cents / 100).toFixed(2)}
+                                    </p>
+                                  </div>
+                                ))}
                               </div>
                             )}
                             
                             <div className="flex items-center justify-between pt-3 border-t">
                               <div>
                                 <p className="text-sm text-muted-foreground">Total</p>
-                                <p className="text-xl font-bold">${calculatedTotal}</p>
+                                <p className="text-xl font-bold">${calculatedTotal.toFixed(2)}</p>
                               </div>
                               
                               {invoice.status === 'draft' && (
@@ -632,8 +887,19 @@ export default function StaffDashboard() {
                               
                               {invoice.status === 'finalized' && (
                                 <p className="text-sm text-muted-foreground">
-                                  Finalized on {format(new Date(invoice.created_at), 'MMM d, yyyy')}
+                                  Ready for payment
                                 </p>
+                              )}
+                              
+                              {invoice.status === 'paid' && invoice.paid_date && (
+                                <div className="text-right">
+                                  <p className="text-sm font-medium text-green-600">
+                                    ✓ Paid
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(new Date(invoice.paid_date), 'MMM d, yyyy')}
+                                  </p>
+                                </div>
                               )}
                             </div>
                           </div>

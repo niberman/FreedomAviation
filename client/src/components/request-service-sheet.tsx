@@ -9,11 +9,15 @@ import { CalendarIcon, Sparkles, Database, Droplet, Wind, Wrench } from "lucide-
 import { format } from "date-fns";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface RequestServiceSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   aircraft: {
+    id?: string;
     tailNumber: string;
     make: string;
     model: string;
@@ -35,22 +39,72 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
   const [serviceType, setServiceType] = useState("detail");
   const [date, setDate] = useState<Date>();
   const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const handleSubmit = () => {
-    console.log("Service request submitted:", { serviceType, date, notes });
-    // TODO: remove mock functionality - create service_requests record
-    
-    const selectedService = serviceTypes.find(s => s.value === serviceType);
-    toast({
-      title: "Service Request Submitted",
-      description: `${selectedService?.label} scheduled for ${aircraft.tailNumber}`,
-    });
-    
-    onOpenChange(false);
-    setServiceType("detail");
-    setDate(undefined);
-    setNotes("");
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to submit a service request.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!aircraft.id) {
+      toast({
+        title: "Error",
+        description: "Aircraft information is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const selectedService = serviceTypes.find(s => s.value === serviceType);
+      
+      const { error } = await supabase.from("service_requests").insert({
+        aircraft_id: aircraft.id,
+        user_id: user.id,
+        service_type: selectedService?.label || serviceType,
+        description: notes || `Service request: ${selectedService?.label}`,
+        status: "pending",
+        priority: "medium",
+        requested_for: date ? format(date, "PPP") : null,
+        requested_date: date ? format(date, "yyyy-MM-dd") : null,
+        notes: notes || null,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Service Request Submitted",
+        description: `${selectedService?.label} scheduled for ${aircraft.tailNumber}`,
+      });
+      
+      // Invalidate queries to refresh the service requests list
+      await queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === "service-requests"
+      });
+      
+      onOpenChange(false);
+      setServiceType("detail");
+      setDate(undefined);
+      setNotes("");
+    } catch (error: any) {
+      console.error("Error submitting service request:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit service request",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -114,9 +168,10 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
             className="w-full" 
             size="lg" 
             onClick={handleSubmit}
+            disabled={loading}
             data-testid="button-submit-service"
           >
-            Submit Request
+            {loading ? "Submitting..." : "Submit Request"}
           </Button>
         </div>
       </SheetContent>

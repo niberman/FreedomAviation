@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import logoImage from "@assets/freedom-aviation-logo.png";
+import logoImage from "@assets/falogo.png";
 
 export default function Login() {
   const [, setLocation] = useLocation();

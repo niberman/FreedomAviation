@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import heroImage from "@assets/stock_images/premium_cirrus_sr22t_b2f4f8b8.jpg";
-import logoImage from "@assets/freedom-aviation-logo.png";
+import logoImage from "@assets/falogo.png";
 
 export function HeroSection() {
   const [, setLocation] = useLocation();
@@ -35,14 +35,15 @@ export function HeroSection() {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Button 
-            size="lg" 
-            onClick={() => setLocation("/contact?source=hero_cta")}
-            data-testid="button-see-plans"
-            className="text-lg px-8"
-          >
-            See Plans & Start
-          </Button>
+          <Link href="/pricing">
+            <Button 
+              size="lg" 
+              data-testid="button-see-plans"
+              className="text-lg px-8"
+            >
+              See Plans & Start
+            </Button>
+          </Link>
           <Button 
             size="lg" 
             variant="outline" 

@@ -2,10 +2,12 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { ThemeToggle } from "@/components/theme-toggle";
-import logoImage from "@assets/freedom-aviation-logo.png";
-import { Menu, X, LogOut, User } from "lucide-react";
+import logoImage from "@assets/falogo.png";
+import { Menu, X, LogOut, User, Settings } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 export function NavBar() {
   const { user, signOut, loading } = useAuth();
@@ -13,7 +15,29 @@ export function NavBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toast } = useToast();
 
+  // Check if user is admin or CFI
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+    retry: false,
+  });
+
+  const isStaff = userProfile?.role === 'admin' || userProfile?.role === 'cfi';
+  const isDev = !import.meta.env.PROD;
+  const showStaffLink = isDev || isStaff;
+
   const handleLogout = async () => {
+    setMobileMenuOpen(false);
     try {
       await signOut();
       toast({
@@ -32,6 +56,7 @@ export function NavBar() {
 
   const navLinks = [
     { href: "/", label: "Home" },
+    { href: "/about", label: "About" },
     { href: "/pricing", label: "Pricing" },
     { href: "/hangar-locations", label: "Hangar Locations" },
     { href: "/contact", label: "Contact" },
@@ -42,6 +67,84 @@ export function NavBar() {
       return location === "/";
     }
     return location.startsWith(href);
+  };
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  // Auth buttons component
+  const AuthButtons = ({ isMobile = false }: { isMobile?: boolean }) => {
+    if (loading) return null;
+
+    const buttonClass = isMobile ? "w-full justify-start" : "";
+    const buttonSize = isMobile ? undefined : "sm";
+
+    if (user) {
+      return (
+        <>
+          <Link href="/dashboard">
+            <Button
+              variant="outline"
+              size={buttonSize}
+              className={buttonClass}
+              onClick={closeMobileMenu}
+            >
+              <User className="h-4 w-4 mr-2" />
+              My Dashboard
+            </Button>
+          </Link>
+          {showStaffLink && (
+            <Link href="/admin">
+              <Button
+                variant="outline"
+                size={buttonSize}
+                className={`${buttonClass} ${isMobile ? "mb-2" : ""}`}
+                onClick={closeMobileMenu}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Staff Portal
+              </Button>
+            </Link>
+          )}
+          <Button
+            variant="ghost"
+            size={buttonSize}
+            className={buttonClass}
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {isDev && (
+          <Link href="/dashboard">
+            <Button
+              variant="outline"
+              size={buttonSize}
+              className={`${buttonClass} ${isMobile ? "mb-2" : ""}`}
+              onClick={closeMobileMenu}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Staff (Dev)
+            </Button>
+          </Link>
+        )}
+        <Link href="/login">
+          <Button
+            variant="default"
+            size={buttonSize}
+            className={isMobile ? "w-full" : ""}
+            onClick={closeMobileMenu}
+          >
+            Login
+          </Button>
+        </Link>
+      </>
+    );
   };
 
   return (
@@ -80,34 +183,7 @@ export function NavBar() {
           <div className="flex items-center gap-2">
             {/* Desktop Auth Section */}
             <div className="hidden md:flex items-center gap-2">
-              {!loading && (
-                <>
-                  {user ? (
-                    <>
-                      <Link href="/dashboard">
-                        <Button variant="outline" size="sm">
-                          <User className="h-4 w-4 mr-2" />
-                          Dashboard
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleLogout}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </Button>
-                    </>
-                  ) : (
-                    <Link href="/login">
-                      <Button variant="default" size="sm">
-                        Login
-                      </Button>
-                    </Link>
-                  )}
-                </>
-              )}
+              <AuthButtons />
             </div>
 
             <ThemeToggle />
@@ -118,6 +194,7 @@ export function NavBar() {
               size="icon"
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -136,52 +213,14 @@ export function NavBar() {
                 <Button
                   variant={isActive(link.href) ? "default" : "ghost"}
                   className="w-full justify-start"
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={closeMobileMenu}
                 >
                   {link.label}
                 </Button>
               </Link>
             ))}
-            <div className="pt-2 border-t">
-              {!loading && (
-                <>
-                  {user ? (
-                    <>
-                      <Link href="/dashboard">
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start mb-2"
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          <User className="h-4 w-4 mr-2" />
-                          Dashboard
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          handleLogout();
-                        }}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout
-                      </Button>
-                    </>
-                  ) : (
-                    <Link href="/login">
-                      <Button
-                        variant="default"
-                        className="w-full"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Login
-                      </Button>
-                    </Link>
-                  )}
-                </>
-              )}
+            <div className="pt-2 border-t space-y-2">
+              <AuthButtons isMobile />
             </div>
           </div>
         )}

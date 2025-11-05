@@ -33,7 +33,7 @@ export default function HangarLocations() {
           'Centennial Airport hangars',
           'aircraft storage Colorado',
           'premium hangar facilities'
-        ]}
+        ].join(", ")}
         canonical="/hangar-locations"
       />
       
@@ -85,7 +85,7 @@ export default function HangarLocations() {
                   
                   <CardContent className="space-y-6">
                     <div>
-                      <p className="text-muted-foreground mb-4">
+                      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
                         {location.description}
                       </p>
                       <div className="flex items-baseline gap-2">
@@ -93,20 +93,6 @@ export default function HangarLocations() {
                         <span className="text-muted-foreground">/month</span>
                       </div>
                     </div>
-
-                    {location.features?.amenities && location.features.amenities.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-3">Amenities & Benefits</h4>
-                        <div className="grid gap-3">
-                          {location.features.amenities.map((amenity: string, idx: number) => (
-                            <div key={idx} className="flex items-start gap-2">
-                              <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                              <span className="text-sm text-muted-foreground">{amenity}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     <Link href={`/pricing?location=${location.slug}`}>
                       <Button className="w-full" variant="outline" data-testid={`button-view-pricing-${location.slug}`}>
@@ -122,8 +108,30 @@ export default function HangarLocations() {
         </div>
       </section>
 
+      {/* Shared Amenities Section */}
+      {locations.length > 0 && locations[0].features?.amenities && locations[0].features.amenities.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-6">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl font-bold mb-8 text-center">Premium Amenities & Benefits</h2>
+              <p className="text-center text-sm text-muted-foreground mb-8 leading-relaxed">
+                Both hangar locations include the same comprehensive amenities and benefits:
+              </p>
+              <div className="grid md:grid-cols-2 gap-3">
+                {locations[0].features.amenities.map((amenity: string, idx: number) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-muted-foreground leading-relaxed">{amenity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Comparison Section */}
-      <section className="py-16">
+      <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold mb-8 text-center">Why Integrated Hangar Pricing?</h2>
@@ -132,8 +140,8 @@ export default function HangarLocations() {
               <Card>
                 <CardContent className="p-6">
                   <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Complete Transparency</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="font-semibold text-base mb-2">Complete Transparency</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     All hangar costs are clearly shown in your monthly package price. 
                     No hidden fees or surprise charges.
                   </p>
@@ -143,8 +151,8 @@ export default function HangarLocations() {
               <Card>
                 <CardContent className="p-6">
                   <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Single Point of Contact</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="font-semibold text-base mb-2">Single Point of Contact</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     One team manages both your aircraft services and hangar coordination. 
                     Streamlined communication and faster response times.
                   </p>
@@ -154,8 +162,8 @@ export default function HangarLocations() {
               <Card>
                 <CardContent className="p-6">
                   <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Flexible Options</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="font-semibold text-base mb-2">Flexible Options</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Choose the hangar that fits your needs and budget. 
                     From our home base facility to premium partners.
                   </p>
@@ -165,8 +173,8 @@ export default function HangarLocations() {
               <Card>
                 <CardContent className="p-6">
                   <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Integrated Operations</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="font-semibold text-base mb-2">Integrated Operations</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Seamless coordination between maintenance, detailing, and hangar services. 
                     Your aircraft is always ready when you need it.
                   </p>
@@ -178,15 +186,15 @@ export default function HangarLocations() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-16 bg-muted/30">
+      <section className="py-16">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-3xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
             <div className="space-y-6">
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-2">Is hangar cost included in my monthly pricing?</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="font-semibold text-base mb-2">Is hangar cost included in my monthly pricing?</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Yes! All hangar costs are transparently included in our pricing calculator.
                     When you select a service package and hangar location, you see the complete monthly cost.
                   </p>
@@ -195,8 +203,8 @@ export default function HangarLocations() {
 
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-2">Can I use my own hangar or tie-down?</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="font-semibold text-base mb-2">Can I use my own hangar or tie-down?</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Absolutely! Select the "None" option when choosing your hangar location to see 
                     base service pricing without hangar costs. You can arrange your own storage solution.
                   </p>
@@ -205,19 +213,20 @@ export default function HangarLocations() {
 
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-2">What's the difference between hangar locations?</h3>
-                  <p className="text-muted-foreground">
-                    Each location offers different amenities and pricing. Our Freedom Aviation Hangar provides 
-                    the fastest service turnaround as our home base, while Sky Harbour offers premium amenities 
-                    like climate control and concierge services.
+                  <h3 className="font-semibold text-base mb-2">What's the difference between hangar locations?</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Both hangar locations offer the same premium amenities and benefits, including climate control, 
+                    24/7 access, secure facilities, concierge service, and more. The main difference is pricing and 
+                    location. Our Freedom Aviation Hangar provides the fastest service turnaround as our home base, 
+                    while Sky Harbour offers the same premium amenities at a different location.
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-2">Can I switch hangar locations later?</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="font-semibold text-base mb-2">Can I switch hangar locations later?</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Yes, subject to availability. Contact us to discuss changing your hangar location.
                     Pricing will be adjusted based on the new location's monthly cost.
                   </p>
@@ -257,7 +266,7 @@ export default function HangarLocations() {
                 name: "What's the difference between hangar locations?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Each location offers different amenities and pricing. Our Freedom Aviation Hangar provides the fastest service turnaround as our home base, while Sky Harbour offers premium amenities like climate control and concierge services.",
+                  text: "Both hangar locations offer the same premium amenities and benefits, including climate control, 24/7 access, secure facilities, concierge service, and more. The main difference is pricing and location. Our Freedom Aviation Hangar provides the fastest service turnaround as our home base, while Sky Harbour offers the same premium amenities at a different location.",
                 },
               },
             ],
