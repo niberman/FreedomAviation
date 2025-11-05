@@ -564,40 +564,56 @@ export default function StaffDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 bg-background z-50">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={logoImage} alt="Freedom Aviation" className="h-8 w-auto" />
-            <h1 className="text-xl font-semibold">Freedom Aviation - Staff</h1>
+      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src={logoImage} alt="Freedom Aviation" className="h-8 w-auto" />
+              <div className="flex items-center gap-2">
+                <Plane className="h-5 w-5 text-primary" />
+                <h1 className="text-xl font-semibold">Freedom Aviation - Staff</h1>
+              </div>
+            </div>
+            <ThemeToggle />
           </div>
-          <ThemeToggle />
         </div>
       </header>
 
-      <main className="max-w-screen-2xl mx-auto px-4 py-8">
-        <Tabs defaultValue="invoices" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="requests" data-testid="tab-requests">Service Requests</TabsTrigger>
-            <TabsTrigger value="aircraft" data-testid="tab-aircraft">Aircraft</TabsTrigger>
-            <TabsTrigger value="maintenance" data-testid="tab-maintenance">Maintenance</TabsTrigger>
-            <TabsTrigger value="clients" data-testid="tab-clients">Clients</TabsTrigger>
-            <TabsTrigger value="schedule" data-testid="tab-schedule">CFI Schedule</TabsTrigger>
-            <TabsTrigger value="logs" data-testid="tab-logs">Flight Logs</TabsTrigger>
-            <TabsTrigger value="invoices" data-testid="tab-invoices">Invoices</TabsTrigger>
-          </TabsList>
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-bold tracking-tight">Staff Dashboard</h2>
+            <p className="text-muted-foreground">Manage service requests, aircraft, maintenance, and invoices</p>
+          </div>
+
+          <Tabs defaultValue="invoices" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 h-auto">
+              <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
+              <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>
+              <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
+              <TabsTrigger value="clients" data-testid="tab-clients" className="text-xs sm:text-sm">Clients</TabsTrigger>
+              <TabsTrigger value="schedule" data-testid="tab-schedule" className="text-xs sm:text-sm">Schedule</TabsTrigger>
+              <TabsTrigger value="logs" data-testid="tab-logs" className="text-xs sm:text-sm">Flight Logs</TabsTrigger>
+              <TabsTrigger value="invoices" data-testid="tab-invoices" className="text-xs sm:text-sm">Invoices</TabsTrigger>
+            </TabsList>
 
           {/* Service Requests */}
-          <TabsContent value="requests" className="space-y-4">
+          <TabsContent value="requests" className="space-y-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold">Service Requests</h2>
-                <p className="text-sm text-muted-foreground mt-1">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="text-2xl font-semibold">Service Requests</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
                   Manage service requests from aircraft owners
                 </p>
               </div>
-              <Badge variant="secondary">
-                {serviceRequests.length} total
-              </Badge>
+              {serviceRequests.length > 0 && (
+                <Badge variant="secondary" className="text-sm">
+                  {serviceRequests.length} total
+                </Badge>
+              )}
             </div>
             {serviceRequests.length === 0 ? (
               <Card>
@@ -647,7 +663,16 @@ export default function StaffDashboard() {
           </TabsContent>
 
           {/* Aircraft (Admin) */}
-          <TabsContent value="aircraft" className="space-y-4">
+          <TabsContent value="aircraft" className="space-y-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Plane className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-2xl font-semibold">Aircraft</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                View and manage all aircraft in the fleet
+              </p>
+            </div>
             {isLoadingAircraft ? (
               <Card>
                 <CardContent className="py-12 text-center">
@@ -676,7 +701,16 @@ export default function StaffDashboard() {
           </TabsContent>
 
           {/* Maintenance (Admin) */}
-          <TabsContent value="maintenance" className="space-y-4">
+          <TabsContent value="maintenance" className="space-y-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-2xl font-semibold">Maintenance</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Track maintenance schedules and due dates
+              </p>
+            </div>
             <MaintenanceList items={maintenanceItems.map((m: any) => {
               // Calculate status based on due dates and hobbs
               let status: "ok" | "due_soon" | "overdue" = "ok";
@@ -717,20 +751,29 @@ export default function StaffDashboard() {
           </TabsContent>
 
           {/* Clients */}
-          <TabsContent value="clients" className="space-y-4">
+          <TabsContent value="clients" className="space-y-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-2xl font-semibold">Clients</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                View and manage client accounts
+              </p>
+            </div>
             <ClientsTable />
           </TabsContent>
 
           {/* CFI Schedule */}
-          <TabsContent value="schedule" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
+          <TabsContent value="schedule" className="space-y-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
                 <h2 className="text-2xl font-semibold">CFI Schedule</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  View and manage flight instruction schedules
-                </p>
               </div>
-              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                View and manage flight instruction schedules
+              </p>
             </div>
             <Card>
               <CardContent className="py-12 text-center">
@@ -740,15 +783,15 @@ export default function StaffDashboard() {
           </TabsContent>
 
           {/* Flight Logs */}
-          <TabsContent value="logs" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
+          <TabsContent value="logs" className="space-y-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-muted-foreground" />
                 <h2 className="text-2xl font-semibold">Flight Logs</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Review and sign off on flight logs
-                </p>
               </div>
-              <FileText className="h-5 w-5 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Review and sign off on flight logs
+              </p>
             </div>
             <Card>
               <CardContent className="py-12 text-center">
@@ -760,8 +803,13 @@ export default function StaffDashboard() {
           {/* Invoices */}
           <TabsContent value="invoices" className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Flight Instruction Invoices</h2>
-              <DollarSign className="h-5 w-5 text-muted-foreground" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="text-2xl font-semibold">Flight Instruction Invoices</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">Create and manage instruction invoices for clients</p>
+              </div>
             </div>
 
             {/* Create Invoice Form */}
@@ -770,7 +818,7 @@ export default function StaffDashboard() {
                 <CardTitle>Create Instruction Invoice</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handlePreview} className="space-y-4">
+                <form onSubmit={handlePreview} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="owner">Client *</Label>
@@ -868,6 +916,7 @@ export default function StaffDashboard() {
                     <Button 
                       type="submit" 
                       data-testid="button-preview-invoice"
+                      size="lg"
                     >
                       Preview Invoice
                     </Button>
@@ -885,40 +934,40 @@ export default function StaffDashboard() {
                     Review the invoice details before sending to the client.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="space-y-6 py-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
+                    <div className="space-y-1">
                       <p className="text-sm font-medium text-muted-foreground">Client</p>
-                      <p className="text-base">{selectedOwner?.full_name || selectedOwner?.email || 'N/A'}</p>
+                      <p className="text-base font-medium">{selectedOwner?.full_name || selectedOwner?.email || 'N/A'}</p>
                     </div>
-                    <div>
+                    <div className="space-y-1">
                       <p className="text-sm font-medium text-muted-foreground">Aircraft</p>
-                      <p className="text-base">{selectedAircraft?.tail_number || 'N/A'}</p>
+                      <p className="text-base font-mono font-semibold">{selectedAircraft?.tail_number || 'N/A'}</p>
                     </div>
-                    <div>
+                    <div className="space-y-1">
                       <p className="text-sm font-medium text-muted-foreground">Description</p>
                       <p className="text-base">{description || 'N/A'}</p>
                     </div>
-                    <div>
+                    <div className="space-y-1">
                       <p className="text-sm font-medium text-muted-foreground">Flight Date</p>
                       <p className="text-base">{flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : 'N/A'}</p>
                     </div>
                   </div>
                   <div className="border-t pt-4">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Line Items</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Line Items</p>
                     <div className="space-y-2">
-                      <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                        <div>
-                          <p className="font-medium">{description} - {flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : ''}</p>
+                      <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium mb-1">{description} - {flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : ''}</p>
                           <p className="text-sm text-muted-foreground">
                             {hours} {parseFloat(hours) === 1 ? 'hr' : 'hrs'} × ${parseFloat(ratePerHour).toFixed(2)}/hr
                           </p>
                         </div>
-                        <p className="font-bold">${totalAmount}</p>
+                        <p className="text-lg font-bold ml-4">${totalAmount}</p>
                       </div>
                     </div>
                   </div>
-                  <div className="border-t pt-4 flex justify-between items-center">
+                  <div className="border-t pt-4 flex justify-between items-center bg-muted/50 p-4 rounded-lg">
                     <p className="text-lg font-semibold">Total Amount</p>
                     <p className="text-2xl font-bold">${totalAmount}</p>
                   </div>
@@ -934,6 +983,7 @@ export default function StaffDashboard() {
                     onClick={() => createAndSendInvoiceMutation.mutate()}
                     disabled={createAndSendInvoiceMutation.isPending}
                     data-testid="button-send-to-client"
+                    size="lg"
                   >
                     {createAndSendInvoiceMutation.isPending ? "Sending..." : "Send to Client"}
                   </Button>
@@ -944,9 +994,16 @@ export default function StaffDashboard() {
             {/* Invoice List */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">My Instruction Invoices</h3>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold">Instruction Invoices</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {isAdmin ? 'All invoices' : 'Your invoices'}
+                  </p>
+                </div>
                 {invoices.length > 0 && (
-                  <Badge variant="secondary">{invoices.length} invoice{invoices.length !== 1 ? 's' : ''}</Badge>
+                  <Badge variant="secondary" className="text-sm">
+                    {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
+                  </Badge>
                 )}
               </div>
               
@@ -998,7 +1055,7 @@ export default function StaffDashboard() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-4">
                   {invoices.map((invoice) => {
                     // Calculate total from all invoice lines
                     let calculatedTotal = invoice.amount;
@@ -1009,79 +1066,100 @@ export default function StaffDashboard() {
                     }
                     
                     return (
-                      <Card key={invoice.id} data-testid={`invoice-${invoice.id}`}>
+                      <Card key={invoice.id} data-testid={`invoice-${invoice.id}`} className="hover:shadow-md transition-shadow">
                         <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle className="text-lg">
-                                {invoice.aircraft?.tail_number || 'N/A'}
-                              </CardTitle>
-                              <p className="text-sm text-muted-foreground mt-1">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <CardTitle className="text-lg font-mono">
+                                  {invoice.aircraft?.tail_number || 'N/A'}
+                                </CardTitle>
+                                <Badge 
+                                  variant={
+                                    invoice.status === 'paid' ? 'default' :
+                                    invoice.status === 'finalized' ? 'secondary' :
+                                    'outline'
+                                  }
+                                  data-testid={`badge-status-${invoice.id}`}
+                                  className="capitalize"
+                                >
+                                  {invoice.status}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
                                 {invoice.owner?.full_name || invoice.owner?.email || 'Unknown Client'}
                               </p>
+                              <p className="text-xs text-muted-foreground font-mono mt-1">
+                                Invoice #{invoice.invoice_number}
+                              </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge 
-                                variant={
-                                  invoice.status === 'paid' ? 'default' :
-                                  invoice.status === 'finalized' ? 'secondary' :
-                                  'outline'
-                                }
-                                data-testid={`badge-status-${invoice.id}`}
-                              >
-                                {invoice.status}
-                              </Badge>
-                              {invoice.category && (
-                                <Badge variant="outline" className="text-xs">
-                                  {invoice.category}
-                                </Badge>
-                              )}
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground mb-1">Total</p>
+                              <p className="text-2xl font-bold">${calculatedTotal.toFixed(2)}</p>
                             </div>
                           </div>
                         </CardHeader>
                         <CardContent>
-                          <div className="space-y-3">
-                            <div>
-                              <p className="text-sm text-muted-foreground">Invoice #</p>
-                              <p className="font-mono">{invoice.invoice_number}</p>
-                            </div>
-                            
+                          <div className="space-y-4">
                             {invoice.invoice_lines && invoice.invoice_lines.length > 0 && (
                               <div className="space-y-2">
-                                <p className="text-sm text-muted-foreground">Line Items</p>
-                                {invoice.invoice_lines.map((line, idx) => (
-                                  <div key={idx} className="pl-2 border-l-2">
-                                    <p className="text-sm font-medium">{line.description}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {line.quantity} {line.quantity === 1 ? 'hr' : 'hrs'} × ${(line.unit_cents / 100).toFixed(2)}/hr = ${(line.quantity * line.unit_cents / 100).toFixed(2)}
-                                    </p>
-                                  </div>
-                                ))}
+                                <p className="text-sm font-medium text-muted-foreground">Line Items</p>
+                                <div className="space-y-2">
+                                  {invoice.invoice_lines.map((line, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium">{line.description}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {line.quantity} {line.quantity === 1 ? 'hr' : 'hrs'} × ${(line.unit_cents / 100).toFixed(2)}/hr
+                                        </p>
+                                      </div>
+                                      <p className="text-sm font-semibold">
+                                        ${(line.quantity * line.unit_cents / 100).toFixed(2)}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
                             
                             <div className="flex items-center justify-between pt-3 border-t">
-                              <div>
-                                <p className="text-sm text-muted-foreground">Total</p>
-                                <p className="text-xl font-bold">${calculatedTotal.toFixed(2)}</p>
+                              <div className="flex items-center gap-4">
+                                {invoice.created_at && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Created</p>
+                                    <p className="text-sm">
+                                      {format(new Date(invoice.created_at), 'MMM d, yyyy')}
+                                    </p>
+                                  </div>
+                                )}
+                                {invoice.due_date && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Due Date</p>
+                                    <p className="text-sm">
+                                      {format(new Date(invoice.due_date), 'MMM d, yyyy')}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                               
-                              {invoice.status === 'finalized' && (
-                                <p className="text-sm text-muted-foreground">
-                                  Sent to client
-                                </p>
-                              )}
-                              
-                              {invoice.status === 'paid' && invoice.paid_date && (
-                                <div className="text-right">
-                                  <p className="text-sm font-medium text-green-600">
-                                    ✓ Paid
+                              <div className="text-right">
+                                {invoice.status === 'finalized' && (
+                                  <p className="text-sm text-muted-foreground">
+                                    Sent to client
                                   </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {format(new Date(invoice.paid_date), 'MMM d, yyyy')}
-                                  </p>
-                                </div>
-                              )}
+                                )}
+                                
+                                {invoice.status === 'paid' && invoice.paid_date && (
+                                  <div>
+                                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                                      ✓ Paid
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {format(new Date(invoice.paid_date), 'MMM d, yyyy')}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </CardContent>
@@ -1093,6 +1171,7 @@ export default function StaffDashboard() {
             </div>
           </TabsContent>
         </Tabs>
+        </div>
       </main>
     </div>
   );

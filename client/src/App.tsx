@@ -31,13 +31,24 @@ import FAHangar from "./pages/partners/FAHangar";
 function DomainRedirect() {
   useEffect(() => {
     // Only redirect in production and if on non-www domain
+    // IMPORTANT: Preserve hash (password reset tokens are in hash)
     if (
       typeof window !== "undefined" &&
       window.location.hostname === "freedomaviationco.com" &&
       !window.location.hostname.startsWith("localhost")
     ) {
-      const newUrl = `https://www.freedomaviationco.com${window.location.pathname}${window.location.search}${window.location.hash}`;
-      window.location.replace(newUrl);
+      // Don't redirect if we're on reset-password page with hash (password reset tokens)
+      // Let the page load first so Supabase can process the hash
+      if (window.location.pathname === "/reset-password" && window.location.hash) {
+        // Only redirect if hash doesn't contain tokens (already processed)
+        if (!window.location.hash.includes("access_token")) {
+          const newUrl = `https://www.freedomaviationco.com${window.location.pathname}${window.location.search}${window.location.hash}`;
+          window.location.replace(newUrl);
+        }
+      } else {
+        const newUrl = `https://www.freedomaviationco.com${window.location.pathname}${window.location.search}${window.location.hash}`;
+        window.location.replace(newUrl);
+      }
     }
   }, []);
   return null;
