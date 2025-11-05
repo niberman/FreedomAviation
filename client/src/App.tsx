@@ -1,4 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { HelmetProvider } from "react-helmet-async";
@@ -25,6 +26,22 @@ import UnifiedPricingConfigurator from "./pages/admin/UnifiedPricingConfigurator
 import NotFound from "./pages/not-found";
 import SkyHarbour from "./pages/partners/SkyHarbour";
 import FAHangar from "./pages/partners/FAHangar";
+
+// Redirect to www domain in production to avoid CORS issues
+function DomainRedirect() {
+  useEffect(() => {
+    // Only redirect in production and if on non-www domain
+    if (
+      typeof window !== "undefined" &&
+      window.location.hostname === "freedomaviationco.com" &&
+      !window.location.hostname.startsWith("localhost")
+    ) {
+      const newUrl = `https://www.freedomaviationco.com${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(newUrl);
+    }
+  }, []);
+  return null;
+}
 
 function Router() {
   return (
@@ -76,6 +93,7 @@ function App() {
   
   return (
     <ErrorBoundary>
+      <DomainRedirect />
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
