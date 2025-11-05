@@ -392,10 +392,8 @@ export default function StaffDashboard() {
 
       // Send email to client
       try {
-        const apiUrl = window.location.origin.startsWith("https://www.")
-          ? `${window.location.origin}/api/invoices/send-email`
-          : `https://www.freedomaviationco.com/api/invoices/send-email`;
-        const emailResponse = await fetch(apiUrl, {
+        // Use relative URL to avoid CORS issues - always uses same origin
+        const emailResponse = await fetch("/api/invoices/send-email", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
