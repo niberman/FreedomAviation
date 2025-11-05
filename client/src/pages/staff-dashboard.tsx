@@ -98,8 +98,6 @@ export default function StaffDashboard() {
   const { data: aircraftFull = [], isLoading: isLoadingAircraft, error: aircraftError } = useQuery({
     queryKey: ['/api/aircraft/full'],
     queryFn: async () => {
-      console.log('🔍 Fetching aircraft for staff dashboard...');
-      
       // Try nested query first - only select columns that exist
       let query = supabase
         .from('aircraft')
@@ -118,8 +116,6 @@ export default function StaffDashboard() {
       
       // If nested query fails, fetch separately
       if (error) {
-        console.warn('⚠️ Nested query failed, trying separate queries:', error?.message);
-        
         // Fetch aircraft without nested relations - only columns that exist
         const aircraftResult = await supabase
           .from('aircraft')
@@ -162,11 +158,8 @@ export default function StaffDashboard() {
       }
       
       if (error) {
-        console.error('❌ Error fetching aircraft:', error);
         throw error;
       }
-      
-      console.log('✅ Fetched aircraft:', data?.length || 0, 'aircraft');
       
       // Transform to match AircraftTable interface
       return (data || []).map((ac: any) => ({
@@ -266,18 +259,14 @@ export default function StaffDashboard() {
   const { data: invoices = [], isLoading: isLoadingInvoices, refetch: refetchInvoices, error: invoicesError } = useQuery<InstructionInvoice[]>({
     queryKey: ['/api/cfi/invoices', user?.id, isDev, isAdmin],
     queryFn: async () => {
-      console.log('🔍 Fetching invoices - User:', user?.id, 'isAdmin:', isAdmin, 'isDev:', isDev);
-      
       // In dev mode without user, return empty array (RLS will block anyway)
       // User should log in to see invoices
       if (!user && isDev) {
-        console.warn('⚠️ DEV MODE: No authenticated user. Please log in to view invoices.');
         return [];
       }
 
       // In production, require authentication
       if (!user) {
-        console.error('❌ Not authenticated');
         throw new Error('Not authenticated. Please log in to view invoices.');
       }
 
@@ -294,18 +283,13 @@ export default function StaffDashboard() {
 
       // Admins see all invoices, CFIs see only their own
       if (!isAdmin) {
-        console.log('🔍 Filtering by CFI ID:', user.id);
         query = query.eq('created_by_cfi_id', user.id);
-      } else {
-        console.log('🔍 Showing all invoices (admin mode)');
       }
 
       let { data, error } = await query.order('created_at', { ascending: false });
       
       // If nested query fails, try fetching separately
       if (error && (error.message?.includes('invoice_lines') || error.message?.includes('aircraft') || error.message?.includes('owner'))) {
-        console.warn('⚠️ Nested query failed, trying separate queries:', error.message);
-        
         // Build base query without nested relations
         let baseQuery = supabase
           .from('invoices')
@@ -398,14 +382,6 @@ export default function StaffDashboard() {
         }
         
         throw new Error(error.message || 'Failed to load invoices. Please try again.');
-      }
-      
-      console.log('✅ Fetched invoices:', data?.length || 0, 'invoices');
-      console.log('📋 Invoice data:', data);
-      
-      // Also log what we're returning
-      if (data && data.length > 0) {
-        console.log('📄 First invoice sample:', data[0]);
       }
       
       return (data || []) as InstructionInvoice[];

@@ -40,8 +40,6 @@ export default function Home() {
       <FeaturesGrid />
       <MembershipTiers />
       <OwnerPortalDemo />
-      {/*Testimonials />*/}
-
       <Footer />
     </div>
   );
