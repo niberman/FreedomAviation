@@ -84,6 +84,16 @@ export default function Login() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setLocation("/forgot-password")}
+              className="text-sm text-muted-foreground hover:text-primary underline"
+              data-testid="button-forgot-password"
+            >
+              Forgot your password?
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>

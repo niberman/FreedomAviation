@@ -12,6 +12,8 @@ import { DevToolbar } from "@/components/dev-toolbar";
 import { NavBar } from "@/components/navbar";
 import Home from "./pages/home";
 import Login from "./pages/login";
+import ForgotPassword from "./pages/forgot-password";
+import ResetPassword from "./pages/reset-password";
 import Pricing from "./pages/Pricing";
 import Contact from "./pages/Contact";
 import HangarLocations from "./pages/HangarLocations";
@@ -29,6 +31,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/contact" component={Contact} />
       <Route path="/about" component={About} />
