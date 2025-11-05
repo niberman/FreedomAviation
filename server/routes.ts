@@ -76,6 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerName: "Test User",
         ownerEmail: testEmail,
         invoiceId: "test-invoice-id",
+        ownerId: "test-owner-id",
         totalAmount: 250.00,
         invoiceLines: [
           {
@@ -93,6 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ],
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         aircraftTailNumber: "N123FA",
+        paymentUrl: null, // Test email doesn't include payment link
       });
       
       res.json({ 
@@ -604,12 +606,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? invoiceLines.reduce((sum: number, line: { total: number }) => sum + line.total, 0)
         : Number(invoice.amount) || 0;
 
+      // Create Stripe checkout session for payment
+      let paymentUrl: string | null = null;
+      if (stripe && invoice.owner_id) {
+        try {
+          console.log("💳 Creating Stripe checkout session for invoice:", invoice.invoice_number);
+          
+          // Check if invoice already has an active checkout session
+          if (invoice.stripe_checkout_session_id) {
+            try {
+              const existingSession = await stripe.checkout.sessions.retrieve(invoice.stripe_checkout_session_id);
+              if (existingSession.status === "open" || existingSession.status === "complete") {
+                paymentUrl = existingSession.url;
+                console.log("✅ Using existing Stripe checkout session:", existingSession.id);
+              }
+            } catch (err) {
+              console.log("⚠️ Existing session not found or expired, creating new session");
+            }
+          }
+          
+          // Create new session if we don't have a valid one
+          if (!paymentUrl) {
+            // Calculate total amount in cents
+            const totalCents = invoiceLines.length > 0
+              ? Math.round(totalAmount * 100)
+              : Math.round(Number(invoice.amount) * 100);
+            
+            if (totalCents > 0) {
+              const frontendUrl = process.env.FRONTEND_URL || "https://www.freedomaviationco.com";
+              
+              const session = await stripe.checkout.sessions.create({
+                payment_method_types: ["card"],
+                line_items: invoiceLines.length > 0
+                  ? invoiceLines.map((line: any) => ({
+                      price_data: {
+                        currency: "usd",
+                        product_data: {
+                          name: line.description || "Flight Instruction",
+                        },
+                        unit_amount: Math.round(line.unitPrice * 100),
+                      },
+                      quantity: line.quantity,
+                    }))
+                  : [
+                      {
+                        price_data: {
+                          currency: "usd",
+                          product_data: {
+                            name: `Invoice ${invoice.invoice_number}`,
+                          },
+                          unit_amount: totalCents,
+                        },
+                        quantity: 1,
+                      },
+                    ],
+                mode: "payment",
+                success_url: `${frontendUrl}/dashboard/more?payment=success&invoice_id=${invoice.id}`,
+                cancel_url: `${frontendUrl}/dashboard/more?payment=cancelled&invoice_id=${invoice.id}`,
+                customer_email: owner.email,
+                metadata: {
+                  invoice_id: invoice.id,
+                  owner_id: invoice.owner_id,
+                  invoice_number: invoice.invoice_number,
+                },
+              });
+              
+              paymentUrl = session.url;
+              
+              // Save checkout session ID to invoice
+              await supabase
+                .from("invoices")
+                .update({ stripe_checkout_session_id: session.id })
+                .eq("id", invoice.id);
+              
+              console.log("✅ Created Stripe checkout session:", session.id);
+              console.log("💳 Payment URL:", paymentUrl);
+            }
+          }
+        } catch (stripeError: any) {
+          console.error("❌ Error creating Stripe checkout session:", stripeError);
+          console.error("⚠️ Email will be sent without payment link");
+          // Don't fail email sending if Stripe fails - just log the error
+        }
+      } else {
+        if (!stripe) {
+          console.warn("⚠️ Stripe not configured, email will be sent without payment link");
+        }
+      }
+
       // Send email
       console.log("📧 Attempting to send invoice email for:", invoice.invoice_number);
       console.log("📧 To:", owner.email);
       console.log("📧 Owner name:", owner.full_name || "not provided");
       console.log("📧 Invoice lines count:", invoiceLines.length);
       console.log("📧 Total amount:", totalAmount);
+      console.log("📧 Payment URL:", paymentUrl || "not available");
       console.log("📧 Email service:", process.env.EMAIL_SERVICE || "console (default)");
       console.log("📧 RESEND_API_KEY:", process.env.RESEND_API_KEY ? "✅ Set" : "❌ Not set");
       console.log("📧 EMAIL_FROM:", process.env.EMAIL_FROM || "not set");
@@ -620,10 +711,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ownerName: owner.full_name || owner.email,
           ownerEmail: owner.email,
           invoiceId: invoice.id,
+          ownerId: invoice.owner_id,
           totalAmount,
           invoiceLines,
           dueDate: invoice.due_date,
           aircraftTailNumber: (invoice.aircraft as any)?.tail_number,
+          paymentUrl,
         });
         
         console.log("✅ Invoice email sent successfully");
