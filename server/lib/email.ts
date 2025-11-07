@@ -193,7 +193,7 @@ Freedom Aviation
   switch (emailService) {
     case "console":
       // Development: just log
-      console.log(`[CONSOLE MODE] Invoice email would be sent to ${data.ownerEmail} for invoice ${data.invoiceNumber}`);
+      console.log(`[CONSOLE MODE] INVOICE EMAIL would be sent to ${data.ownerEmail} for invoice ${data.invoiceNumber}`);
       console.log("To actually send emails, set EMAIL_SERVICE=resend and RESEND_API_KEY");
       // Don't throw - console mode is valid for development
       return;

@@ -67,6 +67,10 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
     try {
       const selectedService = serviceTypes.find(s => s.value === serviceType);
       
+      // Build requested_departure in ISO format if date is provided
+      const requestedDeparture = date ? date.toISOString() : null;
+      const requestedDate = date ? format(date, "yyyy-MM-dd") : null;
+      
       const { error } = await supabase.from("service_requests").insert({
         aircraft_id: aircraft.id,
         user_id: user.id,
@@ -75,7 +79,8 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
         status: "pending",
         priority: "medium",
         requested_for: date ? format(date, "PPP") : null,
-        requested_date: date ? format(date, "yyyy-MM-dd") : null,
+        requested_date: requestedDate,
+        requested_departure: requestedDeparture,
         notes: notes || null,
       });
 
@@ -86,9 +91,11 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
         description: `${selectedService?.label} scheduled for ${aircraft.tailNumber}`,
       });
       
-      // Invalidate queries to refresh the service requests list
+      // Invalidate all service request queries (both client and staff dashboard queries)
       await queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === "service-requests"
+        predicate: (query) => 
+          query.queryKey[0] === "service-requests" || 
+          query.queryKey[0] === "/api/service-requests"
       });
       
       onOpenChange(false);

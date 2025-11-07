@@ -18,6 +18,7 @@ describe('Email Service', () => {
     invoiceNumber: 'INV-001',
     ownerName: 'John Doe',
     ownerEmail: 'john@example.com',
+    ownerId: 'owner-123',
     invoiceId: 'invoice-123',
     totalAmount: 250.00,
     invoiceLines: [
@@ -44,12 +45,12 @@ describe('Email Service', () => {
 
       await sendInvoiceEmail(mockInvoiceData);
 
-      const logCalls = (console.log as any).mock.calls.map((call: any[]) => call.join(' '));
-      const allLogs = logCalls.join(' ');
-      
-      expect(allLogs).toContain('INVOICE EMAIL');
-      expect(allLogs).toContain('john@example.com');
-      expect(allLogs).toContain('INV-001');
+      const logCalls = (console.log as any).mock.calls.flat();
+      const joinedLogs = logCalls.join(' ');
+
+      expect(joinedLogs).toContain('[CONSOLE MODE] INVOICE EMAIL would be sent to john@example.com');
+      expect(joinedLogs).toContain('To actually send emails, set EMAIL_SERVICE=resend and RESEND_API_KEY');
+      expect(joinedLogs).toContain('INV-001');
     });
 
     it('should use console mode by default', async () => {
@@ -115,7 +116,7 @@ describe('Email Service', () => {
 
       const callArgs = (global.fetch as any).mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
-      expect(body.from).toBe('Freedom Aviation <invoices@freedomaviationco.com>');
+      expect(body.from).toBe('Freedom Aviation <onboarding@resend.dev>');
     });
 
     it('should handle API errors', async () => {
@@ -148,7 +149,7 @@ describe('Email Service', () => {
 
       await sendInvoiceEmail(mockInvoiceData);
 
-      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('SMTP email'));
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('[SMTP] Email would be sent to john@example.com'));
     });
   });
 

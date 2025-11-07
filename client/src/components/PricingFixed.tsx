@@ -12,8 +12,8 @@ export default function PricingFixed() {
   const [, navigate] = useLocation();
   
   // Fetch pricing data from database
-  const { data: pricingClasses, isLoading: isLoadingClasses } = useClasses();
-  const { data: locations, isLoading: isLoadingLocations } = useLocations();
+  const { data: pricingClasses, isLoading: isLoadingClasses, isError: isErrorClasses } = useClasses();
+  const { data: locations, isLoading: isLoadingLocations, isError: isErrorLocations } = useLocations();
   
   // Load hangar selection from localStorage
   const [selectedHangarId, setSelectedHangarId] = useState<string>(() => {
@@ -30,28 +30,30 @@ export default function PricingFixed() {
     }
   }, [selectedHangarId]);
 
-  // Transform database locations to hangar options format
-  const hangarOptions = locations ? [
-    {
-      id: "none",
-      slug: "none",
-      name: "No Hangar",
-      cost: 0,
-      description: "I'll arrange my own hangar or tie-down",
-      icon: Plane,
-    },
-    ...locations.map(loc => ({
+  // Always include default option and append locations when available
+  const defaultHangarOption = {
+    id: "none",
+    slug: "none",
+    name: "No Hangar",
+    cost: 0,
+    description: "I'll arrange my own hangar or tie-down",
+    icon: Plane,
+  };
+
+  const hangarOptions = [
+    defaultHangarOption,
+    ...(locations ?? []).map(loc => ({
       id: loc.slug,
       slug: loc.slug,
       name: loc.name,
       cost: loc.hangar_cost_monthly,
       description: loc.description || "Premium hangar facility",
       icon: Building2,
-    }))
-  ] : [];
+    })),
+  ];
 
-  const selectedHangar = hangarOptions.find(h => h.id === selectedHangarId) || hangarOptions[0];
-  const hangarCost = selectedHangar?.cost || 0;
+  const selectedHangar = hangarOptions.find(h => h.id === selectedHangarId) || defaultHangarOption;
+  const hangarCost = selectedHangar.cost;
 
   const handleContinue = (packageId: string) => {
     navigate(`/contact?source=pricing_${packageId}&hangar=${selectedHangarId}`);
@@ -62,6 +64,23 @@ export default function PricingFixed() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" data-testid="loading-spinner" />
+      </div>
+    );
+  }
+
+  if (isErrorClasses || isErrorLocations) {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4 text-center">
+        <div className="space-y-4 max-w-md">
+          <h2 className="text-2xl font-semibold">We can't load pricing right now</h2>
+          <p className="text-muted-foreground">
+            We're having trouble loading {isErrorLocations && isErrorClasses ? "hangar locations and pricing packages" : isErrorLocations ? "hangar locations" : "pricing packages"}.
+            Please try again in a moment or contact us directly so we can help you select the right package.
+          </p>
+          <Button onClick={() => window.location.reload()} className="w-full md:w-auto">
+            Try Again
+          </Button>
+        </div>
       </div>
     );
   }

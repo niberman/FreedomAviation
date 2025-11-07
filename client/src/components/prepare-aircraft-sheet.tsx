@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface PrepareAircraftSheetProps {
   open: boolean;
@@ -42,6 +43,7 @@ export function PrepareAircraftSheet({
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   async function handleSubmit() {
     if (!date) {
@@ -68,16 +70,24 @@ export function PrepareAircraftSheet({
         .filter(Boolean)
         .join(" • ");
 
+      // Format date and time for database fields
+      const requestedDate = format(date, "yyyy-MM-dd");
+      const requestedTime = format(date, "HH:mm:ss");
+      const requestedDeparture = date.toISOString();
+
       const { error: insErr } = await supabase.from("service_requests").insert([
         {
           user_id: user.id,
           aircraft_id: aircraft.id,
-          service_type: "pre_flight_prep",
+          service_type: "Pre-Flight Concierge",
           description,
           priority: "medium",
           status: "pending",
           airport: "KAPA",
-          requested_departure: date.toISOString(),
+          requested_departure: requestedDeparture,
+          requested_date: requestedDate,
+          requested_time: requestedTime,
+          requested_for: format(date, "PPP"),
           // map toggles to schema:
           hangar_pullout: tasks.staging || null, // "Stage on Ramp"
           o2_topoff: tasks.fluids || null,
@@ -85,6 +95,7 @@ export function PrepareAircraftSheet({
           gpu_required: null,
           fuel_grade: null, // set later if you collect real fuel info
           fuel_quantity: null,
+          notes: notes?.trim() || null,
         },
       ]);
 
@@ -93,6 +104,13 @@ export function PrepareAircraftSheet({
       toast({
         title: "Aircraft Preparation Scheduled",
         description: `Your ${aircraft.make} ${aircraft.model} will be ready for ${format(date, "PPP")}.`,
+      });
+
+      // Invalidate all service request queries (both client and staff dashboard queries)
+      await queryClient.invalidateQueries({
+        predicate: (query) => 
+          query.queryKey[0] === "service-requests" || 
+          query.queryKey[0] === "/api/service-requests"
       });
 
       onOpenChange(false);

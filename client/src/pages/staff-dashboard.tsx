@@ -252,30 +252,127 @@ export default function StaffDashboard() {
   }, [aircraftError, toast]);
 
   // Fetch service requests for kanban board
-  const { data: serviceRequests = [], refetch: refetchServiceRequests } = useQuery({
+  const { data: serviceRequests = [], refetch: refetchServiceRequests, error: serviceRequestsError, isLoading: isLoadingServiceRequests } = useQuery({
     queryKey: ['/api/service-requests'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_requests')
-        .select(`
-          id,
-          service_type,
-          requested_departure,
-          description,
-          status,
-          priority,
-          airport,
-          created_at,
-          aircraft:aircraft_id(tail_number),
-          owner:user_id(full_name, email)
-        `)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      try {
+        // First, try to fetch service requests with nested relations
+        let query = supabase
+          .from('service_requests')
+          .select(`
+            id,
+            service_type,
+            requested_departure,
+            requested_date,
+            requested_time,
+            requested_for,
+            description,
+            status,
+            priority,
+            airport,
+            assigned_to,
+            notes,
+            created_at,
+            aircraft_id,
+            user_id,
+            aircraft:aircraft_id(tail_number),
+            owner:user_id(full_name, email)
+          `)
+          .order('created_at', { ascending: false });
+
+        let { data, error } = await query;
+        
+        // If nested query fails, try fetching separately
+        if (error && (error.message?.includes('aircraft') || error.message?.includes('owner') || error.message?.includes('user_profiles'))) {
+          console.warn('⚠️ Nested query failed, trying separate queries:', error.message);
+          
+          // Fetch service requests without nested relations
+          const srResult = await supabase
+            .from('service_requests')
+            .select('id, service_type, requested_departure, requested_date, requested_time, requested_for, description, status, priority, airport, assigned_to, notes, created_at, aircraft_id, user_id')
+            .order('created_at', { ascending: false });
+          
+          if (srResult.error) {
+            console.error('❌ Error fetching service requests:', srResult.error);
+            throw srResult.error;
+          }
+          
+          const srData = srResult.data || [];
+          
+          // Get unique aircraft and user IDs
+          const aircraftIds = [...new Set(srData.map((sr: any) => sr.aircraft_id).filter(Boolean))];
+          const userIds = [...new Set(srData.map((sr: any) => sr.user_id).filter(Boolean))];
+          
+          // Fetch aircraft and owners separately
+          const [aircraftResult, ownersResult] = await Promise.all([
+            aircraftIds.length > 0
+              ? supabase
+                  .from('aircraft')
+                  .select('id, tail_number')
+                  .in('id', aircraftIds)
+              : { data: [], error: null },
+            userIds.length > 0
+              ? supabase
+                  .from('user_profiles')
+                  .select('id, full_name, email')
+                  .in('id', userIds)
+              : { data: [], error: null },
+          ]);
+          
+          // Create maps for quick lookup
+          const aircraftMap = (aircraftResult.data || []).reduce((acc: any, ac: any) => {
+            acc[ac.id] = { tail_number: ac.tail_number };
+            return acc;
+          }, {});
+          
+          const ownersMap = (ownersResult.data || []).reduce((acc: any, owner: any) => {
+            acc[owner.id] = { full_name: owner.full_name, email: owner.email };
+            return acc;
+          }, {});
+          
+          // Combine data
+          data = srData.map((sr: any) => ({
+            ...sr,
+            aircraft: aircraftMap[sr.aircraft_id] || null,
+            owner: ownersMap[sr.user_id] || null,
+          }));
+          
+          error = null; // Clear error since we successfully fetched
+        }
+        
+        if (error) {
+          console.error('❌ Error fetching service requests:', error);
+          throw error;
+        }
+        
+        return data || [];
+      } catch (err: any) {
+        console.error('❌ Error in service requests query:', err);
+        // Provide more helpful error message
+        if (err.message?.includes('permission') || err.code === 'PGRST301') {
+          throw new Error('Permission denied. Please check your authentication and ensure you have admin or staff role.');
+        } else if (err.message?.includes('relation') || err.code === 'PGRST116') {
+          throw new Error('Service requests table not found. Please ensure the database schema is set up correctly.');
+        } else {
+          throw err;
+        }
+      }
     },
     // Refetch every 30 seconds to catch new requests
     refetchInterval: 30000,
   });
+
+  // Handle service requests loading errors
+  useEffect(() => {
+    if (serviceRequestsError) {
+      console.error('Service requests query error:', serviceRequestsError);
+      toast({
+        title: 'Error loading service requests',
+        description: serviceRequestsError instanceof Error ? serviceRequestsError.message : 'Failed to load service requests. Please try refreshing the page.',
+        variant: 'destructive',
+      });
+    }
+  }, [serviceRequestsError, toast]);
 
   // Fetch maintenance items
   const { data: maintenanceItems = [] } = useQuery({
@@ -372,7 +469,7 @@ export default function StaffDashboard() {
         .eq('category', 'instruction');
 
       // Admins see all invoices, CFIs see only their own
-      if (!isAdmin) {
+      if (!isAdmin && user) {
         query = query.eq('created_by_cfi_id', user.id);
       }
 
@@ -386,7 +483,7 @@ export default function StaffDashboard() {
           .select('*')
           .eq('category', 'instruction');
 
-        if (!isAdmin) {
+        if (!isAdmin && user) {
           baseQuery = baseQuery.eq('created_by_cfi_id', user.id);
         }
 
@@ -503,9 +600,12 @@ export default function StaffDashboard() {
       const hoursDecimal = parseFloat(hours);
 
       // Create the invoice (aircraft_id is optional)
+      // Convert "__none__" to null for optional aircraft
+      const aircraftId = selectedAircraftId === "__none__" || !selectedAircraftId ? null : selectedAircraftId;
+      
       const { data: invoiceData, error: createError } = await supabase.rpc('create_instruction_invoice', {
         p_owner_id: selectedOwnerId,
-        p_aircraft_id: selectedAircraftId || null,
+        p_aircraft_id: aircraftId,
         p_description: `${description} - ${flightDate}`,
         p_hours: hoursDecimal,
         p_rate_cents: rateCents,
@@ -710,7 +810,48 @@ export default function StaffDashboard() {
                 </Badge>
               )}
             </div>
-            {serviceRequests.length === 0 ? (
+            {isLoadingServiceRequests ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">Loading service requests...</p>
+                </CardContent>
+              </Card>
+            ) : serviceRequestsError ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <p className="text-destructive font-medium mb-2">Error loading service requests</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {serviceRequestsError instanceof Error ? serviceRequestsError.message : 'Unknown error occurred'}
+                  </p>
+                  {serviceRequestsError instanceof Error && serviceRequestsError.message.includes('Permission') && (
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Make sure you're logged in as an admin or staff member with proper permissions.
+                    </p>
+                  )}
+                  {serviceRequestsError instanceof Error && serviceRequestsError.message.includes('table not found') && (
+                    <p className="text-xs text-muted-foreground mb-4">
+                      The database schema may need to be set up. Check the SETUP.md guide.
+                    </p>
+                  )}
+                  <div className="flex gap-2 justify-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => refetchServiceRequests()}
+                    >
+                      Retry
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => window.location.reload()}
+                    >
+                      Refresh Page
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : serviceRequests.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground">No service requests yet.</p>
@@ -720,37 +861,39 @@ export default function StaffDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <KanbanBoard items={serviceRequests.map((sr: any) => {
-                // Map database statuses to Kanban board statuses
-                const statusMap: Record<string, 'new' | 'in_progress' | 'done'> = {
-                  'pending': 'new',
-                  'in_progress': 'in_progress',
-                  'completed': 'done',
-                  'cancelled': 'done', // Treat cancelled as done
-                };
-                
-                // Format requested date/time
-                let requestedFor = 'TBD';
-                if (sr.requested_departure) {
-                  const date = new Date(sr.requested_departure);
-                  requestedFor = format(date, 'MMM d, yyyy HH:mm');
-                } else if (sr.airport) {
-                  requestedFor = sr.airport;
-                }
-                
-                // Use description for display
-                const displayNotes = sr.description || '';
-                
-                return {
-                  id: sr.id,
-                  tailNumber: sr.aircraft?.tail_number || 'N/A',
-                  type: sr.service_type,
-                  requestedFor,
-                  notes: displayNotes,
-                  status: statusMap[sr.status] || 'new',
-                  ownerName: sr.owner?.full_name || sr.owner?.email || undefined,
-                };
-              })} />
+              <KanbanBoard items={serviceRequests
+                .filter((sr: any) => sr && sr.id) // Filter out any null/undefined items or items without id
+                .map((sr: any) => {
+                  // Map database statuses to Kanban board statuses
+                  const statusMap: Record<string, 'new' | 'in_progress' | 'done'> = {
+                    'pending': 'new',
+                    'in_progress': 'in_progress',
+                    'completed': 'done',
+                    'cancelled': 'done', // Treat cancelled as done
+                  };
+                  
+                  // Format requested date/time
+                  let requestedFor = 'TBD';
+                  if (sr.requested_departure) {
+                    const date = new Date(sr.requested_departure);
+                    requestedFor = format(date, 'MMM d, yyyy HH:mm');
+                  } else if (sr.airport) {
+                    requestedFor = sr.airport;
+                  }
+                  
+                  // Use description for display
+                  const displayNotes = sr.description || '';
+                  
+                  return {
+                    id: sr.id,
+                    tailNumber: sr.aircraft?.tail_number || 'N/A',
+                    type: sr.service_type,
+                    requestedFor,
+                    notes: displayNotes,
+                    status: statusMap[sr.status] || 'new',
+                    ownerName: sr.owner?.full_name || sr.owner?.email || undefined,
+                  };
+                })} />
             )}
           </TabsContent>
 
@@ -901,9 +1044,198 @@ export default function StaffDashboard() {
                 View and manage flight instruction schedules
               </p>
             </div>
+
+            {/* Instruction Requests */}
             <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Schedule functionality coming soon.</p>
+              <CardHeader>
+                <CardTitle>Flight Instruction Requests</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Instruction requests from owners awaiting CFI assignment
+                </p>
+              </CardHeader>
+              <CardContent>
+                {isLoadingServiceRequests ? (
+                  <div className="py-8 text-center text-muted-foreground">
+                    Loading instruction requests...
+                  </div>
+                ) : serviceRequestsError ? (
+                  <div className="py-8 text-center text-destructive">
+                    Error loading instruction requests: {serviceRequestsError.message}
+                  </div>
+                ) : (() => {
+                  // Filter for Flight Instruction requests and sort by date/time
+                  const instructionRequests = (serviceRequests || [])
+                    .filter((sr: any) => sr && sr.id && sr.service_type === "Flight Instruction")
+                    .sort((a: any, b: any) => {
+                      // Sort by requested_date, then requested_time
+                      // Requests without dates go to the end
+                      if (!a.requested_date && !b.requested_date) {
+                        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                      }
+                      if (!a.requested_date) return 1;
+                      if (!b.requested_date) return -1;
+                      
+                      const dateA = new Date(a.requested_date + (a.requested_time ? `T${a.requested_time}` : 'T00:00:00')).getTime();
+                      const dateB = new Date(b.requested_date + (b.requested_time ? `T${b.requested_time}` : 'T00:00:00')).getTime();
+                      return dateA - dateB;
+                    });
+
+                  if (instructionRequests.length === 0) {
+                    return (
+                      <div className="py-8 text-center text-muted-foreground">
+                        No flight instruction requests at this time.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {instructionRequests.map((request: any) => {
+                        const isAssigned = request.assigned_to === user?.id;
+                        const isAssignedToOther = request.assigned_to && request.assigned_to !== user?.id;
+                        
+                        return (
+                          <Card key={request.id} className={isAssigned ? "border-primary" : ""}>
+                            <CardContent className="pt-6">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="font-semibold">
+                                      {request.owner?.full_name || request.owner?.email || "Unknown Owner"}
+                                    </h3>
+                                    {request.aircraft && (
+                                      <Badge variant="outline">
+                                        {request.aircraft.tail_number}
+                                      </Badge>
+                                    )}
+                                    <Badge variant={request.status === "pending" ? "secondary" : request.status === "in_progress" ? "default" : "outline"}>
+                                      {request.status}
+                                    </Badge>
+                                    {isAssigned && (
+                                      <Badge variant="default">Assigned to You</Badge>
+                                    )}
+                                    {isAssignedToOther && (
+                                      <Badge variant="outline">Assigned to Another CFI</Badge>
+                                    )}
+                                  </div>
+                                  
+                                  {request.requested_date && (
+                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                      <span className="flex items-center gap-1">
+                                        <Calendar className="h-4 w-4" />
+                                        {new Date(request.requested_date).toLocaleDateString()}
+                                      </span>
+                                      {request.requested_time && (
+                                        <span className="flex items-center gap-1">
+                                          {request.requested_time}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {request.description && (
+                                    <p className="text-sm text-muted-foreground line-clamp-2">
+                                      {request.description}
+                                    </p>
+                                  )}
+                                  
+                                  {request.notes && (
+                                    <p className="text-sm text-muted-foreground italic">
+                                      Notes: {request.notes}
+                                    </p>
+                                  )}
+                                  
+                                  <div className="text-xs text-muted-foreground">
+                                    Requested: {new Date(request.created_at).toLocaleString()}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex flex-col gap-2">
+                                  {!request.assigned_to && (
+                                    <Button
+                                      size="sm"
+                                      onClick={async () => {
+                                        try {
+                                          const { error } = await supabase
+                                            .from('service_requests')
+                                            .update({ assigned_to: user?.id, status: 'in_progress' })
+                                            .eq('id', request.id);
+                                          
+                                          if (error) throw error;
+                                          
+                                          toast({
+                                            title: "Success",
+                                            description: "You've been assigned to this instruction request.",
+                                          });
+                                          
+                                          // Invalidate all service request queries to refresh
+                                          await queryClient.invalidateQueries({
+                                            predicate: (query) => 
+                                              query.queryKey[0] === "service-requests" || 
+                                              query.queryKey[0] === "/api/service-requests"
+                                          });
+                                          await refetchServiceRequests();
+                                        } catch (error: any) {
+                                          console.error("Error assigning request:", error);
+                                          toast({
+                                            title: "Error",
+                                            description: error.message || "Failed to assign request",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      Assign to Me
+                                    </Button>
+                                  )}
+                                  
+                                  {isAssigned && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={async () => {
+                                        try {
+                                          const { error } = await supabase
+                                            .from('service_requests')
+                                            .update({ assigned_to: null, status: 'pending' })
+                                            .eq('id', request.id);
+                                          
+                                          if (error) throw error;
+                                          
+                                          toast({
+                                            title: "Success",
+                                            description: "Assignment removed.",
+                                          });
+                                          
+                                          // Invalidate all service request queries to refresh
+                                          await queryClient.invalidateQueries({
+                                            predicate: (query) => 
+                                              query.queryKey[0] === "service-requests" || 
+                                              query.queryKey[0] === "/api/service-requests"
+                                          });
+                                          await refetchServiceRequests();
+                                        } catch (error: any) {
+                                          console.error("Error unassigning request:", error);
+                                          toast({
+                                            title: "Error",
+                                            description: error.message || "Failed to unassign request",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      Unassign
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
@@ -953,11 +1285,13 @@ export default function StaffDashboard() {
                           <SelectValue placeholder="Select client" />
                         </SelectTrigger>
                         <SelectContent>
-                          {owners.map((owner: any) => (
-                            <SelectItem key={owner.id} value={owner.id}>
-                              {owner.full_name || owner.email}
-                            </SelectItem>
-                          ))}
+                          {owners
+                            .filter((owner: any) => owner && owner.id)
+                            .map((owner: any) => (
+                              <SelectItem key={owner.id} value={owner.id}>
+                                {owner.full_name || owner.email}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -973,12 +1307,14 @@ export default function StaffDashboard() {
                           <SelectValue placeholder="Select aircraft (optional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
-                          {filteredAircraft.map((ac: any) => (
-                            <SelectItem key={ac.id} value={ac.id}>
-                              {ac.tail_number}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="__none__">None</SelectItem>
+                          {filteredAircraft
+                            .filter((ac: any) => ac && ac.id)
+                            .map((ac: any) => (
+                              <SelectItem key={ac.id} value={ac.id}>
+                                {ac.tail_number}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1183,7 +1519,9 @@ export default function StaffDashboard() {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
-                  {invoices.map((invoice) => {
+                  {invoices
+                    .filter((invoice) => invoice && invoice.id)
+                    .map((invoice) => {
                     // Calculate total from all invoice lines
                     let calculatedTotal = invoice.amount;
                     if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
