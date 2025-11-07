@@ -29,7 +29,7 @@ describe('useIsMobile', () => {
       onchange: null,
       addListener: vi.fn(),
       removeListener: vi.fn(),
-      addEventListener: vi.fn((event, handler) => {
+      addEventListener: vi.fn((event: string, handler: (e: any) => void) => {
         // Call handler immediately to simulate initial state
         if (event === 'change') {
           setTimeout(() => handler({ matches: true }), 0);
@@ -58,7 +58,7 @@ describe('useIsMobile', () => {
       onchange: null,
       addListener: vi.fn(),
       removeListener: vi.fn(),
-      addEventListener: vi.fn((event, handler) => {
+      addEventListener: vi.fn((event: string, handler: (e: any) => void) => {
         // Call handler immediately to simulate initial state
         if (event === 'change') {
           setTimeout(() => handler({ matches: false }), 0);

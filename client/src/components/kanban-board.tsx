@@ -4,6 +4,7 @@ import { Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ServiceRequest {
   id: string;
@@ -22,6 +23,7 @@ interface KanbanBoardProps {
 export function KanbanBoard({ items = [] }: KanbanBoardProps) {
   const [requests, setRequests] = useState<ServiceRequest[]>(items);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Update local state when props change
   useEffect(() => {
@@ -74,6 +76,13 @@ export function KanbanBoard({ items = [] }: KanbanBoardProps) {
       toast({
         title: "Status updated",
         description: `Request moved to ${newStatus.replace('_', ' ')}`,
+      });
+      
+      // Invalidate all service request queries to refresh both client and staff dashboards
+      await queryClient.invalidateQueries({
+        predicate: (query) => 
+          query.queryKey[0] === "service-requests" || 
+          query.queryKey[0] === "/api/service-requests"
       });
     }
   };

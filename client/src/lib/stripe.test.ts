@@ -23,13 +23,17 @@ describe('Stripe utilities', () => {
 
       const result = await createCheckoutSession('invoice-123', 'user-456');
 
-      expect(global.fetch).toHaveBeenCalledWith('/api/stripe/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ invoiceId: 'invoice-123', userId: 'user-456' }),
-      });
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/stripe/create-checkout-session',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ invoiceId: 'invoice-123', userId: 'user-456' }),
+          credentials: 'include',
+        }
+      );
 
       expect(result).toEqual(mockResponse);
     });

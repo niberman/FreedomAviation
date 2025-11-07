@@ -14,11 +14,12 @@
     "outDir": "dist",
     "rootDir": ".",
     "baseUrl": ".",
+    "types": ["vitest/globals"],
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["server/**/*.ts", "client/**/*.ts", "client/**/*.tsx", "vite.config.ts"],
+  "include": ["server/**/*.ts", "client/**/*.ts", "client/**/*.tsx", "vite.config.ts", "vitest.d.ts"],
   "exclude": ["node_modules"]
 }

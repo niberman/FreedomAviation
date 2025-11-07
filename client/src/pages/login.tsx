@@ -27,17 +27,47 @@ export default function Login() {
         .maybeSingle();
       
       if (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('Error fetching user profile in login:', error);
+        console.error('Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
+        
+        // Check if it's a permission/RLS error
+        const isPermissionError = error.message?.includes('permission') || 
+                                  error.message?.includes('RLS') ||
+                                  error.code === 'PGRST301' ||
+                                  error.code === '42501';
+        
+        if (isPermissionError) {
+          console.error('Permission/RLS error when fetching profile. User may not have access to their own profile.');
+          console.error('This could indicate an RLS policy issue. Check that "Users can view own profile" policy exists.');
+        }
+        
         // Default to dashboard if we can't fetch the role
+        // The StaffProtectedRoute will handle redirecting if needed
         return "/dashboard";
       }
       
+      if (!data) {
+        console.warn('User profile not found for user:', userId);
+        console.warn('Profile may be created by trigger. Defaulting to dashboard.');
+        // Default to dashboard - StaffProtectedRoute will check and redirect if needed
+        return "/dashboard";
+      }
+      
+      console.log('User role detected:', data.role);
+      
       // Redirect staff (admin or cfi) to staff dashboard
-      if (data?.role === 'admin' || data?.role === 'cfi') {
+      if (data.role === 'admin' || data.role === 'cfi') {
+        console.log('Redirecting staff user to /staff');
         return "/staff";
       }
       
       // Regular users go to owner dashboard
+      console.log('Redirecting owner user to /dashboard');
       return "/dashboard";
     } catch (error) {
       console.error('Error checking user role:', error);
@@ -61,8 +91,18 @@ export default function Login() {
     try {
       await signIn(email, password);
       
-      // Get the current user to check their role
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      // Get user directly from Supabase after sign in (most reliable)
+      const { data: { user: currentUser }, error: getUserError } = await supabase.auth.getUser();
+      
+      if (getUserError) {
+        console.error('Error getting user after sign in:', getUserError);
+        // Fallback: let useEffect handle redirect when user becomes available
+        toast({
+          title: "Welcome back!",
+          description: "Successfully signed in to Freedom Aviation",
+        });
+        return;
+      }
       
       if (currentUser) {
         // Determine redirect path based on user role
@@ -72,10 +112,8 @@ export default function Login() {
           description: "Successfully signed in to Freedom Aviation",
         });
         setLocation(redirectPath);
-      } else {
-        // Fallback if user is not available immediately
-        setLocation("/dashboard");
       }
+      // If user is not available, the useEffect will handle redirect when it becomes available
     } catch (error: any) {
       toast({
         variant: "destructive",

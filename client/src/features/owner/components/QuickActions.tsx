@@ -144,6 +144,8 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         user_id: userId,
         aircraft_id: prepForm.aircraft_id,
         description: descriptionParts,
+        airport: prepForm.airport || null,
+        requested_departure: prepForm.requested_departure || null,
       };
       
       console.log("Submitting payload:", payload);
@@ -172,8 +174,11 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         description: "",
       });
       
+      // Invalidate all service request queries (both client and staff dashboard queries)
       await queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === "service-requests"
+        predicate: (query) => 
+          query.queryKey[0] === "service-requests" || 
+          query.queryKey[0] === "/api/service-requests"
       });
       await queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "service-tasks"
@@ -208,6 +213,19 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
     setLoading(true);
     
     try {
+      // Parse datetime-local format to separate date and time if provided
+      let requestedDate: string | null = null;
+      let requestedTime: string | null = null;
+      let requestedDeparture: string | null = null;
+      
+      if (serviceForm.requested_for) {
+        // Format: "2024-01-15T14:30"
+        requestedDeparture = serviceForm.requested_for;
+        const [datePart, timePart] = serviceForm.requested_for.split('T');
+        if (datePart) requestedDate = datePart;
+        if (timePart) requestedTime = timePart;
+      }
+
       const { error } = await supabase.from("service_requests").insert({
         aircraft_id: aircraftId,
         user_id: userId,
@@ -215,7 +233,9 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         description: serviceForm.notes || `Service request: ${serviceForm.type}`,
         status: "pending",
         priority: "medium",
-        requested_departure: serviceForm.requested_for || null,
+        requested_departure: requestedDeparture,
+        requested_date: requestedDate,
+        requested_time: requestedTime,
       });
 
       if (error) throw error;
@@ -232,8 +252,11 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         requested_for: "",
       });
       
+      // Invalidate all service request queries (both client and staff dashboard queries)
       await queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === "service-requests"
+        predicate: (query) => 
+          query.queryKey[0] === "service-requests" || 
+          query.queryKey[0] === "/api/service-requests"
       });
       await queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === "service-tasks"
@@ -282,6 +305,11 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         instructionForm.notes ? `Notes: ${instructionForm.notes}` : null,
       ].filter(Boolean).join(" | ");
 
+      // Build requested_departure in ISO format for consistency
+      const requestedDeparture = instructionForm.requested_date && instructionForm.requested_time
+        ? `${instructionForm.requested_date}T${instructionForm.requested_time}:00`
+        : null;
+
       const payload: any = {
         service_type: "Flight Instruction",
         priority: "medium",
@@ -292,6 +320,7 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         requested_date: instructionForm.requested_date,
         requested_time: instructionForm.requested_time,
         requested_for: `${instructionForm.requested_date} ${instructionForm.requested_time}`,
+        requested_departure: requestedDeparture,
         notes: instructionForm.notes || null,
       };
       
@@ -311,8 +340,11 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         notes: "",
       });
       
+      // Invalidate all service request queries (both client and staff dashboard queries)
       await queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === "service-requests"
+        predicate: (query) => 
+          query.queryKey[0] === "service-requests" || 
+          query.queryKey[0] === "/api/service-requests"
       });
     } catch (error) {
       console.error("Error submitting flight instruction request:", error);
@@ -334,7 +366,12 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
       <CardContent className="grid gap-3">
         <Dialog open={openPrep} onOpenChange={setOpenPrep}>
           <DialogTrigger asChild>
-            <Button variant="default" className="w-full justify-start" data-testid="button-prepare-aircraft">
+            <Button 
+              variant="default" 
+              className="w-full justify-start" 
+              data-testid="button-prepare-aircraft"
+              onClick={() => setOpenPrep(true)}
+            >
               <Plane className="mr-2 h-4 w-4" />
               Prepare My Aircraft
             </Button>
@@ -512,7 +549,12 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
 
         <Dialog open={openService} onOpenChange={setOpenService}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="w-full justify-start" data-testid="button-request-service">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start" 
+              data-testid="button-request-service"
+              onClick={() => setOpenService(true)}
+            >
               <Wrench className="mr-2 h-4 w-4" />
               Request Service
             </Button>
@@ -579,7 +621,12 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
 
         <Dialog open={openInstruction} onOpenChange={setOpenInstruction}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="w-full justify-start" data-testid="button-request-instruction">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start" 
+              data-testid="button-request-instruction"
+              onClick={() => setOpenInstruction(true)}
+            >
               <GraduationCap className="mr-2 h-4 w-4" />
               Request Flight Instruction
             </Button>
