@@ -81,17 +81,20 @@ export function NavBar() {
     if (user) {
       return (
         <>
-          <Link href="/dashboard">
-            <Button
-              variant="outline"
-              size={buttonSize}
-              className={buttonClass}
-              onClick={closeMobileMenu}
-            >
-              <User className="h-4 w-4 mr-2" />
-              My Dashboard
-            </Button>
-          </Link>
+          {/* Only show owner dashboard for non-staff users */}
+          {!isStaff && (
+            <Link href="/dashboard">
+              <Button
+                variant="outline"
+                size={buttonSize}
+                className={buttonClass}
+                onClick={closeMobileMenu}
+              >
+                <User className="h-4 w-4 mr-2" />
+                My Dashboard
+              </Button>
+            </Link>
+          )}
           {showStaffLink && (
             <Link href="/admin">
               <Button

@@ -502,10 +502,10 @@ export default function StaffDashboard() {
       const rateCents = Math.round(parseFloat(ratePerHour) * 100);
       const hoursDecimal = parseFloat(hours);
 
-      // Create the invoice
+      // Create the invoice (aircraft_id is optional)
       const { data: invoiceData, error: createError } = await supabase.rpc('create_instruction_invoice', {
         p_owner_id: selectedOwnerId,
-        p_aircraft_id: selectedAircraftId,
+        p_aircraft_id: selectedAircraftId || null,
         p_description: `${description} - ${flightDate}`,
         p_hours: hoursDecimal,
         p_rate_cents: rateCents,
@@ -535,10 +535,15 @@ export default function StaffDashboard() {
           // Use current origin (localhost, www, or other)
           apiUrl = `${window.location.origin}/api/invoices/send-email`;
         }
+        // Get auth token for API request
+        const { data: { session } } = await supabase.auth.getSession();
+        const authToken = session?.access_token;
+
         const emailResponse = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(authToken && { Authorization: `Bearer ${authToken}` }),
           },
           credentials: "include",
           body: JSON.stringify({ invoiceId }),
@@ -629,10 +634,10 @@ export default function StaffDashboard() {
 
   const handlePreview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedOwnerId || !selectedAircraftId || !description || !flightDate || !hours || !ratePerHour) {
+    if (!selectedOwnerId || !description || !flightDate || !hours || !ratePerHour) {
       toast({
         title: "Missing fields",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields (Client, Description, Flight Date, Hours, and Rate).",
         variant: "destructive",
       });
       return;
@@ -958,16 +963,17 @@ export default function StaffDashboard() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="aircraft">Aircraft *</Label>
+                      <Label htmlFor="aircraft">Aircraft (Optional)</Label>
                       <Select 
                         value={selectedAircraftId} 
                         onValueChange={setSelectedAircraftId}
                         disabled={!selectedOwnerId}
                       >
                         <SelectTrigger id="aircraft" data-testid="select-aircraft">
-                          <SelectValue placeholder="Select aircraft" />
+                          <SelectValue placeholder="Select aircraft (optional)" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="">None</SelectItem>
                           {filteredAircraft.map((ac: any) => (
                             <SelectItem key={ac.id} value={ac.id}>
                               {ac.tail_number}
@@ -1063,7 +1069,7 @@ export default function StaffDashboard() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-muted-foreground">Aircraft</p>
-                      <p className="text-base font-mono font-semibold">{selectedAircraft?.tail_number || 'N/A'}</p>
+                      <p className="text-base font-mono font-semibold">{selectedAircraft?.tail_number || 'Not specified'}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-muted-foreground">Description</p>

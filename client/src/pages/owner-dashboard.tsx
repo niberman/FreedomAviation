@@ -9,16 +9,44 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT, DEMO_USER } from "@/lib/demo-data";
 import logoImage from "@assets/falogo.png";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowRight } from "lucide-react";
 import { EditableField } from "@/components/owner/EditableField";
 import { useAircraft } from "@/lib/hooks/useAircraft";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
   const { isDemo } = useDemoMode();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  
+  // Check if user is staff and redirect them
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && !isDemo,
+    retry: false,
+  });
+
+  const isStaff = userProfile?.role === 'admin' || userProfile?.role === 'cfi';
+
+  // Redirect staff users to staff dashboard
+  useEffect(() => {
+    if (!isDemo && user && userProfile && isStaff) {
+      setLocation('/staff');
+    }
+  }, [user, userProfile, isStaff, isDemo, setLocation]);
   
   // Use hooks for editing
   const { aircraftList: hookAircraftList, updateAircraft } = useAircraft();
