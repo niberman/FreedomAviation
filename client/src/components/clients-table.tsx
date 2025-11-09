@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, User, Plane, Pencil, Info, Plus } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -39,6 +40,7 @@ interface Client {
 
 export function ClientsTable() {
   const { toast } = useToast();
+  const { session } = useAuth();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editClientId, setEditClientId] = useState("");
@@ -50,69 +52,72 @@ export function ClientsTable() {
   const [newClientPhone, setNewClientPhone] = useState("");
 
   // Fetch all clients (owners)
+  const accessToken = session?.access_token ?? null;
+
   const { data: clients = [], isLoading, error: clientsError } = useQuery({
-    queryKey: ['/api/clients'],
+    queryKey: ['/api/clients', accessToken],
     queryFn: async () => {
-      console.log('[ClientsTable] Fetching clients...');
-      
-      // Fetch owners - without the problematic aircraft count aggregation
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          full_name,
-          email,
-          phone,
-          role,
-          created_at
-        `)
-        .eq('role', 'owner')
-        .order('created_at', { ascending: false });
-      
-      console.log('[ClientsTable] Owners query result:', { data, error });
-      
-      if (error) {
-        console.error('[ClientsTable] Error fetching clients:', error);
-        // Check if it's a permission error
-        if (error.code === 'PGRST301' || error.message?.includes('permission') || error.message?.includes('RLS')) {
-          throw new Error('Permission denied. Please ensure you are logged in as an admin or CFI.');
+      if (!accessToken) {
+        throw new Error('Not authenticated. Please sign in again.');
+      }
+
+      console.log('[ClientsTable] Fetching clients via API...');
+
+      const response = await fetch('/api/clients', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+      const responseBody = await response.text();
+
+      let payload: any = null;
+      if (contentType.includes('application/json')) {
+        try {
+          payload = JSON.parse(responseBody);
+        } catch (parseError) {
+          console.error('[ClientsTable] Failed to parse JSON response:', parseError);
+          console.error('[ClientsTable] Response body:', responseBody);
+          throw new Error('Invalid JSON response from /api/clients. Please check the server logs.');
         }
-        throw error;
+      } else {
+        console.error('[ClientsTable] Expected JSON but received:', contentType || 'unknown content-type');
+        console.error('[ClientsTable] Response body (first 200 chars):', responseBody.slice(0, 200));
+
+        throw new Error(
+          'Received a non-JSON response from /api/clients. ' +
+          'Ensure the API server is running and accessible.'
+        );
       }
-      
-      if (!data) {
-        console.warn('[ClientsTable] No data returned from query');
-        return [];
+
+      if (!response.ok) {
+        console.error('[ClientsTable] Error fetching clients:', payload);
+        throw new Error(payload.message || payload.error || 'Failed to load client list.');
       }
-      
-      // For each client, count their aircraft separately
-      const clientsWithCounts = await Promise.all(
-        data.map(async (client: any) => {
-          const { count } = await supabase
-            .from('aircraft')
-            .select('*', { count: 'exact', head: true })
-            .eq('owner_id', client.id);
-          
-          return {
-            ...client,
-            aircraft_count: count || 0,
-          };
-        })
-      );
-      
-      console.log('[ClientsTable] Clients with aircraft counts:', clientsWithCounts);
-      return clientsWithCounts;
+
+      const clientsFromApi = payload.clients ?? payload.data ?? [];
+      console.log('[ClientsTable] Clients API response:', clientsFromApi);
+      return clientsFromApi;
     },
+    enabled: !!accessToken,
     retry: false,
   });
 
   // Create new client
   const createClientMutation = useMutation({
     mutationFn: async () => {
+      if (!accessToken) {
+        throw new Error('Not authenticated. Please sign in again.');
+      }
+
       const response = await fetch('/api/clients/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           email: newClientEmail,
@@ -253,7 +258,7 @@ export function ClientsTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold">Client Management</h2>
           <p className="text-sm text-muted-foreground">View and manage owner accounts</p>
@@ -334,57 +339,59 @@ export function ClientsTable() {
               No clients found. Clients must sign up through the authentication system first.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Aircraft</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.map((client: Client) => (
-                  <TableRow key={client.id} data-testid={`client-row-${client.id}`}>
-                    <TableCell className="font-medium">{client.full_name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        {client.email}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {client.phone || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Plane className="h-4 w-4 text-muted-foreground" />
-                        {client.aircraft_count || 0}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(client.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">Active</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEditClient(client)}
-                        data-testid={`button-edit-${client.id}`}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            <div className="w-full overflow-x-auto">
+              <Table className="min-w-[720px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Aircraft</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {clients.map((client: Client) => (
+                    <TableRow key={client.id} data-testid={`client-row-${client.id}`}>
+                      <TableCell className="font-medium">{client.full_name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          {client.email}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {client.phone || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Plane className="h-4 w-4 text-muted-foreground" />
+                          {client.aircraft_count || 0}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(client.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">Active</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditClient(client)}
+                          data-testid={`button-edit-${client.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

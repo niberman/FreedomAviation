@@ -39,7 +39,7 @@ export default function About() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
         
-        <div className="relative z-10 max-w-7xl mx-auto px-6 text-center animate-in fade-in duration-700">
+        <div className="relative z-10 max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 text-center animate-in fade-in duration-700">
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 text-foreground">
             Just Fly. We Handle Everything.
           </h1>
@@ -63,10 +63,10 @@ export default function About() {
 
       {/* Section 1: Our Mission */}
       <section className="py-20 md:py-24">
-        <div className="max-w-4xl mx-auto px-6">
+        <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-center">Our Mission</h2>
-            <div className="space-y-4 text-lg text-muted-foreground leading-relaxed">
+            <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
               <p>
                 To make aircraft ownership effortless, safe, and rewarding by combining expert technical care with personalized concierge service.
               </p>
@@ -80,8 +80,8 @@ export default function About() {
 
       {/* Section 2: What We Do */}
       <section className="py-20 md:py-24 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="animate-in fade-in slide-in-from-left duration-700">
               <img 
                 src={aircraftImage} 
@@ -92,11 +92,11 @@ export default function About() {
             
             <div className="animate-in fade-in slide-in-from-right duration-700">
               <h2 className="text-4xl md:text-5xl font-bold mb-6">What We Do</h2>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
                 Freedom Aviation offers tiered management memberships that scale with your aircraft and flying lifestyle.
               </p>
               
-              <ul className="space-y-4">
+              <ul className="space-y-6">
                 {[
                   "Maintenance oversight & readiness tracking",
                   "Detailing, fueling, and hangar coordination",
@@ -117,7 +117,7 @@ export default function About() {
 
       {/* Section 3: Our Team */}
       <section className="py-20 md:py-24">
-        <div className="max-w-4xl mx-auto px-6">
+        <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center">Our Team</h2>
             <p className="text-lg text-muted-foreground leading-relaxed text-center">
@@ -129,62 +129,62 @@ export default function About() {
 
       {/* Section 4: Our Values */}
       <section className="py-20 md:py-24 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <h2 className="text-4xl md:text-5xl font-bold mb-12 text-center">Our Values</h2>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <Card className="hover-elevate">
-                <CardContent className="p-6 text-center">
+                <CardContent className="px-8 py-10 text-center space-y-4">
                   <div className="flex justify-center mb-4">
                     <div className="rounded-full bg-primary/10 p-4">
                       <Shield className="h-8 w-8 text-primary" />
                     </div>
                   </div>
                   <h3 className="text-xl font-semibold mb-3">Safety Above All</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-base text-muted-foreground leading-relaxed">
                     Precision, consistency, and care in every procedure.
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="hover-elevate">
-                <CardContent className="p-6 text-center">
+                <CardContent className="px-8 py-10 text-center space-y-4">
                   <div className="flex justify-center mb-4">
                     <div className="rounded-full bg-primary/10 p-4">
                       <Eye className="h-8 w-8 text-primary" />
                     </div>
                   </div>
                   <h3 className="text-xl font-semibold mb-3">Trust & Transparency</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-base text-muted-foreground leading-relaxed">
                     Predictable pricing and open communication.
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="hover-elevate">
-                <CardContent className="p-6 text-center">
+                <CardContent className="px-8 py-10 text-center space-y-4">
                   <div className="flex justify-center mb-4">
                     <div className="rounded-full bg-primary/10 p-4">
                       <Users className="h-8 w-8 text-primary" />
                     </div>
                   </div>
                   <h3 className="text-xl font-semibold mb-3">Pilot-Centric Service</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-base text-muted-foreground leading-relaxed">
                     Tailored to real pilot needs — because we are pilots, too.
                   </p>
                 </CardContent>
               </Card>
 
               <Card className="hover-elevate">
-                <CardContent className="p-6 text-center">
+                <CardContent className="px-8 py-10 text-center space-y-4">
                   <div className="flex justify-center mb-4">
                     <div className="rounded-full bg-primary/10 p-4">
                       <Award className="h-8 w-8 text-primary" />
                     </div>
                   </div>
                   <h3 className="text-xl font-semibold mb-3">Excellence in Every Detail</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-base text-muted-foreground leading-relaxed">
                     From ramp presentation to avionics updates, nothing is overlooked.
                   </p>
                 </CardContent>
@@ -197,10 +197,10 @@ export default function About() {
       {/* Section 5: The Freedom Difference */}
       <section className="py-20 md:py-24 relative">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/5" />
-        <div className="relative max-w-4xl mx-auto px-6">
+        <div className="relative max-w-3xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center">The Freedom Difference</h2>
-            <div className="space-y-4 text-lg text-muted-foreground leading-relaxed text-center">
+            <div className="space-y-6 text-lg text-muted-foreground leading-relaxed text-center">
               <p>
                 Freedom Aviation isn't just management — it's membership.
               </p>
@@ -217,16 +217,16 @@ export default function About() {
 
       {/* Section 6: Founder's Note */}
       <section className="py-20 md:py-24 bg-muted/30">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
           <Card className="hover-elevate">
-            <CardContent className="p-8 md:p-12">
+            <CardContent className="px-10 py-12 md:px-14 md:py-16">
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="space-y-6">
+                <div className="space-y-8">
                   <div className="text-2xl md:text-3xl font-bold text-center mb-8">
                     Founder's Note
                   </div>
                   
-                  <div className="space-y-4 text-lg text-muted-foreground leading-relaxed">
+                  <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
                     <p className="italic">
                       "Freedom Aviation began with a simple vision — to give pilots the same level of confidence and convenience that professional flight departments enjoy.
                     </p>
@@ -251,12 +251,12 @@ export default function About() {
 
       {/* Section 7: CTA */}
       <section className="py-20 md:py-24">
-        <div className="max-w-4xl mx-auto px-6 text-center">
+        <div className="max-w-3xl mx-auto px-6 sm:px-8 lg:px-12 text-center">
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
               Ready to Experience True Freedom in Flight?
             </h2>
-            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
               Join our community of owner-pilots who trust Freedom Aviation for seamless aircraft management.
             </p>
             <Link href="/pricing">

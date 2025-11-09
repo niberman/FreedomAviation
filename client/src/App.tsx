@@ -11,6 +11,7 @@ import { StaffProtectedRoute } from "@/components/staff-protected-route";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { DevToolbar } from "@/components/dev-toolbar";
 import { NavBar } from "@/components/navbar";
+import { Footer } from "@/components/footer";
 import Home from "./pages/home";
 import Login from "./pages/login";
 import ForgotPassword from "./pages/forgot-password";
@@ -101,6 +102,11 @@ function Router() {
 function App() {
   const [location] = useLocation();
   const showNavBar = location !== "/demo";
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [location]);
   
   return (
     <ErrorBoundary>
@@ -109,9 +115,14 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <TooltipProvider>
-              <Toaster />
-              {showNavBar && <NavBar />}
-              <Router />
+              <div className="flex min-h-screen flex-col">
+                <Toaster />
+                {showNavBar && <NavBar />}
+                <main className="flex-1">
+                  <Router />
+                </main>
+                <Footer />
+              </div>
               <DevToolbar />
             </TooltipProvider>
           </AuthProvider>

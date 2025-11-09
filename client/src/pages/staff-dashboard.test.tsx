@@ -41,13 +41,30 @@ vi.mock('@/components/kanban-board', () => ({
   ),
 }));
 vi.mock('@/components/aircraft-table', () => ({
-  AircraftTable: ({ items }: { items: any[] }) => (
+  AircraftTable: ({
+    items,
+    owners,
+    onAircraftCreated,
+  }: {
+    items: any[];
+    owners?: any[];
+    onAircraftCreated?: () => void;
+  }) => (
     <div data-testid="aircraft-table">
       {items.map((item) => (
         <div key={item.id} data-testid={`aircraft-${item.id}`}>
           {item.tailNumber}
         </div>
       ))}
+      <div data-testid="aircraft-owners-count">
+        {owners ? owners.length : 0}
+      </div>
+      <button
+        data-testid="aircraft-mock-create"
+        onClick={() => onAircraftCreated && onAircraftCreated()}
+      >
+        trigger-create
+      </button>
     </div>
   ),
 }));
@@ -204,7 +221,7 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
 
       // Mock user profile query
       mockSupabase.maybeSingle = vi.fn().mockResolvedValue({
-        data: { role: 'cfi' },
+        data: { role: 'staff' },
         error: null,
       });
 
@@ -268,8 +285,7 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
           assigned_to: null,
           aircraft: { tail_number: 'N123FA' },
           owner: { full_name: 'John Doe', email: 'john@test.com' },
-          requested_date: '2024-01-15',
-          requested_time: '14:00',
+          requested_departure: '2024-01-15T14:00:00.000Z',
           created_at: '2024-01-10T10:00:00',
         },
       ];
@@ -283,7 +299,7 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
 
       // Mock user profile
       mockSupabase.maybeSingle = vi.fn().mockResolvedValue({
-        data: { role: 'cfi' },
+        data: { role: 'staff' },
         error: null,
       });
 
@@ -308,7 +324,14 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
   });
 
   describe('Aircraft Viewing', () => {
-    it('should fetch and display all aircraft', async () => {
+    it('should fetch and display all aircraft with owner options', async () => {
+      const mockOwners = [
+        {
+          id: 'owner-1',
+          full_name: 'Aviator One',
+          email: 'owner1@test.com',
+        },
+      ];
       const mockAircraft = [
         {
           id: 'aircraft-1',
@@ -324,10 +347,15 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
 
       mockSupabase.from.mockReturnValue(mockSupabase);
       mockSupabase.select.mockReturnValue(mockSupabase);
-      mockSupabase.order.mockResolvedValueOnce({
-        data: mockAircraft,
-        error: null,
-      });
+      mockSupabase.order
+        .mockResolvedValueOnce({
+          data: mockOwners,
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: mockAircraft,
+          error: null,
+        });
 
       // Mock user profile
       mockSupabase.maybeSingle = vi.fn().mockResolvedValue({
@@ -345,8 +373,11 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
       await userEvent.click(aircraftTab);
 
       await waitFor(() => {
-        expect(mockSupabase.from).toHaveBeenCalledWith('aircraft');
+        expect(screen.getByTestId('aircraft-table')).toBeInTheDocument();
       });
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('aircraft');
+      expect(screen.getByTestId('aircraft-owners-count')).toHaveTextContent('1');
     });
   });
 

@@ -10,16 +10,17 @@ export const serviceRequestSchema = z.object({
   service_type: z.string().min(1, "Service type is required"),
   priority: z.enum(["low", "medium", "high"]).optional().nullable(),
   description: z.string().optional().nullable(),
-  airport: z.string().optional().nullable(),
+  airport: z.string().regex(/^[A-Z0-9]{3,4}$/, "Airport must be 3-4 characters").optional().nullable(),
   requested_departure: z.string().datetime().optional().nullable(),
-  fuel_grade: z.enum(["100LL", "Jet-A", "MoGas"]).optional().nullable(),
+  fuel_grade: z.enum(["100LL", "Jet-A", "Jet-A+", "MOGAS"]).optional().nullable(),
   fuel_quantity: z.number().min(0).optional().nullable(),
-  cabin_provisioning: z.record(z.any()).optional().nullable(),
+  cabin_provisioning: z.union([z.record(z.any()), z.string()]).optional().nullable(),
   o2_topoff: z.boolean().optional().nullable(),
   tks_topoff: z.boolean().optional().nullable(),
   gpu_required: z.boolean().optional().nullable(),
   hangar_pullout: z.boolean().optional().nullable(),
-  notes: z.string().optional().nullable(),
+  is_extra_charge: z.boolean().optional().nullable(),
+  credits_used: z.number().min(0).optional().nullable(),
 });
 
 export type ServiceRequestFormData = z.infer<typeof serviceRequestSchema>;
@@ -103,10 +104,11 @@ export function useServiceRequests(aircraftId?: string) {
 
       const insertData: ServiceRequestInsert = {
         ...validated,
+        description: validated.description ?? `Service request: ${validated.service_type}`,
         user_id: user.id,
         status: "pending",
-        is_extra_charge: false,
-        credits_used: 0,
+        is_extra_charge: validated.is_extra_charge ?? false,
+        credits_used: validated.credits_used ?? 0,
       };
 
       const { data, error } = await supabase
@@ -131,7 +133,10 @@ export function useServiceRequests(aircraftId?: string) {
 
       const { data, error } = await supabase
         .from("service_requests")
-        .update({ ...validated, status: updateData.status } as ServiceRequestUpdate)
+        .update({
+          ...validated,
+          ...(updateData.status ? { status: updateData.status } : {}),
+        } as ServiceRequestUpdate)
         .eq("id", id)
         .select()
         .single();

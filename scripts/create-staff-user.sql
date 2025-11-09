@@ -26,9 +26,9 @@ UPDATE public.user_profiles
 SET role = 'admin'
 WHERE email = 'YOUR_EMAIL@example.com';
 
--- OR for CFI (Certified Flight Instructor) role:
+-- OR for staff (Instruction) role:
 -- UPDATE public.user_profiles 
--- SET role = 'cfi'
+-- SET role = 'staff'
 -- WHERE email = 'YOUR_EMAIL@example.com';
 
 -- Verify the update
@@ -61,10 +61,10 @@ WHERE email = 'YOUR_EMAIL@example.com';
 -- );
 --
 -- UPDATE public.user_profiles 
--- SET role = 'cfi'
+-- SET role = 'staff'
 -- WHERE email IN (
---   'cfi1@freedomaviationco.com',
---   'cfi2@freedomaviationco.com'
+--   'instructor1@freedomaviationco.com',
+--   'instructor2@freedomaviationco.com'
 -- );
 
 -- ============================================================================
@@ -77,16 +77,16 @@ WHERE email = 'YOUR_EMAIL@example.com';
 -- WHERE role = 'admin'
 -- ORDER BY created_at DESC;
 
--- View all CFI users
+-- View all staff users
 -- SELECT id, email, full_name, role, created_at
 -- FROM public.user_profiles 
--- WHERE role = 'cfi'
+-- WHERE role = 'staff'
 -- ORDER BY created_at DESC;
 
--- View all staff (admin + CFI)
+-- View all staff (admin + staff)
 -- SELECT id, email, full_name, role, created_at
 -- FROM public.user_profiles 
--- WHERE role IN ('admin', 'cfi')
+-- WHERE role IN ('admin', 'staff')
 -- ORDER BY role, created_at DESC;
 
 -- ============================================================================

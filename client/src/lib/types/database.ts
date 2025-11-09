@@ -12,7 +12,7 @@ export type Json =
 export type MembershipClass = 'I' | 'II' | 'III'
 export type ServiceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 export type MaintenanceStatus = 'current' | 'due_soon' | 'overdue'
-export type UserRole = 'owner' | 'cfi' | 'admin'
+export type UserRole = 'owner' | 'cfi' | 'staff' | 'admin'
 
 export interface Database {
   public: {
@@ -184,8 +184,8 @@ export interface Database {
           aircraft_id: string
           user_id: string
           service_type: string
-          priority: string | null
-          description: string | null
+          priority: string
+          description: string
           airport: string | null
           requested_departure: string | null
           fuel_grade: string | null
@@ -200,7 +200,6 @@ export interface Database {
           is_extra_charge: boolean
           credits_used: number
           assigned_to: string | null
-          notes: string | null
           created_at: string
           updated_at: string
         }
@@ -210,7 +209,7 @@ export interface Database {
           user_id: string
           service_type: string
           priority?: string | null
-          description?: string | null
+          description: string
           airport?: string | null
           requested_departure?: string | null
           fuel_grade?: string | null
@@ -225,7 +224,6 @@ export interface Database {
           is_extra_charge?: boolean
           credits_used?: number
           assigned_to?: string | null
-          notes?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -235,7 +233,7 @@ export interface Database {
           user_id?: string
           service_type?: string
           priority?: string | null
-          description?: string | null
+          description?: string
           airport?: string | null
           requested_departure?: string | null
           fuel_grade?: string | null
@@ -250,7 +248,6 @@ export interface Database {
           is_extra_charge?: boolean
           credits_used?: number
           assigned_to?: string | null
-          notes?: string | null
           created_at?: string
           updated_at?: string
         }

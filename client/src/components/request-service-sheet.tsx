@@ -69,7 +69,6 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
       
       // Build requested_departure in ISO format if date is provided
       const requestedDeparture = date ? date.toISOString() : null;
-      const requestedDate = date ? format(date, "yyyy-MM-dd") : null;
       
       const { error } = await supabase.from("service_requests").insert({
         aircraft_id: aircraft.id,
@@ -78,10 +77,7 @@ export function RequestServiceSheet({ open, onOpenChange, aircraft }: RequestSer
         description: notes || `Service request: ${selectedService?.label}`,
         status: "pending",
         priority: "medium",
-        requested_for: date ? format(date, "PPP") : null,
-        requested_date: requestedDate,
         requested_departure: requestedDeparture,
-        notes: notes || null,
       });
 
       if (error) throw error;

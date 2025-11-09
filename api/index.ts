@@ -14,6 +14,11 @@ app.enable("trust proxy");
 if (process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production") {
   const CANONICAL = "www.freedomaviationco.com";
   app.use((req, res, next) => {
+    // Never redirect API requests — keep them accessible from both apex and www
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
+
     const host = (req.headers.host || "").toLowerCase();
     const proto =
       (req.headers["x-forwarded-proto"] as string) ||

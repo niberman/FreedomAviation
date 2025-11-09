@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { isStaffRole } from "@/lib/roles";
 
 export function NavBar() {
   const { user, signOut, loading } = useAuth();
@@ -32,7 +33,7 @@ export function NavBar() {
     retry: false,
   });
 
-  const isStaff = userProfile?.role === 'admin' || userProfile?.role === 'cfi';
+  const isStaff = isStaffRole(userProfile?.role ?? null);
   const isDev = !import.meta.env.PROD;
   const showStaffLink = isDev || isStaff;
 
