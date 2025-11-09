@@ -15,13 +15,19 @@ Premium aircraft management platform for owners, CFIs, and admins.
    npm install
    ```
 
-2. **Configure Supabase**
+2. **Configure environment variables**
+   - Review `env.local` (auto-generated from `env.local.example`)
+   - Rename to `.env.local` if your tooling expects the dot-prefixed name
+   - Fill in `SUPABASE_SERVICE_ROLE_KEY` (from Supabase → Project Settings → API)
+   - Optionally set `STRIPE_SECRET_KEY` if testing billing flows
+
+3. **Configure Supabase**
    - Go to [Supabase Dashboard](https://supabase.com/dashboard)
    - Open your project: `wsepwuxkwjnsgmkddkjw`
    - Run `supabase-schema.sql` in SQL Editor
    - Run `scripts/check-setup.sql` to verify setup
 
-3. **Create Admin User**
+4. **Create Admin User**
    - Create a user in Supabase Dashboard → Authentication → Users
    - Run `scripts/setup-admin.sql` replacing email with your email
    - Or run:
@@ -31,7 +37,7 @@ Premium aircraft management platform for owners, CFIs, and admins.
      WHERE email = 'your-email@example.com';
      ```
 
-4. **Run Development Server**
+5. **Run Development Server**
    ```bash
    npm run dev
    ```

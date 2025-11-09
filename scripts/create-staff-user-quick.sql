@@ -20,11 +20,11 @@ FROM public.user_profiles
 WHERE email = 'YOUR_EMAIL@example.com';
 
 -- ============================================================================
--- CREATE CFI (Certified Flight Instructor) USER
+-- CREATE STAFF (Instruction) USER
 -- ============================================================================
--- Uncomment and replace email if you need a CFI instead of admin:
+-- Uncomment and replace email if you need a staff instructor instead of admin:
 -- UPDATE public.user_profiles 
--- SET role = 'cfi'
+-- SET role = 'staff'
 -- WHERE email = 'YOUR_EMAIL@example.com';
 
 -- ============================================================================

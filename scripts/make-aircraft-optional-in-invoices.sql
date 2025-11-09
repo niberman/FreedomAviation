@@ -54,8 +54,8 @@ BEGIN
   FROM public.user_profiles
   WHERE id = auth.uid();
   
-  IF v_user_role NOT IN ('cfi', 'admin') THEN
-    RAISE EXCEPTION 'Only CFIs and admins can create instruction invoices';
+  IF v_user_role NOT IN ('staff', 'cfi', 'admin') THEN
+    RAISE EXCEPTION 'Only staff and admins can create instruction invoices';
   END IF;
   
   -- Verify aircraft exists and belongs to owner (only if aircraft_id is provided)
@@ -148,5 +148,6 @@ WHERE table_schema = 'public'
 --   15000,  -- $150.00 in cents
 --   'YOUR_CFI_ID'::UUID
 -- );
+
 
 

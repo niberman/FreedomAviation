@@ -31,14 +31,14 @@ ORDER BY policyname;
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.user_profiles;
 
 -- Create the correct policy that checks the role column in user_profiles
-CREATE POLICY "Admins and CFIs can view all profiles" ON public.user_profiles
+CREATE POLICY "Admins and staff can view all profiles" ON public.user_profiles
   FOR SELECT USING (
-    -- Allow if user is admin or CFI (check role column in user_profiles table)
+    -- Allow if user is admin or staff (legacy CFI roles are also supported)
     EXISTS (
       SELECT 1 
       FROM public.user_profiles 
       WHERE id = auth.uid() 
-        AND role IN ('admin', 'cfi')
+        AND role::text IN ('admin', 'staff', 'cfi')
     )
   );
 
@@ -58,22 +58,22 @@ CREATE POLICY "Admins and CFIs can view all profiles" ON public.user_profiles
 -- ============================================================================
 
 -- If the above doesn't work, we can create a helper function
-CREATE OR REPLACE FUNCTION public.is_admin_or_cfi()
+CREATE OR REPLACE FUNCTION public.is_admin_or_staff()
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 
     FROM public.user_profiles 
     WHERE id = auth.uid() 
-      AND role IN ('admin', 'cfi')
+      AND role::text IN ('admin', 'staff', 'cfi')
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Then use the function in the policy (alternative approach)
--- DROP POLICY IF EXISTS "Admins and CFIs can view all profiles" ON public.user_profiles;
--- CREATE POLICY "Admins and CFIs can view all profiles" ON public.user_profiles
---   FOR SELECT USING (public.is_admin_or_cfi());
+-- DROP POLICY IF EXISTS "Admins and staff can view all profiles" ON public.user_profiles;
+-- CREATE POLICY "Admins and staff can view all profiles" ON public.user_profiles
+--   FOR SELECT USING (public.is_admin_or_staff());
 
 -- ============================================================================
 -- VERIFY: Check current user's role

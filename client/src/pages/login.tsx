@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { isStaffRole } from "@/lib/roles";
 import logoImage from "@assets/falogo.png";
 
 export default function Login() {
@@ -60,8 +61,8 @@ export default function Login() {
       
       console.log('User role detected:', data.role);
       
-      // Redirect staff (admin or cfi) to staff dashboard
-      if (data.role === 'admin' || data.role === 'cfi') {
+      // Redirect staff (admin, staff, or legacy cfi) to staff dashboard
+      if (isStaffRole(data.role)) {
         console.log('Redirecting staff user to /staff');
         return "/staff";
       }

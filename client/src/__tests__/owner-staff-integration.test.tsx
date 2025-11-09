@@ -207,8 +207,7 @@ describe('Owner-Staff Dashboard Integration Tests', () => {
         status: 'pending',
         aircraft_id: 'aircraft-123',
         user_id: 'owner-123',
-        requested_date: '2024-01-20',
-        requested_time: '14:00',
+        requested_departure: '2024-01-20T14:00:00.000Z',
         description: 'IPC training needed',
       };
 

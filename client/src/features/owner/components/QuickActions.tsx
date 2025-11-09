@@ -137,6 +137,13 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         prepForm.description ? `Notes: ${prepForm.description}` : null,
       ].filter(Boolean).join(" | ");
 
+      const requestedDepartureIso = prepForm.requested_departure
+        ? (() => {
+            const parsed = new Date(prepForm.requested_departure);
+            return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+          })()
+        : null;
+
       const payload: any = {
         service_type: "Pre-Flight Concierge",
         priority: "high",
@@ -145,8 +152,19 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         aircraft_id: prepForm.aircraft_id,
         description: descriptionParts,
         airport: prepForm.airport || null,
-        requested_departure: prepForm.requested_departure || null,
+        requested_departure: requestedDepartureIso,
+        cabin_provisioning: prepForm.cabin_provisioning
+          ? { notes: prepForm.cabin_provisioning }
+          : null,
+        o2_topoff: prepForm.o2_topoff,
+        tks_topoff: prepForm.tks_topoff,
+        gpu_required: prepForm.gpu_required,
+        hangar_pullout: prepForm.hangar_pullout,
       };
+      
+      if (prepForm.fuel_target === "ADD_QUANTITY" && typeof prepForm.fuel_add_quantity === "number") {
+        payload.fuel_quantity = prepForm.fuel_add_quantity;
+      }
       
       console.log("Submitting payload:", payload);
       const { data, error } = await supabase.from("service_requests").insert(payload).select();
@@ -214,16 +232,14 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
     
     try {
       // Parse datetime-local format to separate date and time if provided
-      let requestedDate: string | null = null;
-      let requestedTime: string | null = null;
       let requestedDeparture: string | null = null;
       
       if (serviceForm.requested_for) {
         // Format: "2024-01-15T14:30"
-        requestedDeparture = serviceForm.requested_for;
-        const [datePart, timePart] = serviceForm.requested_for.split('T');
-        if (datePart) requestedDate = datePart;
-        if (timePart) requestedTime = timePart;
+        const parsed = new Date(serviceForm.requested_for);
+        requestedDeparture = Number.isNaN(parsed.getTime())
+          ? null
+          : parsed.toISOString();
       }
 
       const { error } = await supabase.from("service_requests").insert({
@@ -234,8 +250,6 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         status: "pending",
         priority: "medium",
         requested_departure: requestedDeparture,
-        requested_date: requestedDate,
-        requested_time: requestedTime,
       });
 
       if (error) throw error;
@@ -307,7 +321,10 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
 
       // Build requested_departure in ISO format for consistency
       const requestedDeparture = instructionForm.requested_date && instructionForm.requested_time
-        ? `${instructionForm.requested_date}T${instructionForm.requested_time}:00`
+        ? (() => {
+            const parsed = new Date(`${instructionForm.requested_date}T${instructionForm.requested_time}`);
+            return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+          })()
         : null;
 
       const payload: any = {
@@ -317,11 +334,7 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
         user_id: userId,
         aircraft_id: aircraftId,
         description: descriptionParts,
-        requested_date: instructionForm.requested_date,
-        requested_time: instructionForm.requested_time,
-        requested_for: `${instructionForm.requested_date} ${instructionForm.requested_time}`,
         requested_departure: requestedDeparture,
-        notes: instructionForm.notes || null,
       };
       
       const { data, error } = await supabase.from("service_requests").insert(payload).select();

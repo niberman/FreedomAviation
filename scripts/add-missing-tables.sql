@@ -100,6 +100,171 @@ BEGIN
   END IF;
 END $$;
 
+-- Add requested_date column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='requested_date'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN requested_date DATE;
+  END IF;
+END $$;
+
+-- Add requested_time column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='requested_time'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN requested_time TIME;
+  END IF;
+END $$;
+
+-- Add airport column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='airport'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN airport TEXT;
+  END IF;
+END $$;
+
+-- Add requested_departure column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='requested_departure'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN requested_departure TIMESTAMPTZ;
+  END IF;
+END $$;
+
+-- Add fuel_grade column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='fuel_grade'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN fuel_grade TEXT;
+  END IF;
+END $$;
+
+-- Add fuel_quantity column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='fuel_quantity'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN fuel_quantity NUMERIC(10, 2);
+  END IF;
+END $$;
+
+-- Add cabin_provisioning column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='cabin_provisioning'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN cabin_provisioning JSONB;
+  END IF;
+END $$;
+
+-- Add o2_topoff column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='o2_topoff'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN o2_topoff BOOLEAN;
+  END IF;
+END $$;
+
+-- Add tks_topoff column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='tks_topoff'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN tks_topoff BOOLEAN;
+  END IF;
+END $$;
+
+-- Add gpu_required column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='gpu_required'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN gpu_required BOOLEAN;
+  END IF;
+END $$;
+
+-- Add hangar_pullout column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='hangar_pullout'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN hangar_pullout BOOLEAN;
+  END IF;
+END $$;
+
+-- Add notes column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='notes'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN notes TEXT;
+  END IF;
+END $$;
+
+-- Add service_id column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='service_id'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN service_id UUID;
+  END IF;
+END $$;
+
+-- Add is_extra_charge column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='is_extra_charge'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN is_extra_charge BOOLEAN DEFAULT FALSE;
+  END IF;
+END $$;
+
+-- Add credits_used column to service_requests if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='service_requests' AND column_name='credits_used'
+  ) THEN
+    ALTER TABLE public.service_requests ADD COLUMN credits_used NUMERIC(10, 2) DEFAULT 0;
+  END IF;
+END $$;
+
 -- Create service_tasks table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.service_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -135,22 +300,42 @@ DROP POLICY IF EXISTS "Aircraft owners can view service tasks" ON public.service
 CREATE POLICY "Aircraft owners can view service tasks" ON public.service_tasks
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.aircraft WHERE id = aircraft_id AND owner_id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+    EXISTS (
+      SELECT 1
+      FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role::text IN ('admin', 'staff', 'cfi')
+    )
   );
 
 DROP POLICY IF EXISTS "Admins can insert service tasks" ON public.service_tasks;
 CREATE POLICY "Admins can insert service tasks" ON public.service_tasks
   FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+    EXISTS (
+      SELECT 1
+      FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role::text IN ('admin', 'staff', 'cfi')
+    )
   );
 
 DROP POLICY IF EXISTS "Admins can update service tasks" ON public.service_tasks;
 CREATE POLICY "Admins can update service tasks" ON public.service_tasks
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+    EXISTS (
+      SELECT 1
+      FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role::text IN ('admin', 'staff', 'cfi')
+    )
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+    EXISTS (
+      SELECT 1
+      FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role::text IN ('admin', 'staff', 'cfi')
+    )
   );
 
 DROP POLICY IF EXISTS "Admins can delete service tasks" ON public.service_tasks;
@@ -164,22 +349,42 @@ DROP POLICY IF EXISTS "Aircraft owners can view consumable events" ON public.con
 CREATE POLICY "Aircraft owners can view consumable events" ON public.consumable_events
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.aircraft WHERE id = aircraft_id AND owner_id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+    EXISTS (
+      SELECT 1
+      FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role::text IN ('admin', 'staff', 'cfi')
+    )
   );
 
 DROP POLICY IF EXISTS "Admins can insert consumable events" ON public.consumable_events;
 CREATE POLICY "Admins can insert consumable events" ON public.consumable_events
   FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+    EXISTS (
+      SELECT 1
+      FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role::text IN ('admin', 'staff', 'cfi')
+    )
   );
 
 DROP POLICY IF EXISTS "Admins can update consumable events" ON public.consumable_events;
 CREATE POLICY "Admins can update consumable events" ON public.consumable_events
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+    EXISTS (
+      SELECT 1
+      FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role::text IN ('admin', 'staff', 'cfi')
+    )
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'cfi'))
+    EXISTS (
+      SELECT 1
+      FROM public.user_profiles
+      WHERE id = auth.uid()
+        AND role::text IN ('admin', 'staff', 'cfi')
+    )
   );
 
 DROP POLICY IF EXISTS "Admins can delete consumable events" ON public.consumable_events;

@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/lib/auth-context';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { isStaffRole } from '@/lib/roles';
 
 export function StaffProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -79,7 +80,7 @@ export function StaffProtectedRoute({ children }: { children: React.ReactNode })
         }, 2000);
       } else if (userProfile) {
         // Check role
-        if (userProfile.role !== 'admin' && userProfile.role !== 'cfi') {
+        if (!isStaffRole(userProfile.role)) {
           console.log('StaffProtectedRoute: User is not staff (role:', userProfile.role, '), redirecting to home');
           setLocation('/');
         } else {
@@ -151,7 +152,7 @@ export function StaffProtectedRoute({ children }: { children: React.ReactNode })
 
   // Check if user has staff role
   if (userProfile) {
-    if (userProfile.role !== 'admin' && userProfile.role !== 'cfi') {
+    if (!isStaffRole(userProfile.role)) {
       return (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">

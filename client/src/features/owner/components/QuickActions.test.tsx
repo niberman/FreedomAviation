@@ -281,8 +281,8 @@ describe('QuickActions - Owner to Staff Interactions', () => {
         user_id: 'owner-123',
         aircraft_id: 'aircraft-123',
       });
-      expect(insertCall[0].requested_date).toBeTruthy();
-      expect(insertCall[0].requested_time).toBeTruthy();
+      expect(insertCall[0].requested_departure).toBeTruthy();
+      expect(insertCall[0].requested_departure).toMatch(/T/);
     });
 
     it('should require date and time for instruction request', async () => {

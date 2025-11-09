@@ -71,8 +71,6 @@ export function PrepareAircraftSheet({
         .join(" • ");
 
       // Format date and time for database fields
-      const requestedDate = format(date, "yyyy-MM-dd");
-      const requestedTime = format(date, "HH:mm:ss");
       const requestedDeparture = date.toISOString();
 
       const { error: insErr } = await supabase.from("service_requests").insert([
@@ -85,17 +83,13 @@ export function PrepareAircraftSheet({
           status: "pending",
           airport: "KAPA",
           requested_departure: requestedDeparture,
-          requested_date: requestedDate,
-          requested_time: requestedTime,
-          requested_for: format(date, "PPP"),
-          // map toggles to schema:
-          hangar_pullout: tasks.staging || null, // "Stage on Ramp"
-          o2_topoff: tasks.fluids || null,
-          tks_topoff: tasks.fluids || null,
-          gpu_required: null,
+          hangar_pullout: tasks.staging,
+          o2_topoff: tasks.fluids,
+          tks_topoff: tasks.fluids,
+          gpu_required: false,
           fuel_grade: null, // set later if you collect real fuel info
           fuel_quantity: null,
-          notes: notes?.trim() || null,
+          cabin_provisioning: notes?.trim() ? { notes: notes.trim() } : null,
         },
       ]);
 

@@ -15,6 +15,7 @@ import { EditableField } from "@/components/owner/EditableField";
 import { useAircraft } from "@/lib/hooks/useAircraft";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { isStaffRole } from "@/lib/roles";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ export default function OwnerDashboard() {
     retry: false,
   });
 
-  const isStaff = userProfile?.role === 'admin' || userProfile?.role === 'cfi';
+  const isStaff = isStaffRole(userProfile?.role ?? null);
 
   // Redirect staff users to staff dashboard
   useEffect(() => {
@@ -178,7 +179,7 @@ export default function OwnerDashboard() {
 
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="mx-auto max-w-screen-xl px-4 py-6 space-y-6 sm:px-6 lg:px-8">
       {isDemo && <DemoBanner />}
       
       <div className="space-y-1">
@@ -188,7 +189,7 @@ export default function OwnerDashboard() {
 
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+        <CardHeader className="flex flex-col items-start gap-2 pb-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-medium">My Aircraft</CardTitle>
           <img src={logoImage} alt="Freedom Aviation" className="h-6 w-auto opacity-50" />
         </CardHeader>

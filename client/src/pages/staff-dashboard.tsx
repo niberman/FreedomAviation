@@ -13,11 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import { Calendar, FileText, DollarSign, Wrench, Plane } from "lucide-react";
 import logoImage from "@assets/falogo.png";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -27,11 +28,13 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { KanbanBoard } from "@/components/kanban-board";
 import { AircraftTable } from "@/components/aircraft-table";
 import { MaintenanceList } from "@/components/maintenance-list";
 import { ClientsTable } from "@/components/clients-table";
+import type { ServiceRequest, ServiceRequestUpdate, ServiceStatus } from "@/lib/types/database";
 
 interface InstructionInvoice {
   id: string;
@@ -54,10 +57,198 @@ interface InstructionInvoice {
   }>;
 }
 
+type StaffServiceRequest = ServiceRequest & {
+  aircraft?: { tail_number?: string | null } | null;
+  owner?: { full_name?: string | null; email?: string | null } | null;
+  assigned_to?: string | null;
+};
+
+type ServicePriorityOption = "low" | "medium" | "high" | "__none__";
+
+type SortDirection = "asc" | "desc";
+
+type ServiceRequestSortField =
+  | "created_at"
+  | "requested_departure"
+  | "tail_number"
+  | "owner"
+  | "service_type"
+  | "priority";
+
+const SERVICE_REQUEST_SORT_FIELDS: Array<{ value: ServiceRequestSortField; label: string }> = [
+  { value: "created_at", label: "Created Date" },
+  { value: "requested_departure", label: "Requested Departure" },
+  { value: "tail_number", label: "Aircraft" },
+  { value: "owner", label: "Client" },
+  { value: "service_type", label: "Service Type" },
+  { value: "priority", label: "Priority" },
+];
+
+const SERVICE_REQUEST_SORT_DIRECTIONS: Array<{ value: SortDirection; label: string }> = [
+  { value: "asc", label: "Ascending" },
+  { value: "desc", label: "Descending" },
+];
+
+const SERVICE_REQUEST_PRIORITY_ORDER: Record<string, number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  urgent: 4,
+};
+
+type SortValue = string | number | null;
+
+const getServiceRequestSortValue = (
+  request: StaffServiceRequest | null | undefined,
+  field: ServiceRequestSortField
+): SortValue => {
+  if (!request) return null;
+
+  switch (field) {
+    case "created_at": {
+      if (!request.created_at) return null;
+      const timestamp = Date.parse(request.created_at);
+      return Number.isNaN(timestamp) ? null : timestamp;
+    }
+    case "requested_departure": {
+      if (!request.requested_departure) return null;
+      const timestamp = Date.parse(request.requested_departure);
+      return Number.isNaN(timestamp) ? null : timestamp;
+    }
+    case "tail_number":
+      return request.aircraft?.tail_number ? request.aircraft.tail_number.toLowerCase() : null;
+    case "owner": {
+      const ownerValue = request.owner?.full_name || request.owner?.email;
+      return ownerValue ? ownerValue.toLowerCase() : null;
+    }
+    case "service_type":
+      return request.service_type ? request.service_type.toLowerCase() : null;
+    case "priority": {
+      const priority = request.priority ? SERVICE_REQUEST_PRIORITY_ORDER[request.priority] : undefined;
+      return typeof priority === "number" ? priority : null;
+    }
+    default:
+      return null;
+  }
+};
+
+const compareSortValues = (a: SortValue, b: SortValue, direction: SortDirection): number => {
+  const normalizeNumber = (value: number | null): number | null => {
+    if (value === null) return null;
+    return Number.isNaN(value) ? null : value;
+  };
+
+  const valueA = typeof a === "number" ? normalizeNumber(a) : a;
+  const valueB = typeof b === "number" ? normalizeNumber(b) : b;
+
+  if (valueA === null && valueB === null) return 0;
+  if (valueA === null) return 1;
+  if (valueB === null) return -1;
+
+  let comparison: number;
+
+  if (typeof valueA === "number" && typeof valueB === "number") {
+    comparison = valueA - valueB;
+  } else {
+    comparison = String(valueA).localeCompare(String(valueB), undefined, { sensitivity: "base" });
+  }
+
+  if (comparison === 0) return 0;
+  return direction === "asc" ? comparison : -comparison;
+};
+
+interface EditServiceRequestFormState {
+  status: ServiceStatus;
+  priority: ServicePriorityOption;
+  requestedDeparture: string;
+  description: string;
+}
+
+const EDIT_SERVICE_REQUEST_FORM_INITIAL_STATE: EditServiceRequestFormState = {
+  status: "pending",
+  priority: "__none__",
+  requestedDeparture: "",
+  description: "",
+};
+
+const toDateTimeLocal = (value?: string | null) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return format(date, "yyyy-MM-dd'T'HH:mm");
+};
+
+const resolvePriorityValue = (value?: string | null): ServicePriorityOption => {
+  return value === "low" || value === "medium" || value === "high" ? value : "__none__";
+};
+
+const INSTALL_DISMISSED_KEY = "faStaffInstallDismissed";
+
+const isIos = () => {
+  if (typeof window === "undefined") return false;
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+};
+
+const isInStandaloneMode = () => {
+  if (typeof window === "undefined") return false;
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  const matchMediaAvailable = typeof window.matchMedia === "function";
+  const displayModeStandalone = matchMediaAvailable ? window.matchMedia("(display-mode: standalone)").matches : false;
+  return (typeof nav.standalone === "boolean" && nav.standalone) || displayModeStandalone;
+};
+
+const isSafari = () => {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent;
+  const isIOS = /iP(ad|hone|od)/.test(ua);
+  const isWebkit = /WebKit/.test(ua);
+  const isChrome = /CriOS/.test(ua);
+  const isFirefox = /FxiOS/.test(ua);
+  return isIOS && isWebkit && !isChrome && !isFirefox;
+};
+
+const isStaffInstallRoute = () => {
+  if (typeof window === "undefined") return false;
+  return window.location.pathname === "/staff";
+};
+
+const getInstallDismissed = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(INSTALL_DISMISSED_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+const persistInstallDismissed = (value: boolean) => {
+  if (typeof window === "undefined") return;
+  try {
+    if (value) {
+      window.localStorage.setItem(INSTALL_DISMISSED_KEY, "true");
+    } else {
+      window.localStorage.removeItem(INSTALL_DISMISSED_KEY);
+    }
+  } catch {
+    // Ignore storage write errors (e.g., private browsing)
+  }
+};
+
+type UpdateServiceRequestVariables = {
+  id: string;
+  updates: Partial<ServiceRequestUpdate>;
+  metadata?: {
+    showSuccessToast?: boolean;
+    successMessage?: string;
+  };
+};
+
 export default function StaffDashboard() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const isDev = !import.meta.env.PROD;
+  const isAuthenticated = Boolean(user?.id);
   const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>("");
   const [description, setDescription] = useState("");
@@ -65,12 +256,86 @@ export default function StaffDashboard() {
   const [hours, setHours] = useState("");
   const [ratePerHour, setRatePerHour] = useState("150");
   const [showPreview, setShowPreview] = useState(false);
+  const [isServiceRequestDialogOpen, setIsServiceRequestDialogOpen] = useState(false);
+  const [selectedServiceRequest, setSelectedServiceRequest] = useState<StaffServiceRequest | null>(null);
+  const [editServiceRequestForm, setEditServiceRequestForm] = useState<EditServiceRequestFormState>(EDIT_SERVICE_REQUEST_FORM_INITIAL_STATE);
+  const [isInstallEligible, setIsInstallEligible] = useState(false);
+  const [installBannerVisible, setInstallBannerVisible] = useState(false);
+  const [serviceRequestSortField, setServiceRequestSortField] = useState<ServiceRequestSortField>("created_at");
+  const [serviceRequestSortDirection, setServiceRequestSortDirection] = useState<SortDirection>("desc");
+
+  const refreshInstallState = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const eligible = isStaffInstallRoute() && isIos() && isSafari() && !isInStandaloneMode();
+    setIsInstallEligible(eligible);
+    if (!eligible) {
+      setInstallBannerVisible(false);
+      return;
+    }
+    setInstallBannerVisible(!getInstallDismissed());
+  }, []);
+
+  const handleCloseInstallBanner = useCallback(() => {
+    persistInstallDismissed(true);
+    setInstallBannerVisible(false);
+    refreshInstallState();
+  }, [refreshInstallState]);
+
+  const handleOpenInstallHelp = useCallback(() => {
+    if (!isInstallEligible) return;
+    persistInstallDismissed(false);
+    setInstallBannerVisible(true);
+    refreshInstallState();
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        const banner = document.getElementById("ios-install-banner");
+        banner?.scrollIntoView({ behavior: "smooth", block: "end" });
+      });
+    }
+  }, [isInstallEligible, refreshInstallState]);
+
+  useEffect(() => {
+    refreshInstallState();
+    if (typeof window === "undefined") return;
+
+    const handleFocus = () => refreshInstallState();
+    const handleOrientationChange = () => refreshInstallState();
+    const handlePageShow = () => refreshInstallState();
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("orientationchange", handleOrientationChange);
+    window.addEventListener("pageshow", handlePageShow);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("orientationchange", handleOrientationChange);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, [refreshInstallState]);
+
+  useEffect(() => {
+    if (!selectedServiceRequest) {
+      setEditServiceRequestForm(EDIT_SERVICE_REQUEST_FORM_INITIAL_STATE);
+      return;
+    }
+
+    setEditServiceRequestForm({
+      status: selectedServiceRequest.status,
+      priority: resolvePriorityValue(selectedServiceRequest.priority),
+      requestedDeparture: toDateTimeLocal(selectedServiceRequest.requested_departure),
+      description: selectedServiceRequest.description ?? "",
+    });
+  }, [selectedServiceRequest]);
 
 
   // Fetch owners
   const { data: owners = [] } = useQuery({
     queryKey: ['/api/owners'],
     queryFn: async () => {
+      if (!user) {
+        if (!isDev) throw new Error('Not authenticated. Please log in to view owners.');
+        return [];
+      }
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, full_name, email')
@@ -79,12 +344,18 @@ export default function StaffDashboard() {
       if (error) throw error;
       return data;
     },
+    enabled: isAuthenticated,
+    retry: false,
   });
 
   // Fetch aircraft for invoice dropdown
   const { data: aircraft = [] } = useQuery({
     queryKey: ['/api/aircraft'],
     queryFn: async () => {
+      if (!user) {
+        if (!isDev) throw new Error('Not authenticated. Please log in to view aircraft.');
+        return [];
+      }
       const { data, error } = await supabase
         .from('aircraft')
         .select('id, tail_number, owner_id')
@@ -92,12 +363,18 @@ export default function StaffDashboard() {
       if (error) throw error;
       return data;
     },
+    enabled: isAuthenticated,
+    retry: false,
   });
 
   // Fetch aircraft with full details for the AircraftTable
   const { data: aircraftFull = [], isLoading: isLoadingAircraft, error: aircraftError } = useQuery({
     queryKey: ['/api/aircraft/full'],
     queryFn: async () => {
+      if (!user) {
+        if (!isDev) throw new Error('Not authenticated. Please log in to view aircraft.');
+        return [];
+      }
       try {
         // First, try to fetch aircraft with nested owner relation
         let query = supabase
@@ -237,6 +514,8 @@ export default function StaffDashboard() {
         }
       }
     },
+    enabled: isAuthenticated,
+    retry: false,
   });
 
   // Handle aircraft loading errors
@@ -252,32 +531,37 @@ export default function StaffDashboard() {
   }, [aircraftError, toast]);
 
   // Fetch service requests for kanban board
-  const { data: serviceRequests = [], refetch: refetchServiceRequests, error: serviceRequestsError, isLoading: isLoadingServiceRequests } = useQuery({
+  const {
+    data: serviceRequests = [],
+    refetch: refetchServiceRequests,
+    error: serviceRequestsError,
+    isLoading: isLoadingServiceRequests,
+  } = useQuery<StaffServiceRequest[]>({
     queryKey: ['/api/service-requests'],
-    queryFn: async () => {
+    queryFn: async (): Promise<StaffServiceRequest[]> => {
+      if (!user) {
+        if (!isDev) throw new Error('Not authenticated. Please log in to view service requests.');
+        return [];
+      }
       try {
         // First, try to fetch service requests with nested relations
+        const normalizeRequestedDeparture = (records: any[] | null | undefined): StaffServiceRequest[] => {
+          if (!records || records.length === 0) return [];
+
+          return records.map((sr) => {
+            if (!sr || !sr.requested_departure) return sr;
+
+            const parsed = new Date(sr.requested_departure);
+            if (Number.isNaN(parsed.getTime())) {
+              return { ...sr, requested_departure: null } as StaffServiceRequest;
+            }
+            return { ...sr, requested_departure: parsed.toISOString() } as StaffServiceRequest;
+          }) as StaffServiceRequest[];
+        };
+
         let query = supabase
           .from('service_requests')
-          .select(`
-            id,
-            service_type,
-            requested_departure,
-            requested_date,
-            requested_time,
-            requested_for,
-            description,
-            status,
-            priority,
-            airport,
-            assigned_to,
-            notes,
-            created_at,
-            aircraft_id,
-            user_id,
-            aircraft:aircraft_id(tail_number),
-            owner:user_id(full_name, email)
-          `)
+          .select('*, aircraft:aircraft_id(tail_number), owner:user_id(full_name, email)')
           .order('created_at', { ascending: false });
 
         let { data, error } = await query;
@@ -289,7 +573,7 @@ export default function StaffDashboard() {
           // Fetch service requests without nested relations
           const srResult = await supabase
             .from('service_requests')
-            .select('id, service_type, requested_departure, requested_date, requested_time, requested_for, description, status, priority, airport, assigned_to, notes, created_at, aircraft_id, user_id')
+            .select('*')
             .order('created_at', { ascending: false });
           
           if (srResult.error) {
@@ -344,8 +628,8 @@ export default function StaffDashboard() {
           console.error('❌ Error fetching service requests:', error);
           throw error;
         }
-        
-        return data || [];
+
+        return normalizeRequestedDeparture(data);
       } catch (err: any) {
         console.error('❌ Error in service requests query:', err);
         // Provide more helpful error message
@@ -360,6 +644,74 @@ export default function StaffDashboard() {
     },
     // Refetch every 30 seconds to catch new requests
     refetchInterval: 30000,
+    enabled: isAuthenticated,
+    retry: false,
+  });
+
+  const sortedServiceRequests = useMemo(() => {
+    const availableRequests = serviceRequests.filter(
+      (sr): sr is StaffServiceRequest => Boolean(sr && sr.id)
+    );
+    const requestsCopy = [...availableRequests];
+
+    requestsCopy.sort((a, b) => {
+      const primaryComparison = compareSortValues(
+        getServiceRequestSortValue(a, serviceRequestSortField),
+        getServiceRequestSortValue(b, serviceRequestSortField),
+        serviceRequestSortDirection
+      );
+
+      if (primaryComparison !== 0) {
+        return primaryComparison;
+      }
+
+      const createdAtComparison = compareSortValues(
+        getServiceRequestSortValue(a, "created_at"),
+        getServiceRequestSortValue(b, "created_at"),
+        "desc"
+      );
+
+      if (createdAtComparison !== 0) {
+        return createdAtComparison;
+      }
+
+      return (a.id || "").localeCompare(b.id || "");
+    });
+
+    return requestsCopy;
+  }, [serviceRequests, serviceRequestSortField, serviceRequestSortDirection]);
+
+  const updateServiceRequestMutation = useMutation<
+    ServiceRequest,
+    Error,
+    UpdateServiceRequestVariables
+  >({
+    mutationFn: async ({ id, updates }) => {
+      const { data, error } = await supabase
+        .from('service_requests')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as ServiceRequest;
+    },
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['/api/service-requests'] });
+      await queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === 'service-requests' || query.queryKey[0] === '/api/service-requests',
+      });
+      await refetchServiceRequests();
+
+      if (variables.metadata?.showSuccessToast) {
+        toast({
+          title: 'Service request updated',
+          description: variables.metadata.successMessage ?? 'Changes saved successfully.',
+        });
+      }
+    },
   });
 
   // Handle service requests loading errors
@@ -374,10 +726,81 @@ export default function StaffDashboard() {
     }
   }, [serviceRequestsError, toast]);
 
+  const handleServiceRequestDialogChange = (open: boolean) => {
+    setIsServiceRequestDialogOpen(open);
+    if (!open) {
+      setSelectedServiceRequest(null);
+    }
+  };
+
+  const handleSelectServiceRequest = (requestId: string) => {
+    const request = serviceRequests.find((sr) => sr.id === requestId);
+    if (!request) return;
+
+    setSelectedServiceRequest(request);
+    setIsServiceRequestDialogOpen(true);
+  };
+
+  const handleStatusChange = async (requestId: string, status: "pending" | "in_progress" | "completed") => {
+    await updateServiceRequestMutation.mutateAsync({
+      id: requestId,
+      updates: { status },
+      metadata: { showSuccessToast: false },
+    });
+
+    setSelectedServiceRequest((prev) =>
+      prev && prev.id === requestId ? { ...prev, status } : prev
+    );
+  };
+
+  const handleServiceRequestUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedServiceRequest) return;
+
+    const updates: Partial<ServiceRequestUpdate> = {
+      status: editServiceRequestForm.status,
+      description: editServiceRequestForm.description,
+      requested_departure: editServiceRequestForm.requestedDeparture
+        ? new Date(editServiceRequestForm.requestedDeparture).toISOString()
+        : null,
+    };
+
+    updates.priority = editServiceRequestForm.priority === "__none__"
+      ? null
+      : editServiceRequestForm.priority;
+
+    try {
+      const updated = await updateServiceRequestMutation.mutateAsync({
+        id: selectedServiceRequest.id,
+        updates,
+        metadata: {
+          showSuccessToast: true,
+          successMessage: "Service request updated successfully.",
+        },
+      });
+
+      setSelectedServiceRequest((prev) =>
+        prev ? { ...prev, ...updated } : prev
+      );
+      handleServiceRequestDialogChange(false);
+    } catch (error: any) {
+      console.error("Error updating service request:", error);
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to update service request.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Fetch maintenance items
   const { data: maintenanceItems = [] } = useQuery({
     queryKey: ['/api/maintenance'],
     queryFn: async () => {
+      if (!user) {
+        if (!isDev) throw new Error('Not authenticated. Please log in to view maintenance items.');
+        return [];
+      }
       const { data, error } = await supabase
         .from('maintenance_due')
         .select(`
@@ -419,9 +842,9 @@ export default function StaffDashboard() {
       
       return data || [];
     },
+    enabled: isAuthenticated,
+    retry: false,
   });
-
-  const isDev = !import.meta.env.PROD;
 
   // Check if user is admin
   const { data: userProfile } = useQuery({
@@ -761,7 +1184,7 @@ export default function StaffDashboard() {
     <div className="min-h-screen bg-background">
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
+          <div className="flex flex-col gap-3 py-3 sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:py-0">
             <div className="flex items-center gap-3">
               <img src={logoImage} alt="Freedom Aviation" className="h-8 w-auto" />
               <div className="flex items-center gap-2">
@@ -776,25 +1199,189 @@ export default function StaffDashboard() {
 
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
-          <div className="space-y-1">
-            <h2 className="text-3xl font-bold tracking-tight">Staff Dashboard</h2>
-            <p className="text-muted-foreground">Manage service requests, aircraft, maintenance, and invoices</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-3xl font-bold tracking-tight">Staff Dashboard</h2>
+              <p className="text-muted-foreground">Manage service requests, aircraft, maintenance, and invoices</p>
+            </div>
+            {isInstallEligible && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleOpenInstallHelp}
+                className="w-full sm:w-auto"
+                data-testid="button-install-on-iphone"
+              >
+                Install on iPhone
+              </Button>
+            )}
           </div>
 
           <Tabs defaultValue="invoices" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 h-auto">
-              <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
-              <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>
-              <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
-              <TabsTrigger value="clients" data-testid="tab-clients" className="text-xs sm:text-sm">Clients</TabsTrigger>
-              <TabsTrigger value="schedule" data-testid="tab-schedule" className="text-xs sm:text-sm">Schedule</TabsTrigger>
-              <TabsTrigger value="logs" data-testid="tab-logs" className="text-xs sm:text-sm">Flight Logs</TabsTrigger>
-              <TabsTrigger value="invoices" data-testid="tab-invoices" className="text-xs sm:text-sm">Invoices</TabsTrigger>
+            <TabsList className="flex w-full flex-wrap gap-2 overflow-x-auto sm:grid sm:grid-cols-4 sm:gap-2 lg:grid-cols-7">
+              <TabsTrigger value="requests" data-testid="tab-requests" className="flex-1 min-w-[140px] text-xs sm:text-sm">
+                Service Requests
+              </TabsTrigger>
+              <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="flex-1 min-w-[140px] text-xs sm:text-sm">
+                Aircraft
+              </TabsTrigger>
+              <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="flex-1 min-w-[140px] text-xs sm:text-sm">
+                Maintenance
+              </TabsTrigger>
+              <TabsTrigger value="clients" data-testid="tab-clients" className="flex-1 min-w-[140px] text-xs sm:text-sm">
+                Clients
+              </TabsTrigger>
+              <TabsTrigger value="schedule" data-testid="tab-schedule" className="flex-1 min-w-[140px] text-xs sm:text-sm">
+                Schedule
+              </TabsTrigger>
+              <TabsTrigger value="logs" data-testid="tab-logs" className="flex-1 min-w-[140px] text-xs sm:text-sm">
+                Flight Logs
+              </TabsTrigger>
+              <TabsTrigger value="invoices" data-testid="tab-invoices" className="flex-1 min-w-[140px] text-xs sm:text-sm">
+                Invoices
+              </TabsTrigger>
             </TabsList>
 
           {/* Service Requests */}
           <TabsContent value="requests" className="space-y-6">
-            <div className="flex items-center justify-between">
+            <Dialog open={isServiceRequestDialogOpen} onOpenChange={handleServiceRequestDialogChange}>
+              <DialogContent className="max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Service Request</DialogTitle>
+                  <DialogDescription>
+                    Update status, priority, scheduling details, and notes for this service request.
+                  </DialogDescription>
+                </DialogHeader>
+                {selectedServiceRequest ? (
+                  <form onSubmit={handleServiceRequestUpdate} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Owner</p>
+                        <p className="text-sm font-semibold">
+                          {selectedServiceRequest.owner?.full_name || selectedServiceRequest.owner?.email || 'Unknown owner'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Aircraft</p>
+                        <p className="text-sm font-mono font-semibold">
+                          {selectedServiceRequest.aircraft?.tail_number || 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Service Type</p>
+                        <p className="text-sm font-semibold">{selectedServiceRequest.service_type}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Created</p>
+                        <p className="text-sm">
+                          {selectedServiceRequest.created_at
+                            ? format(new Date(selectedServiceRequest.created_at), 'MMM d, yyyy HH:mm')
+                            : 'Unknown'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="service-request-status">Status</Label>
+                        <Select
+                          value={editServiceRequestForm.status}
+                          onValueChange={(value) =>
+                            setEditServiceRequestForm((prev) => ({
+                              ...prev,
+                              status: value as ServiceStatus,
+                            }))
+                          }
+                        >
+                          <SelectTrigger id="service-request-status" data-testid="select-service-request-status">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="service-request-priority">Priority</Label>
+                        <Select
+                          value={editServiceRequestForm.priority}
+                          onValueChange={(value) =>
+                            setEditServiceRequestForm((prev) => ({
+                              ...prev,
+                              priority: value as ServicePriorityOption,
+                            }))
+                          }
+                        >
+                          <SelectTrigger id="service-request-priority" data-testid="select-service-request-priority">
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Not set</SelectItem>
+                            <SelectItem value="low">Low</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="service-request-requested-departure">Requested Departure</Label>
+                      <Input
+                        id="service-request-requested-departure"
+                        type="datetime-local"
+                        value={editServiceRequestForm.requestedDeparture}
+                        onChange={(event) =>
+                          setEditServiceRequestForm((prev) => ({
+                            ...prev,
+                            requestedDeparture: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="service-request-description">Notes</Label>
+                      <Textarea
+                        id="service-request-description"
+                        rows={4}
+                        value={editServiceRequestForm.description}
+                        onChange={(event) =>
+                          setEditServiceRequestForm((prev) => ({
+                            ...prev,
+                            description: event.target.value,
+                          }))
+                        }
+                        placeholder="Add internal notes or update the request description"
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleServiceRequestDialogChange(false)}
+                        disabled={updateServiceRequestMutation.isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={updateServiceRequestMutation.isPending}
+                        data-testid="button-save-service-request"
+                      >
+                        {updateServiceRequestMutation.isPending ? 'Saving...' : 'Save changes'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                ) : (
+                  <div className="py-6">
+                    <p className="text-sm text-muted-foreground">No service request selected.</p>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Wrench className="h-5 w-5 text-muted-foreground" />
@@ -805,9 +1392,59 @@ export default function StaffDashboard() {
                 </p>
               </div>
               {serviceRequests.length > 0 && (
-                <Badge variant="secondary" className="text-sm">
-                  {serviceRequests.length} total
-                </Badge>
+                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                  <Badge variant="secondary" className="text-sm">
+                    {serviceRequests.length} total
+                  </Badge>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor="service-request-sort-field"
+                        className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                      >
+                        Sort by
+                      </Label>
+                      <Select
+                        value={serviceRequestSortField}
+                        onValueChange={(value) => setServiceRequestSortField(value as ServiceRequestSortField)}
+                      >
+                        <SelectTrigger id="service-request-sort-field" className="w-[190px]">
+                          <SelectValue placeholder="Select field" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SERVICE_REQUEST_SORT_FIELDS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label
+                        htmlFor="service-request-sort-direction"
+                        className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                      >
+                        Order
+                      </Label>
+                      <Select
+                        value={serviceRequestSortDirection}
+                        onValueChange={(value) => setServiceRequestSortDirection(value as SortDirection)}
+                      >
+                        <SelectTrigger id="service-request-sort-direction" className="w-[140px]">
+                          <SelectValue placeholder="Select order" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SERVICE_REQUEST_SORT_DIRECTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
             {isLoadingServiceRequests ? (
@@ -861,9 +1498,8 @@ export default function StaffDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <KanbanBoard items={serviceRequests
-                .filter((sr: any) => sr && sr.id) // Filter out any null/undefined items or items without id
-                .map((sr: any) => {
+              <KanbanBoard
+                items={sortedServiceRequests.map((sr) => {
                   // Map database statuses to Kanban board statuses
                   const statusMap: Record<string, 'new' | 'in_progress' | 'done'> = {
                     'pending': 'new',
@@ -893,7 +1529,10 @@ export default function StaffDashboard() {
                     status: statusMap[sr.status] || 'new',
                     ownerName: sr.owner?.full_name || sr.owner?.email || undefined,
                   };
-                })} />
+                })}
+                onCardSelect={handleSelectServiceRequest}
+                onStatusChange={handleStatusChange}
+              />
             )}
           </TabsContent>
 
@@ -950,7 +1589,7 @@ export default function StaffDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <AircraftTable items={aircraftFull} />
+              <AircraftTable items={aircraftFull} owners={owners} />
             )}
           </TabsContent>
 
@@ -1067,17 +1706,15 @@ export default function StaffDashboard() {
                   const instructionRequests = (serviceRequests || [])
                     .filter((sr: any) => sr && sr.id && sr.service_type === "Flight Instruction")
                     .sort((a: any, b: any) => {
-                      // Sort by requested_date, then requested_time
-                      // Requests without dates go to the end
-                      if (!a.requested_date && !b.requested_date) {
+                      const aTime = a.requested_departure ? new Date(a.requested_departure).getTime() : null;
+                      const bTime = b.requested_departure ? new Date(b.requested_departure).getTime() : null;
+
+                      if (aTime === null && bTime === null) {
                         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                       }
-                      if (!a.requested_date) return 1;
-                      if (!b.requested_date) return -1;
-                      
-                      const dateA = new Date(a.requested_date + (a.requested_time ? `T${a.requested_time}` : 'T00:00:00')).getTime();
-                      const dateB = new Date(b.requested_date + (b.requested_time ? `T${b.requested_time}` : 'T00:00:00')).getTime();
-                      return dateA - dateB;
+                      if (aTime === null) return 1;
+                      if (bTime === null) return -1;
+                      return aTime - bTime;
                     });
 
                   if (instructionRequests.length === 0) {
@@ -1119,17 +1756,15 @@ export default function StaffDashboard() {
                                     )}
                                   </div>
                                   
-                                  {request.requested_date && (
+                                  {request.requested_departure && (
                                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                       <span className="flex items-center gap-1">
                                         <Calendar className="h-4 w-4" />
-                                        {new Date(request.requested_date).toLocaleDateString()}
+                                        {new Date(request.requested_departure).toLocaleDateString()}
                                       </span>
-                                      {request.requested_time && (
-                                        <span className="flex items-center gap-1">
-                                          {request.requested_time}
-                                        </span>
-                                      )}
+                                      <span className="flex items-center gap-1">
+                                        {new Date(request.requested_departure).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
                                     </div>
                                   )}
                                   
@@ -1139,9 +1774,11 @@ export default function StaffDashboard() {
                                     </p>
                                   )}
                                   
-                                  {request.notes && (
+                                  {request.cabin_provisioning && (
                                     <p className="text-sm text-muted-foreground italic">
-                                      Notes: {request.notes}
+                                      Provisioning: {typeof request.cabin_provisioning === "string"
+                                        ? request.cabin_provisioning
+                                        : request.cabin_provisioning?.notes || JSON.stringify(request.cabin_provisioning)}
                                     </p>
                                   )}
                                   
@@ -1260,7 +1897,7 @@ export default function StaffDashboard() {
 
           {/* Invoices */}
           <TabsContent value="invoices" className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-muted-foreground" />
@@ -1456,7 +2093,7 @@ export default function StaffDashboard() {
 
             {/* Invoice List */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <h3 className="text-lg font-semibold">Instruction Invoices</h3>
                   <p className="text-sm text-muted-foreground">
@@ -1638,6 +2275,40 @@ export default function StaffDashboard() {
         </Tabs>
         </div>
       </main>
+
+      {isInstallEligible && (
+        <div
+          id="ios-install-banner"
+          role="dialog"
+          aria-label="Install FA Staff on iPhone"
+          aria-live="polite"
+          className={cn(
+            "pointer-events-none fixed inset-x-4 bottom-4 z-[9999] transform rounded-2xl border border-white/10 bg-slate-900 text-white shadow-2xl transition-all duration-300 sm:left-1/2 sm:bottom-6 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:inset-x-auto",
+            installBannerVisible ? "pointer-events-auto translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+          )}
+        >
+          <div className="flex items-start justify-between gap-3 p-4">
+            <div className="flex-1 space-y-2 text-sm leading-relaxed">
+              <strong className="text-base font-semibold">Install “FA Staff”</strong>
+              <p>
+                On iPhone: tap the{" "}
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-white/10 text-[0.65rem] font-semibold uppercase tracking-wide">
+                  Share
+                </span>{" "}
+                button in Safari, then choose <span className="font-semibold">Add to Home Screen</span>.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="ml-2 text-lg text-white/70 transition hover:text-white"
+              aria-label="Dismiss install tip"
+              onClick={handleCloseInstallBanner}
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

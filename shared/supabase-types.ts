@@ -1,7 +1,7 @@
 export type MembershipClass = 'I' | 'II' | 'III';
 export type ServiceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 export type MaintenanceStatus = 'current' | 'due_soon' | 'overdue';
-export type UserRole = 'owner' | 'cfi' | 'admin';
+export type UserRole = 'owner' | 'cfi' | 'staff' | 'admin';
 
 export interface UserProfile {
   id: string;
@@ -62,12 +62,20 @@ export interface ServiceRequest {
   user_id: string;
   service_type: string;
   priority?: string;
-  description?: string;
-  requested_date?: string;
-  requested_time?: string;
+  description: string;
   status: ServiceStatus;
   assigned_to?: string;
-  notes?: string;
+  airport?: string | null;
+  requested_departure?: string | null;
+  fuel_grade?: string | null;
+  fuel_quantity?: number | null;
+  cabin_provisioning?: Record<string, any> | string | null;
+  o2_topoff?: boolean | null;
+  tks_topoff?: boolean | null;
+  gpu_required?: boolean | null;
+  hangar_pullout?: boolean | null;
+  is_extra_charge?: boolean | null;
+  credits_used?: number | null;
   created_at: string;
   updated_at: string;
 }

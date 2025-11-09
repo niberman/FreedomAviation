@@ -3,7 +3,6 @@ import { FeaturesGrid } from "@/components/features-grid";
 import { MembershipTiers } from "@/components/membership-tiers";
 import OwnerPortalDemo from "@/components/OwnerPortalDemo";
 import { Testimonials } from "@/components/testimonials";
-import { Footer } from "@/components/footer";
 import { Seo, getLocalBusinessJsonLd } from "@/components/Seo";
 import { allKeywords } from "@/seo/keywords";
 import { Link } from "wouter";
@@ -40,7 +39,6 @@ export default function Home() {
       <FeaturesGrid />
       <MembershipTiers />
       <OwnerPortalDemo />
-      <Footer />
     </div>
   );
 }

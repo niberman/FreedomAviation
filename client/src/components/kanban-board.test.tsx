@@ -230,5 +230,17 @@ describe('KanbanBoard - Staff Dashboard Service Request Management', () => {
     expect(card).toHaveTextContent('John Doe');
     expect(card).toHaveTextContent('Need fuel and O2 topoff');
   });
+
+  it('should trigger onCardSelect when a card is clicked', async () => {
+    const user = userEvent.setup();
+    const onCardSelect = vi.fn();
+
+    renderWithProviders(<KanbanBoard items={mockServiceRequests} onCardSelect={onCardSelect} />);
+
+    const card = screen.getByTestId('kanban-card-request-1');
+    await user.click(card);
+
+    expect(onCardSelect).toHaveBeenCalledWith('request-1');
+  });
 });
 

@@ -16,9 +16,15 @@ const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
 
 // Initialize Supabase admin client (for server-side operations)
 // Prefer SUPABASE_URL for server-side (VITE_ prefix is for client-side)
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseUrl =
+  process.env.SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseAnonKey =
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.warn("⚠️  Supabase credentials not set. Some features may not work.");
@@ -108,6 +114,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
     }
     res.status(204).end();
+  });
+
+  app.get("/api/clients", async (req: Request, res: Response) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+
+    if (
+      origin &&
+      (allowedOrigins.includes(origin) ||
+        origin.startsWith("https://freedomaviationco.com") ||
+        origin.startsWith("http://localhost:"))
+    ) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({
+          error: "Supabase not configured",
+          message: "Server is missing Supabase credentials",
+        });
+      }
+
+      const authHeader = req.headers.authorization;
+      const token =
+        authHeader && authHeader.startsWith("Bearer ")
+          ? authHeader.substring(7)
+          : null;
+
+      if (!token) {
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Missing authorization token",
+        });
+      }
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseAnon.auth.getUser(token);
+
+      if (authError || !user) {
+        console.error("❌ Error verifying auth token for /api/clients:", authError);
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Invalid or expired token",
+        });
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("id, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("❌ Error fetching staff profile in /api/clients:", profileError);
+        return res.status(500).json({
+          error: "Failed to fetch user profile",
+          message: profileError.message,
+        });
+      }
+
+      if (!profile || !profile.role) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "User profile not found or role missing",
+        });
+      }
+
+      if (!["admin", "cfi"].includes(profile.role)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Insufficient permissions",
+        });
+      }
+
+      const { data: owners, error: ownersError } = await supabase
+        .from("user_profiles")
+        .select("id, full_name, email, phone, role, created_at")
+        .eq("role", "owner")
+        .order("created_at", { ascending: false });
+
+      if (ownersError) {
+        console.error("❌ Error fetching owners in /api/clients:", ownersError);
+        return res.status(500).json({
+          error: "Failed to load clients",
+          message: ownersError.message,
+        });
+      }
+
+      const { data: aircraftRows, error: aircraftError } = await supabase
+        .from("aircraft")
+        .select("owner_id");
+
+      if (aircraftError) {
+        console.error("⚠️ Error fetching aircraft for /api/clients:", aircraftError);
+      }
+
+      const aircraftCounts = new Map<string, number>();
+
+      (aircraftRows ?? []).forEach((row: { owner_id: string | null }) => {
+        if (row?.owner_id) {
+          aircraftCounts.set(
+            row.owner_id,
+            (aircraftCounts.get(row.owner_id) ?? 0) + 1,
+          );
+        }
+      });
+
+      const clients = (owners ?? []).map((owner) => ({
+        ...owner,
+        aircraft_count: aircraftCounts.get(owner.id) ?? 0,
+      }));
+
+      res.json({
+        clients,
+        total: clients.length,
+      });
+    } catch (error: any) {
+      console.error("❌ Unexpected error in /api/clients:", error);
+      res.status(500).json({
+        error: "Failed to load clients",
+        message: error?.message || "Unknown error occurred",
+      });
+    }
   });
 
   // Test endpoint to verify routing works
