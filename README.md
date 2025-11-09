@@ -44,6 +44,13 @@ Premium aircraft management platform for owners, CFIs, and admins.
    
    Open http://localhost:5000 in your browser
 
+## Deployment & Environments
+
+- `main` branch → Vercel Production → `freedomaviationco.com`, `www.freedomaviationco.com`
+- `dashboard` branch → Vercel Preview → `freedom-aviation.vercel.app`
+- Configure Vercel Domains so `freedom-aviation.vercel.app` is pinned to the Preview environment and restricted to the `dashboard` branch.
+- Ship risky dashboard iterations from `dashboard`; keep marketing updates on `main` to protect the public site.
+
 ## Important Notes
 
 ⚠️ **Can't access `/admin`?**
@@ -103,11 +110,18 @@ scripts/             # Setup and utility scripts
 - `/contact` - Contact form
 
 ### Authenticated
-- `/dashboard` - Owner portal
-- `/dashboard/more` - Owner settings
+- `/dashboard` - Owner overview
+- `/dashboard/more` - Owner operations & billing
+- `/dashboard/members` - Owner members workspace (preview)
+- `/dashboard/aircraft` - Owner aircraft workspace (preview)
+- `/dashboard/settings` - Owner settings workspace (preview)
 - `/admin` - Admin dashboard (requires admin/CFI role)
 - `/admin/pricing` - Pricing configurator
-- `/staff` - Alternative staff dashboard
+- `/staff` - Staff overview
+- `/staff/members` - Staff member coordination (preview)
+- `/staff/aircraft` - Staff aircraft operations (preview)
+- `/staff/operations` - Staff workflow planning (preview)
+- `/staff/settings` - Staff notification settings (preview)
 
 ## License
 
