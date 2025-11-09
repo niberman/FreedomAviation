@@ -1,30 +1,29 @@
 import { DashboardLayout } from "@/components/dashboard/layout";
 import { staffDashboardNavItems } from "@/components/dashboard/nav-items";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { ClientsTable } from "@/components/clients-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Users } from "lucide-react";
 
 export default function StaffMembers() {
   return (
     <DashboardLayout
-      title="Staff · Members"
-      description="Coordinate member outreach and concierge support."
+      title="Members"
+      description="View and manage client accounts"
       navItems={staffDashboardNavItems}
+      actions={<ThemeToggle />}
     >
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle>Member coordination is planned</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm text-muted-foreground">
-          <p>
-            Use this space to design staff tools for managing member relationships.
-            Iterations here stay isolated on the <code>dashboard</code> branch.
-          </p>
-          <Button variant="outline" size="sm" disabled>
-            Assign concierge (coming soon)
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-2xl font-semibold">Client Management</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          View client details, membership status, and contact information
+        </p>
+      </div>
+      
+      <ClientsTable />
     </DashboardLayout>
   );
 }
-
