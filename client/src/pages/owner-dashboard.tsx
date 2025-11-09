@@ -16,6 +16,8 @@ import { useAircraft } from "@/lib/hooks/useAircraft";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { isStaffRole } from "@/lib/roles";
+import { DashboardLayout } from "@/components/dashboard/layout";
+import { ownerDashboardNavItems } from "@/components/dashboard/nav-items";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
@@ -176,17 +178,14 @@ export default function OwnerDashboard() {
       });
     }
   };
-
-
   return (
-    <div className="mx-auto max-w-screen-xl px-4 py-6 space-y-6 sm:px-6 lg:px-8">
+    <DashboardLayout
+      title="Owner Dashboard"
+      description="Welcome back to Freedom Aviation"
+      navItems={ownerDashboardNavItems}
+      titleTestId="text-dashboard-title"
+    >
       {isDemo && <DemoBanner />}
-      
-      <div className="space-y-1">
-        <h2 className="text-3xl font-bold tracking-tight" data-testid="text-dashboard-title">Owner Dashboard</h2>
-        <p className="text-muted-foreground">Welcome back to Freedom Aviation</p>
-      </div>
-
 
       <Card>
         <CardHeader className="flex flex-col items-start gap-2 pb-3 sm:flex-row sm:items-center sm:justify-between">
@@ -302,6 +301,6 @@ export default function OwnerDashboard() {
           </Button>
         </Link>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

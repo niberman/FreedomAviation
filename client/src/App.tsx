@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { DevToolbar } from "@/components/dev-toolbar";
 import { NavBar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import { siteConfig, isMarketingDomain } from "@/lib/site-config";
 import Home from "./pages/home";
 import Login from "./pages/login";
 import ForgotPassword from "./pages/forgot-password";
@@ -23,6 +24,13 @@ import About from "./pages/About";
 import OwnerDashboard from "./pages/owner-dashboard";
 import OwnerMore from "./pages/owner-more";
 import StaffDashboard from "./pages/staff-dashboard";
+import DashboardMembers from "./pages/dashboard/members";
+import DashboardAircraft from "./pages/dashboard/aircraft";
+import DashboardSettings from "./pages/dashboard/settings";
+import StaffMembers from "./pages/staff/members";
+import StaffAircraft from "./pages/staff/aircraft";
+import StaffOperations from "./pages/staff/operations";
+import StaffSettings from "./pages/staff/settings";
 import UnifiedPricingConfigurator from "./pages/admin/UnifiedPricingConfigurator";
 import NotFound from "./pages/not-found";
 import SkyHarbour from "./pages/partners/SkyHarbour";
@@ -35,19 +43,21 @@ function DomainRedirect() {
     // IMPORTANT: Preserve hash (password reset tokens are in hash)
     if (
       typeof window !== "undefined" &&
-      window.location.hostname === "freedomaviationco.com" &&
-      !window.location.hostname.startsWith("localhost")
+      isMarketingDomain(window.location.hostname) &&
+      window.location.hostname !== siteConfig.marketing.primaryDomain &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1"
     ) {
       // Don't redirect if we're on reset-password page with hash (password reset tokens)
       // Let the page load first so Supabase can process the hash
       if (window.location.pathname === "/reset-password" && window.location.hash) {
         // Only redirect if hash doesn't contain tokens (already processed)
         if (!window.location.hash.includes("access_token")) {
-          const newUrl = `https://www.freedomaviationco.com${window.location.pathname}${window.location.search}${window.location.hash}`;
+          const newUrl = `https://${siteConfig.marketing.primaryDomain}${window.location.pathname}${window.location.search}${window.location.hash}`;
           window.location.replace(newUrl);
         }
       } else {
-        const newUrl = `https://www.freedomaviationco.com${window.location.pathname}${window.location.search}${window.location.hash}`;
+        const newUrl = `https://${siteConfig.marketing.primaryDomain}${window.location.pathname}${window.location.search}${window.location.hash}`;
         window.location.replace(newUrl);
       }
     }
@@ -72,6 +82,21 @@ function Router() {
           <OwnerDashboard />
         </ProtectedRoute>
       </Route>
+      <Route path="/dashboard/members">
+        <ProtectedRoute>
+          <DashboardMembers />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/aircraft">
+        <ProtectedRoute>
+          <DashboardAircraft />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/settings">
+        <ProtectedRoute>
+          <DashboardSettings />
+        </ProtectedRoute>
+      </Route>
       <Route path="/dashboard/more">
         <ProtectedRoute>
           <OwnerMore />
@@ -92,6 +117,26 @@ function Router() {
           <StaffDashboard />
         </StaffProtectedRoute>
       </Route>
+      <Route path="/staff/members">
+        <StaffProtectedRoute>
+          <StaffMembers />
+        </StaffProtectedRoute>
+      </Route>
+      <Route path="/staff/aircraft">
+        <StaffProtectedRoute>
+          <StaffAircraft />
+        </StaffProtectedRoute>
+      </Route>
+      <Route path="/staff/operations">
+        <StaffProtectedRoute>
+          <StaffOperations />
+        </StaffProtectedRoute>
+      </Route>
+      <Route path="/staff/settings">
+        <StaffProtectedRoute>
+          <StaffSettings />
+        </StaffProtectedRoute>
+      </Route>
       <Route path="/partners/sky-harbour" component={SkyHarbour} />
       <Route path="/partners/fa-hangar" component={FAHangar} />
       <Route component={NotFound} />
@@ -101,7 +146,12 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const showNavBar = location !== "/demo";
+  const currentPath = location ?? "";
+  const isDashboardRoute =
+    currentPath.startsWith("/dashboard") ||
+    currentPath.startsWith("/staff") ||
+    currentPath.startsWith("/admin");
+  const showMarketingChrome = !isDashboardRoute && currentPath !== "/demo";
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -117,11 +167,11 @@ function App() {
             <TooltipProvider>
               <div className="flex min-h-screen flex-col">
                 <Toaster />
-                {showNavBar && <NavBar />}
+                {showMarketingChrome && <NavBar />}
                 <main className="flex-1">
                   <Router />
                 </main>
-                <Footer />
+                {showMarketingChrome && <Footer />}
               </div>
               <DevToolbar />
             </TooltipProvider>

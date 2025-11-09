@@ -12,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Calendar, FileText, DollarSign, Wrench, Plane } from "lucide-react";
-import logoImage from "@assets/falogo.png";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
@@ -35,6 +34,8 @@ import { AircraftTable } from "@/components/aircraft-table";
 import { MaintenanceList } from "@/components/maintenance-list";
 import { ClientsTable } from "@/components/clients-table";
 import type { ServiceRequest, ServiceRequestUpdate, ServiceStatus } from "@/lib/types/database";
+import { DashboardLayout } from "@/components/dashboard/layout";
+import { staffDashboardNavItems } from "@/components/dashboard/nav-items";
 
 interface InstructionInvoice {
   id: string;
@@ -1181,44 +1182,34 @@ export default function StaffDashboard() {
   const selectedAircraft = aircraft.find((a: any) => a.id === selectedAircraftId);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 py-3 sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:py-0">
-            <div className="flex items-center gap-3">
-              <img src={logoImage} alt="Freedom Aviation" className="h-8 w-auto" />
-              <div className="flex items-center gap-2">
-                <Plane className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-semibold">Freedom Aviation - Staff</h1>
-              </div>
-            </div>
-            <ThemeToggle />
+    <DashboardLayout
+      title="Staff Dashboard"
+      description="Manage service requests, aircraft, maintenance, and invoices"
+      navItems={staffDashboardNavItems}
+      actions={<ThemeToggle />}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Plane className="h-5 w-5 text-primary" />
+            <span>Freedom Aviation · Staff</span>
           </div>
         </div>
-      </header>
+        {isInstallEligible && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleOpenInstallHelp}
+            className="w-full sm:w-auto"
+            data-testid="button-install-on-iphone"
+          >
+            Install on iPhone
+          </Button>
+        )}
+      </div>
 
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-1">
-              <h2 className="text-3xl font-bold tracking-tight">Staff Dashboard</h2>
-              <p className="text-muted-foreground">Manage service requests, aircraft, maintenance, and invoices</p>
-            </div>
-            {isInstallEligible && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleOpenInstallHelp}
-                className="w-full sm:w-auto"
-                data-testid="button-install-on-iphone"
-              >
-                Install on iPhone
-              </Button>
-            )}
-          </div>
-
-          <Tabs defaultValue="invoices" className="space-y-6">
+      <Tabs defaultValue="invoices" className="space-y-6">
             <TabsList className="flex w-full flex-wrap gap-2 overflow-x-auto sm:grid sm:grid-cols-4 sm:gap-2 lg:grid-cols-7">
               <TabsTrigger value="requests" data-testid="tab-requests" className="flex-1 min-w-[140px] text-xs sm:text-sm">
                 Service Requests
@@ -2272,9 +2263,7 @@ export default function StaffDashboard() {
               )}
             </div>
           </TabsContent>
-        </Tabs>
-        </div>
-      </main>
+      </Tabs>
 
       {isInstallEligible && (
         <div
@@ -2309,6 +2298,6 @@ export default function StaffDashboard() {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 }

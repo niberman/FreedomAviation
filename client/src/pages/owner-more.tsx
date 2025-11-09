@@ -3,9 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
-import { Link, useLocation } from "wouter";
-import { ArrowLeft, Plane, DollarSign } from "lucide-react";
+import { useLocation } from "wouter";
+import { Plane, DollarSign } from "lucide-react";
 import { CreditsOverview } from "@/components/owner/CreditsOverview";
 import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
@@ -15,6 +14,8 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT } from "@/lib/demo-data";
 import { useToast } from "@/hooks/use-toast";
+import { DashboardLayout } from "@/components/dashboard/layout";
+import { ownerDashboardNavItems } from "@/components/dashboard/nav-items";
 
 export default function OwnerMore() {
   const { user } = useAuth();
@@ -260,70 +261,48 @@ export default function OwnerMore() {
   }, [invoicesError, toast]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 bg-background z-50">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Plane className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-semibold">Freedom Aviation</h1>
-            </div>
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
+    <DashboardLayout
+      title="Operations & Billing"
+      description="Manage your account, billing, and service history."
+      navItems={ownerDashboardNavItems}
+      actions={<ThemeToggle />}
+    >
+      {isDemo && <DemoBanner />}
 
-      <main className="container mx-auto p-6 space-y-8 max-w-7xl">
-        {isDemo && <DemoBanner />}
-        
-        <div className="space-y-1">
-          <h2 className="text-3xl font-bold tracking-tight">More Details</h2>
-          <p className="text-muted-foreground">Manage your account, billing, and services</p>
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <DollarSign className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-xl font-semibold">Billing & Invoices</h3>
         </div>
+        <div className="grid grid-cols-1 gap-6">
+          <BillingCard invoices={invoices} isLoading={invoicesLoading} />
+          <CreditsOverview />
+        </div>
+      </section>
 
-        {/* Billing & Invoices Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-muted-foreground" />
-            <h3 className="text-xl font-semibold">Billing & Invoices</h3>
-          </div>
-          <div className="grid grid-cols-1 gap-6">
-            <BillingCard invoices={invoices} isLoading={invoicesLoading} />
-            <CreditsOverview />
-          </div>
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Plane className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-xl font-semibold">Service History</h3>
         </div>
+        <div className="grid grid-cols-1 gap-6">
+          <ServiceTimeline 
+            tasks={serviceTasks} 
+            requests={serviceRequests}
+            isLoading={tasksLoading} 
+          />
+        </div>
+      </section>
 
-        {/* Service History Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Plane className="h-5 w-5 text-muted-foreground" />
-            <h3 className="text-xl font-semibold">Service History</h3>
-          </div>
-          <div className="grid grid-cols-1 gap-6">
-            <ServiceTimeline 
-              tasks={serviceTasks} 
-              requests={serviceRequests}
-              isLoading={tasksLoading} 
-            />
-          </div>
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <h3 className="text-xl font-semibold">Account & Settings</h3>
         </div>
-
-        {/* Account & Settings Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xl font-semibold">Account & Settings</h3>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <PasswordChangeCard />
-            <DocsCard />
-          </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <PasswordChangeCard />
+          <DocsCard />
         </div>
-      </main>
-    </div>
+      </section>
+    </DashboardLayout>
   );
 }
