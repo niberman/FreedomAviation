@@ -184,13 +184,20 @@ export default function OwnerDashboard() {
       description="Welcome back to Freedom Aviation"
       navItems={ownerDashboardNavItems}
       titleTestId="text-dashboard-title"
+      showHeader={false}
     >
       {isDemo && <DemoBanner />}
 
       <Card>
         <CardHeader className="flex flex-col items-start gap-2 pb-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-medium">My Aircraft</CardTitle>
-          <img src={logoImage} alt="Freedom Aviation" className="h-6 w-auto opacity-50" />
+          <Link href="/" data-testid="link-home-from-logo">
+            <img
+              src={logoImage}
+              alt="Freedom Aviation"
+              className="h-6 w-auto opacity-50 transition-opacity hover:opacity-80"
+            />
+          </Link>
         </CardHeader>
         <CardContent>
           {aircraft ? (

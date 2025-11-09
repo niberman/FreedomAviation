@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { Link } from "wouter";
 import { KanbanBoard } from "@/components/kanban-board";
 import { AircraftTable } from "@/components/aircraft-table";
 import { MaintenanceList } from "@/components/maintenance-list";
@@ -216,15 +217,22 @@ export default function StaffDashboard() {
         }
         
         // Transform to match AircraftTable interface
-        return (data || []).map((ac: any) => ({
-          id: ac.id,
-          tailNumber: ac.tail_number,
-          make: ac.make || 'N/A',
-          model: ac.model || '',
-          class: ac.class || 'Unknown',
-          baseAirport: ac.base_location || 'KAPA',
-          owner: ac.owner?.full_name || ac.owner?.email || 'Unknown Owner',
-        }));
+        return (data || []).map((ac: any) => {
+          const ownerRecord = ac.owner || null;
+          const ownerName = ownerRecord?.full_name || ownerRecord?.email || null;
+
+          return {
+            id: ac.id,
+            tailNumber: ac.tail_number,
+            make: ac.make || 'N/A',
+            model: ac.model || '',
+            class: ac.class || 'Unknown',
+            baseAirport: ac.base_location || 'KAPA',
+            owner: ownerName || 'Unassigned',
+            ownerId: ac.owner_id ?? null,
+            ownerEmail: ownerRecord?.email ?? null,
+          };
+        });
       } catch (err: any) {
         console.error('❌ Error in aircraft query:', err);
         // Provide more helpful error message
@@ -263,15 +271,10 @@ export default function StaffDashboard() {
             id,
             service_type,
             requested_departure,
-            requested_date,
-            requested_time,
-            requested_for,
             description,
             status,
             priority,
             airport,
-            assigned_to,
-            notes,
             created_at,
             aircraft_id,
             user_id,
@@ -289,7 +292,7 @@ export default function StaffDashboard() {
           // Fetch service requests without nested relations
           const srResult = await supabase
             .from('service_requests')
-            .select('id, service_type, requested_departure, requested_date, requested_time, requested_for, description, status, priority, airport, assigned_to, notes, created_at, aircraft_id, user_id')
+            .select('id, service_type, requested_departure, description, status, priority, airport, created_at, aircraft_id, user_id')
             .order('created_at', { ascending: false });
           
           if (srResult.error) {
@@ -763,13 +766,26 @@ export default function StaffDashboard() {
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logoImage} alt="Freedom Aviation" className="h-8 w-auto" />
+              <Link href="/" data-testid="link-home-from-logo">
+                <img
+                  src={logoImage}
+                  alt="Freedom Aviation"
+                  className="h-8 w-auto transition-opacity hover:opacity-80"
+                />
+              </Link>
               <div className="flex items-center gap-2">
                 <Plane className="h-5 w-5 text-primary" />
                 <h1 className="text-xl font-semibold">Freedom Aviation - Staff</h1>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <Link href="/">
+                <Button variant="outline" size="sm" data-testid="button-return-home">
+                  Back to Home
+                </Button>
+              </Link>
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>
@@ -950,7 +966,7 @@ export default function StaffDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <AircraftTable items={aircraftFull} />
+              <AircraftTable items={aircraftFull} owners={owners} />
             )}
           </TabsContent>
 
@@ -1091,8 +1107,8 @@ export default function StaffDashboard() {
                   return (
                     <div className="space-y-4">
                       {instructionRequests.map((request: any) => {
-                        const isAssigned = request.assigned_to === user?.id;
-                        const isAssignedToOther = request.assigned_to && request.assigned_to !== user?.id;
+                        const isAssigned = false;
+                        const isAssignedToOther = false;
                         
                         return (
                           <Card key={request.id} className={isAssigned ? "border-primary" : ""}>
@@ -1151,82 +1167,9 @@ export default function StaffDashboard() {
                                 </div>
                                 
                                 <div className="flex flex-col gap-2">
-                                  {!request.assigned_to && (
-                                    <Button
-                                      size="sm"
-                                      onClick={async () => {
-                                        try {
-                                          const { error } = await supabase
-                                            .from('service_requests')
-                                            .update({ assigned_to: user?.id, status: 'in_progress' })
-                                            .eq('id', request.id);
-                                          
-                                          if (error) throw error;
-                                          
-                                          toast({
-                                            title: "Success",
-                                            description: "You've been assigned to this instruction request.",
-                                          });
-                                          
-                                          // Invalidate all service request queries to refresh
-                                          await queryClient.invalidateQueries({
-                                            predicate: (query) => 
-                                              query.queryKey[0] === "service-requests" || 
-                                              query.queryKey[0] === "/api/service-requests"
-                                          });
-                                          await refetchServiceRequests();
-                                        } catch (error: any) {
-                                          console.error("Error assigning request:", error);
-                                          toast({
-                                            title: "Error",
-                                            description: error.message || "Failed to assign request",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      Assign to Me
-                                    </Button>
-                                  )}
+                                  {/* Assignment feature disabled (column not available) */}
                                   
-                                  {isAssigned && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={async () => {
-                                        try {
-                                          const { error } = await supabase
-                                            .from('service_requests')
-                                            .update({ assigned_to: null, status: 'pending' })
-                                            .eq('id', request.id);
-                                          
-                                          if (error) throw error;
-                                          
-                                          toast({
-                                            title: "Success",
-                                            description: "Assignment removed.",
-                                          });
-                                          
-                                          // Invalidate all service request queries to refresh
-                                          await queryClient.invalidateQueries({
-                                            predicate: (query) => 
-                                              query.queryKey[0] === "service-requests" || 
-                                              query.queryKey[0] === "/api/service-requests"
-                                          });
-                                          await refetchServiceRequests();
-                                        } catch (error: any) {
-                                          console.error("Error unassigning request:", error);
-                                          toast({
-                                            title: "Error",
-                                            description: error.message || "Failed to unassign request",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      Unassign
-                                    </Button>
-                                  )}
+                                  {/* Unassign disabled */}
                                 </div>
                               </div>
                             </CardContent>

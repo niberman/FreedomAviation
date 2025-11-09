@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, User, Plane, Pencil, Info, Plus } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -57,50 +57,22 @@ export function ClientsTable() {
   const { data: clients = [], isLoading, error: clientsError } = useQuery({
     queryKey: ['/api/clients', accessToken],
     queryFn: async () => {
-      if (!accessToken) {
-        throw new Error('Not authenticated. Please sign in again.');
+      console.log('[ClientsTable] Fetching clients directly from Supabase...');
+      
+      // Fetch directly from Supabase instead of API server
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, email, full_name, phone, role, created_at')
+        .eq('role', 'owner')
+        .order('full_name');
+
+      if (error) {
+        console.error('[ClientsTable] Error fetching clients:', error);
+        throw error;
       }
 
-      console.log('[ClientsTable] Fetching clients via API...');
-
-      const response = await fetch('/api/clients', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: 'include',
-      });
-
-      const contentType = response.headers.get('content-type') || '';
-      const responseBody = await response.text();
-
-      let payload: any = null;
-      if (contentType.includes('application/json')) {
-        try {
-          payload = JSON.parse(responseBody);
-        } catch (parseError) {
-          console.error('[ClientsTable] Failed to parse JSON response:', parseError);
-          console.error('[ClientsTable] Response body:', responseBody);
-          throw new Error('Invalid JSON response from /api/clients. Please check the server logs.');
-        }
-      } else {
-        console.error('[ClientsTable] Expected JSON but received:', contentType || 'unknown content-type');
-        console.error('[ClientsTable] Response body (first 200 chars):', responseBody.slice(0, 200));
-
-        throw new Error(
-          'Received a non-JSON response from /api/clients. ' +
-          'Ensure the API server is running and accessible.'
-        );
-      }
-
-      if (!response.ok) {
-        console.error('[ClientsTable] Error fetching clients:', payload);
-        throw new Error(payload.message || payload.error || 'Failed to load client list.');
-      }
-
-      const clientsFromApi = payload.clients ?? payload.data ?? [];
-      console.log('[ClientsTable] Clients API response:', clientsFromApi);
-      return clientsFromApi;
+      console.log('[ClientsTable] Clients from Supabase:', data);
+      return data || [];
     },
     enabled: !!accessToken,
     retry: false,

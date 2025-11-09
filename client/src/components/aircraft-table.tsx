@@ -26,10 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Database, Loader2, Plus, PlusCircle, Wrench } from "lucide-react";
+import { Database, Loader2, Plus, PlusCircle, UserPlus, Wrench } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Aircraft {
   id: string; // UUID from public.aircraft.id
@@ -39,6 +39,8 @@ interface Aircraft {
   class: string;
   baseAirport: string; // maps to aircraft.base_location
   owner: string; // display only
+  ownerId?: string | null;
+  ownerEmail?: string | null;
 }
 
 interface AircraftOwner {
@@ -48,6 +50,8 @@ interface AircraftOwner {
 }
 
 const OWNER_NONE_VALUE = "__none__";
+
+type QuickAction = "readiness" | "oil" | "avionics";
 
 interface NewAircraftState {
   tailNumber: string;
@@ -86,51 +90,180 @@ export function AircraftTable({
   const [newAircraft, setNewAircraft] = useState<NewAircraftState>(
     createInitialAircraftState(),
   );
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isAssignSubmitting, setIsAssignSubmitting] = useState(false);
+  const [selectedAircraftForAssign, setSelectedAircraftForAssign] =
+    useState<Aircraft | null>(null);
+  const [selectedOwnerIdForAssign, setSelectedOwnerIdForAssign] =
+    useState<string>(OWNER_NONE_VALUE);
+
+  const quickActionMutation = useMutation<void, Error, { action: QuickAction; aircraft: Aircraft }>({
+    mutationFn: async ({ action, aircraft }) => {
+      if (!aircraft?.id) {
+        throw new Error("Missing aircraft identifier");
+      }
+
+      if (action === "readiness") {
+        const { error } = await supabase
+          .from("service_tasks")
+          .insert([
+            {
+              aircraft_id: aircraft.id,
+              type: "readiness",
+              status: "pending",
+              notes: "Created from staff dashboard quick action",
+            },
+          ]);
+
+        if (error) {
+          throw new Error(error.message ?? "Unable to create readiness task.");
+        }
+        return;
+      }
+
+      if (action === "oil") {
+        const { error } = await supabase
+          .from("consumable_events")
+          .insert([
+            {
+              aircraft_id: aircraft.id,
+              kind: "OIL",
+              quantity: 2,
+              unit: "qt",
+              notes: "Top-off request from staff dashboard quick action",
+            },
+          ]);
+
+        if (error) {
+          throw new Error(error.message ?? "Unable to log oil top-off.");
+        }
+        return;
+      }
+
+      if (action === "avionics") {
+        const { error } = await supabase
+          .from("service_tasks")
+          .insert([
+            {
+              aircraft_id: aircraft.id,
+              type: "avionics_db_update",
+              status: "pending",
+              notes: "Scheduled from staff dashboard quick action",
+            },
+          ]);
+
+        if (error) {
+          throw new Error(error.message ?? "Unable to create avionics database update task.");
+        }
+        return;
+      }
+
+      throw new Error("Unknown quick action");
+    },
+    onSuccess: (_, { action, aircraft }) => {
+      const actionSummary: Record<QuickAction, string> = {
+        readiness: "Readiness task created",
+        oil: "Oil top-off logged",
+        avionics: "Avionics database update scheduled",
+      };
+
+      toast({
+        title: "Quick action completed",
+        description: `${actionSummary[action]} for ${aircraft.tailNumber}.`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/service-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aircraft/full"] });
+    },
+    onError: (error, { action, aircraft }) => {
+      const actionSummary: Record<QuickAction, string> = {
+        readiness: "readiness task",
+        oil: "oil top-off",
+        avionics: "avionics database update",
+      };
+
+      toast({
+        title: `Failed to create ${actionSummary[action]}`,
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+
+      console.error("Quick action failed", {
+        action,
+        aircraftId: aircraft.id,
+        error,
+      });
+    },
+  });
 
   const filteredAircraft =
     baseFilter === "all"
       ? items
       : items.filter((a) => a.baseAirport === baseFilter);
 
-  async function createReadinessTask(aircraftId: string) {
-    // service_tasks: aircraft_id (uuid) NOT NULL, type text NOT NULL, status default 'pending'
-    await supabase
-      .from("service_tasks")
-      .insert([
-        {
-          aircraft_id: aircraftId,
-          type: "readiness",
-          status: "pending",
-          notes: "Created from dashboard",
-        },
-      ]);
+  function handleOpenAssignDialog(aircraft: Aircraft) {
+    setSelectedAircraftForAssign(aircraft);
+    setSelectedOwnerIdForAssign(
+      aircraft.ownerId && aircraft.ownerId !== OWNER_NONE_VALUE
+        ? aircraft.ownerId
+        : OWNER_NONE_VALUE,
+    );
+    setIsAssignDialogOpen(true);
   }
 
-  async function topOffOil(aircraftId: string) {
-    // consumable_events requires: aircraft_id, kind ('OIL'|'O2'|'TKS')
-    await supabase
-      .from("consumable_events")
-      .insert([
-        {
-          aircraft_id: aircraftId,
-          kind: "OIL",
-          quantity: 2,
-          unit: "qt",
-          notes: "Top-off request",
-        },
-      ]);
+  function resetAssignDialog() {
+    setIsAssignDialogOpen(false);
+    setIsAssignSubmitting(false);
+    setSelectedAircraftForAssign(null);
+    setSelectedOwnerIdForAssign(OWNER_NONE_VALUE);
   }
 
-  async function markAvionicsDbUpdate(aircraftId: string) {
-    await supabase
-      .from("service_tasks")
-      .insert([
-        {
-          aircraft_id: aircraftId,
-          type: "avionics_db_update",
-          status: "pending",
-        },
-      ]);
+  async function handleAssignAircraft(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedAircraftForAssign) {
+      resetAssignDialog();
+      return;
+    }
+
+    const aircraftId = selectedAircraftForAssign.id;
+    const ownerId =
+      selectedOwnerIdForAssign === OWNER_NONE_VALUE
+        ? null
+        : selectedOwnerIdForAssign;
+
+    setIsAssignSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from("aircraft")
+        .update({ owner_id: ownerId })
+        .eq("id", aircraftId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Aircraft updated",
+        description: ownerId
+          ? `Assigned ${selectedAircraftForAssign.tailNumber} to the selected client.`
+          : `Removed client assignment from ${selectedAircraftForAssign.tailNumber}.`,
+      });
+
+      resetAssignDialog();
+      queryClient.invalidateQueries({ queryKey: ["/api/aircraft"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aircraft/full"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      onAircraftCreated?.();
+    } catch (err: any) {
+      setIsAssignSubmitting(false);
+      toast({
+        title: "Failed to update aircraft",
+        description: err?.message || "Please try again.",
+        variant: "destructive",
+      });
+    }
   }
 
   async function handleCreateAircraft(event: FormEvent<HTMLFormElement>) {
@@ -270,26 +403,71 @@ export function AircraftTable({
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => createReadinessTask(a.id)}
+                        onClick={() => handleOpenAssignDialog(a)}
+                        data-testid={`button-assign-${a.id}`}
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        <span className="sr-only">Assign to client</span>
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={
+                          quickActionMutation.isPending &&
+                          quickActionMutation.variables?.aircraft.id === a.id
+                        }
+                        onClick={() =>
+                          quickActionMutation.mutate({ action: "readiness", aircraft: a })
+                        }
                         data-testid={`button-readiness-${a.id}`}
                       >
-                        <Plus className="h-4 w-4" />
+                        {quickActionMutation.isPending &&
+                        quickActionMutation.variables?.aircraft.id === a.id &&
+                        quickActionMutation.variables?.action === "readiness" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Plus className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => topOffOil(a.id)}
+                        disabled={
+                          quickActionMutation.isPending &&
+                          quickActionMutation.variables?.aircraft.id === a.id
+                        }
+                        onClick={() =>
+                          quickActionMutation.mutate({ action: "oil", aircraft: a })
+                        }
                         data-testid={`button-topoff-${a.id}`}
                       >
-                        <Wrench className="h-4 w-4" />
+                        {quickActionMutation.isPending &&
+                        quickActionMutation.variables?.aircraft.id === a.id &&
+                        quickActionMutation.variables?.action === "oil" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Wrench className="h-4 w-4" />
+                        )}
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => markAvionicsDbUpdate(a.id)}
+                        disabled={
+                          quickActionMutation.isPending &&
+                          quickActionMutation.variables?.aircraft.id === a.id
+                        }
+                        onClick={() =>
+                          quickActionMutation.mutate({ action: "avionics", aircraft: a })
+                        }
                         data-testid={`button-db-update-${a.id}`}
                       >
-                        <Database className="h-4 w-4" />
+                        {quickActionMutation.isPending &&
+                        quickActionMutation.variables?.aircraft.id === a.id &&
+                        quickActionMutation.variables?.action === "avionics" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Database className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </TableCell>
@@ -466,6 +644,77 @@ export function AircraftTable({
                   </>
                 ) : (
                   "Save Aircraft"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAssignDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          resetAssignDialog();
+          return;
+        }
+        setIsAssignDialogOpen(open);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Aircraft to Client</DialogTitle>
+            <DialogDescription>
+              Choose which client should own this aircraft.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleAssignAircraft} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Aircraft</Label>
+              <div className="rounded-md border bg-muted px-3 py-2 font-mono">
+                {selectedAircraftForAssign?.tailNumber ?? "N/A"}
+              </div>
+              {selectedAircraftForAssign && (
+                <p className="text-xs text-muted-foreground">
+                  Current owner: {selectedAircraftForAssign.owner || "Unassigned"}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assign-owner">Assign to Client</Label>
+              <Select
+                value={selectedOwnerIdForAssign}
+                onValueChange={setSelectedOwnerIdForAssign}
+              >
+                <SelectTrigger id="assign-owner" data-testid="select-assign-owner">
+                  <SelectValue placeholder="Select client" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={OWNER_NONE_VALUE}>Unassigned</SelectItem>
+                  {owners.map((owner) => (
+                    <SelectItem key={owner.id} value={owner.id}>
+                      {owner.full_name || owner.email || owner.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={resetAssignDialog}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isAssignSubmitting}
+                data-testid="button-save-assignment"
+              >
+                {isAssignSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Assignment"
                 )}
               </Button>
             </DialogFooter>

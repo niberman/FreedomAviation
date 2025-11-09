@@ -43,9 +43,8 @@ export function StaffProtectedRoute({ children }: { children: React.ReactNode })
   const isLoading = authLoading || profileLoading;
 
   useEffect(() => {
-    // In dev mode, skip all redirects - allow access
+    // In dev mode, skip all redirects - allow access (silenced)
     if (isDev) {
-      console.warn('⚠️ DEV MODE: Allowing access to staff dashboard without authentication');
       return;
     }
 
@@ -95,14 +94,7 @@ export function StaffProtectedRoute({ children }: { children: React.ReactNode })
 
   // In dev mode, allow access immediately - bypass all checks
   if (isDev) {
-    return (
-      <>
-        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-black px-4 py-2 text-center text-sm font-semibold">
-          ⚠️ DEV MODE: Staff dashboard accessed without authentication
-        </div>
-        {children}
-      </>
-    );
+    return <>{children}</>;
   }
 
   // Production mode checks below
