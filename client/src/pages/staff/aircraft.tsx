@@ -133,15 +133,22 @@ export default function StaffAircraft() {
         }
         
         // Transform to match AircraftTable interface
-        return (data || []).map((ac: any) => ({
-          id: ac.id,
-          tailNumber: ac.tail_number,
-          make: ac.make || 'N/A',
-          model: ac.model || '',
-          class: ac.class || 'Unknown',
-          baseAirport: ac.base_location || 'KAPA',
-          owner: ac.owner?.full_name || ac.owner?.email || 'Unknown Owner',
-        }));
+        return (data || []).map((ac: any) => {
+          const ownerRecord = ac.owner || null;
+          const ownerName = ownerRecord?.full_name || ownerRecord?.email || null;
+
+          return {
+            id: ac.id,
+            tailNumber: ac.tail_number,
+            make: ac.make || 'N/A',
+            model: ac.model || '',
+            class: ac.class || 'Unknown',
+            baseAirport: ac.base_location || 'KAPA',
+            owner: ownerName || 'Unassigned',
+            ownerId: ac.owner_id ?? null,
+            ownerEmail: ownerRecord?.email ?? null,
+          };
+        });
       } catch (err: any) {
         console.error('❌ Error in aircraft query:', err);
         // Provide more helpful error message

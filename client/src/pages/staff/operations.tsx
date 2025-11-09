@@ -29,15 +29,10 @@ export default function StaffOperations() {
             id,
             service_type,
             requested_departure,
-            requested_date,
-            requested_time,
-            requested_for,
             description,
             status,
             priority,
             airport,
-            assigned_to,
-            notes,
             created_at,
             aircraft_id,
             user_id,
@@ -55,7 +50,7 @@ export default function StaffOperations() {
           // Fetch service requests without nested relations
           const srResult = await supabase
             .from('service_requests')
-            .select('id, service_type, requested_departure, requested_date, requested_time, requested_for, description, status, priority, airport, assigned_to, notes, created_at, aircraft_id, user_id')
+            .select('id, service_type, requested_departure, description, status, priority, airport, created_at, aircraft_id, user_id')
             .order('created_at', { ascending: false });
           
           if (srResult.error) {
@@ -249,10 +244,6 @@ export default function StaffOperations() {
                 if (sr.requested_departure) {
                   const date = new Date(sr.requested_departure);
                   requestedFor = format(date, 'MMM d, yyyy HH:mm');
-                } else if (sr.requested_date && sr.requested_time) {
-                  requestedFor = `${format(new Date(sr.requested_date), 'MMM d, yyyy')} ${sr.requested_time}`;
-                } else if (sr.requested_date) {
-                  requestedFor = format(new Date(sr.requested_date), 'MMM d, yyyy');
                 } else if (sr.airport) {
                   requestedFor = sr.airport;
                 }
