@@ -268,113 +268,21 @@ export default function StaffDashboard() {
   const { data: serviceRequests = [], refetch: refetchServiceRequests, error: serviceRequestsError, isLoading: isLoadingServiceRequests } = useQuery({
     queryKey: ['/api/service-requests'],
     queryFn: async () => {
-      try {
-        // First, try to fetch service requests with nested relations
-        let query = supabase
-          .from('service_requests')
-          .select(`
-            id,
-            service_type,
-            requested_departure,
-            description,
-            status,
-            priority,
-            airport,
-            created_at,
-            aircraft_id,
-            user_id,
-            assigned_to,
-            notes,
-            fuel_grade,
-            fuel_quantity,
-            o2_topoff,
-            tks_topoff,
-            gpu_required,
-            hangar_pullout,
-            is_extra_charge,
-            credits_used,
-            aircraft:aircraft_id(tail_number),
-            owner:user_id(full_name, email)
-          `)
-          .order('created_at', { ascending: false });
-
-        let { data, error } = await query;
-        
-        // If nested query fails, try fetching separately
-        if (error && (error.message?.includes('aircraft') || error.message?.includes('owner') || error.message?.includes('user_profiles'))) {
-          console.warn('⚠️ Nested query failed, trying separate queries:', error.message);
-          
-          // Fetch service requests without nested relations
-          const srResult = await supabase
-            .from('service_requests')
-            .select('id, service_type, requested_departure, description, status, priority, airport, created_at, aircraft_id, user_id, assigned_to, notes, fuel_grade, fuel_quantity, o2_topoff, tks_topoff, gpu_required, hangar_pullout, is_extra_charge, credits_used')
-            .order('created_at', { ascending: false });
-          
-          if (srResult.error) {
-            console.error('❌ Error fetching service requests:', srResult.error);
-            throw srResult.error;
-          }
-          
-          const srData = srResult.data || [];
-          
-          // Get unique aircraft and user IDs
-          const aircraftIds = [...new Set(srData.map((sr: any) => sr.aircraft_id).filter(Boolean))];
-          const userIds = [...new Set(srData.map((sr: any) => sr.user_id).filter(Boolean))];
-          
-          // Fetch aircraft and owners separately
-          const [aircraftResult, ownersResult] = await Promise.all([
-            aircraftIds.length > 0
-              ? supabase
-                  .from('aircraft')
-                  .select('id, tail_number')
-                  .in('id', aircraftIds)
-              : { data: [], error: null },
-            userIds.length > 0
-              ? supabase
-                  .from('user_profiles')
-                  .select('id, full_name, email')
-                  .in('id', userIds)
-              : { data: [], error: null },
-          ]);
-          
-          // Create maps for quick lookup
-          const aircraftMap = (aircraftResult.data || []).reduce((acc: any, ac: any) => {
-            acc[ac.id] = { tail_number: ac.tail_number };
-            return acc;
-          }, {});
-          
-          const ownersMap = (ownersResult.data || []).reduce((acc: any, owner: any) => {
-            acc[owner.id] = { full_name: owner.full_name, email: owner.email };
-            return acc;
-          }, {});
-          
-          // Combine data
-          data = srData.map((sr: any) => ({
-            ...sr,
-            aircraft: aircraftMap[sr.aircraft_id] || null,
-            owner: ownersMap[sr.user_id] || null,
-          }));
-          
-          error = null; // Clear error since we successfully fetched
-        }
-        
-        if (error) {
-          console.error('❌ Error fetching service requests:', error);
-          throw error;
-        }
-        
-        return data || [];
-      } catch (err: any) {
-        console.error('❌ Error in service requests query:', err);
-        // Provide more helpful error message
-        if (err.message?.includes('permission') || err.code === 'PGRST301') {
-          throw new Error('Permission denied. Please check your authentication and ensure you have admin or staff role.');
-        } else if (err.message?.includes('relation') || err.code === 'PGRST116') {
-          throw new Error('Service requests table not found. Please ensure the database schema is set up correctly.');
-        } else {
-          throw err;
-        }
+      // Use backend REST endpoint for consistency and RLS bypass
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token;
+      const res = await fetch(`/api/service-requests`, {
+        headers: {
+          ...(authToken && { Authorization: `Bearer ${authToken}` }),
+        },
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(err.message || 'Failed to load service requests');
       }
+      const json = await res.json();
+      return json.serviceRequests || [];
     },
     // Refetch every 30 seconds to catch new requests
     refetchInterval: 30000,
@@ -383,28 +291,26 @@ export default function StaffDashboard() {
   // Handle service request status change
   const handleStatusChange = async (requestId: string, status: "pending" | "in_progress" | "completed") => {
     try {
-      const { error } = await supabase
-        .from("service_requests")
-        .update({ status })
-        .eq("id", requestId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Status updated",
-        description: `Service request status changed to ${status}`,
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token;
+      const res = await fetch(`/api/service-requests/${requestId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken && { Authorization: `Bearer ${authToken}` }),
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
       });
-
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(err.message || 'Failed to update status');
+      }
+      toast({ title: 'Status updated', description: `Service request status changed to ${status}` });
+      queryClient.invalidateQueries({ queryKey: ['/api/service-requests'] });
     } catch (error) {
-      console.error("Error updating service request status:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update status",
-        variant: "destructive",
-      });
+      console.error('Error updating service request status:', error);
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to update status', variant: 'destructive' });
       throw error;
     }
   };

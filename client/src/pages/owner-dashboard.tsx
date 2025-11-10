@@ -55,7 +55,7 @@ export default function OwnerDashboard() {
   // Use hooks for editing
   const { aircraftList: hookAircraftList, updateAircraft } = useAircraft();
   
-  const { data: aircraftList } = useQuery({
+  const { data: aircraftList, isLoading: aircraftLoading } = useQuery({
     queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }],
     enabled: isDemo || Boolean(user?.id),
     queryFn: async () => {
@@ -313,7 +313,7 @@ export default function OwnerDashboard() {
           )}
         </CardContent>
       </Card>
-      {aircraft === null && (hookAircraftList.isLoading || aircraftList === undefined) && (
+      {aircraft === null && aircraftLoading && (
         <div className="p-4 animate-pulse text-muted-foreground text-sm">Loading aircraft information…</div>
       )}
 
