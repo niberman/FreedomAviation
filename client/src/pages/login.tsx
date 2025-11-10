@@ -12,10 +12,13 @@ import logoImage from "@assets/falogo.png";
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
 
   // Helper function to determine redirect based on user role
@@ -126,6 +129,53 @@ export default function Login() {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate password match
+    if (password !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Password mismatch",
+        description: "Passwords do not match",
+      });
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      toast({
+        variant: "destructive",
+        title: "Password too short",
+        description: "Password must be at least 6 characters",
+      });
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      await signUp(email, password, fullName.trim() ? { full_name: fullName.trim() } : undefined);
+      
+      toast({
+        title: "Account created!",
+        description: "Redirecting to complete your profile...",
+      });
+      
+      // Redirect to onboarding flow
+      setTimeout(() => {
+        setLocation("/onboarding");
+      }, 1000);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: error.message || "Failed to create account. Please try again.",
+      });
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -134,10 +184,25 @@ export default function Login() {
             <img src={logoImage} alt="Freedom Aviation" className="h-16 w-auto" />
           </div>
           <CardTitle className="text-2xl">Freedom Aviation</CardTitle>
-          <CardDescription>Sign in to your owner portal</CardDescription>
+          <CardDescription>
+            {isRegister ? "Create your account" : "Sign in to your owner portal"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={isRegister ? handleRegister : handleLogin} className="space-y-4">
+            {isRegister && (
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input 
+                  id="fullName" 
+                  type="text" 
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  data-testid="input-full-name"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input 
@@ -159,21 +224,58 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 data-testid="input-password"
                 required
+                minLength={6}
               />
             </div>
-            <Button type="submit" className="w-full" data-testid="button-login" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+            {isRegister && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input 
+                  id="confirmPassword" 
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  data-testid="input-confirm-password"
+                  required
+                  minLength={6}
+                />
+              </div>
+            )}
+            <Button type="submit" className="w-full" data-testid={isRegister ? "button-register" : "button-login"} disabled={loading}>
+              {loading 
+                ? (isRegister ? "Creating account..." : "Signing in...") 
+                : (isRegister ? "Create Account" : "Sign In")
+              }
             </Button>
           </form>
-          <div className="mt-4 text-center">
+          <div className="mt-4 space-y-2 text-center">
             <button
               type="button"
-              onClick={() => setLocation("/forgot-password")}
+              onClick={() => {
+                setIsRegister(!isRegister);
+                setPassword("");
+                setConfirmPassword("");
+                setFullName("");
+              }}
               className="text-sm text-muted-foreground hover:text-primary underline"
-              data-testid="button-forgot-password"
+              data-testid="button-toggle-auth"
             >
-              Forgot your password?
+              {isRegister 
+                ? "Already have an account? Sign in" 
+                : "Don't have an account? Register"}
             </button>
+            {!isRegister && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setLocation("/forgot-password")}
+                  className="text-sm text-muted-foreground hover:text-primary underline"
+                  data-testid="button-forgot-password"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

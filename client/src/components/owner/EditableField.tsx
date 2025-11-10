@@ -45,16 +45,30 @@ export function EditableField({
   };
 
   const handleSave = async () => {
+    if (isSaving) return; // Prevent double submission
+    
     setIsSaving(true);
     try {
       const parsedValue = parse ? parse(editValue) : editValue;
       await onSave(parsedValue as string | number | null);
       setIsEditing(false);
+      setEditValue("");
     } catch (error) {
-      console.error("Error saving:", error);
+      console.error("Error saving field:", error);
+      // Don't close the editor on error - let user see the error and retry
+      // The error will be shown via toast in the parent component
+      // Re-throw so parent can handle it
+      throw error;
     } finally {
       setIsSaving(false);
     }
+  };
+  
+  const handleSaveClick = () => {
+    handleSave().catch((error) => {
+      // Error is already logged and will be handled by parent's toast
+      // This catch prevents unhandled promise rejection
+    });
   };
 
   if (isEditing) {
@@ -69,7 +83,7 @@ export function EditableField({
           autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              handleSave();
+              handleSaveClick();
             } else if (e.key === "Escape") {
               handleCancel();
             }
@@ -79,7 +93,7 @@ export function EditableField({
           size="icon"
           variant="ghost"
           className="h-8 w-8"
-          onClick={handleSave}
+          onClick={handleSaveClick}
           disabled={isSaving}
         >
           {isSaving ? (

@@ -216,9 +216,10 @@ export default function Pricing() {
                         <Button 
                           className="w-full mt-6" 
                           variant={isMiddle ? "default" : "outline"}
+                          onClick={() => navigate(`/onboarding?tier=${cls.slug}&hangar=${selectedLocationSlug}`)}
                           data-testid={`button-select-${cls.id}`}
                         >
-                          Get Started
+                          Start Your Membership
                         </Button>
                       </CardContent>
                     </Card>

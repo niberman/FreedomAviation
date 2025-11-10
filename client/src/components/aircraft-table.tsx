@@ -26,10 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Database, Loader2, Plus, PlusCircle, UserPlus, Wrench } from "lucide-react";
+import { Loader2, Plus, PlusCircle, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Aircraft {
   id: string; // UUID from public.aircraft.id
@@ -51,7 +52,29 @@ interface AircraftOwner {
 
 const OWNER_NONE_VALUE = "__none__";
 
-type QuickAction = "readiness" | "oil" | "avionics";
+type ServiceType = "readiness" | "avionics_db_update" | "preflight" | "detail" | "clean" | "o2" | "tks" | "db_update" | "maintenance" | "inspection" | "repair" | "other";
+
+interface ServiceOption {
+  value: ServiceType | "oil_topoff";
+  label: string;
+  description?: string;
+}
+
+const SERVICE_OPTIONS: ServiceOption[] = [
+  { value: "readiness", label: "Readiness Check", description: "Create a readiness task" },
+  { value: "oil_topoff", label: "Oil Top-Off", description: "Log oil top-off in consumable events" },
+  { value: "avionics_db_update", label: "Avionics Database Update", description: "Schedule avionics database update" },
+  { value: "preflight", label: "Pre-Flight Check", description: "Pre-flight inspection" },
+  { value: "detail", label: "Full Detail", description: "Full aircraft detail service" },
+  { value: "clean", label: "Cleaning", description: "Aircraft cleaning service" },
+  { value: "o2", label: "Oxygen Service", description: "Oxygen system service" },
+  { value: "tks", label: "TKS Fluid Service", description: "TKS fluid service" },
+  { value: "db_update", label: "Database Update", description: "General database update" },
+  { value: "maintenance", label: "Maintenance", description: "General maintenance task" },
+  { value: "inspection", label: "Inspection", description: "Aircraft inspection" },
+  { value: "repair", label: "Repair", description: "Repair service" },
+  { value: "other", label: "Other Service", description: "Other service type" },
+];
 
 interface NewAircraftState {
   tailNumber: string;
@@ -96,32 +119,19 @@ export function AircraftTable({
     useState<Aircraft | null>(null);
   const [selectedOwnerIdForAssign, setSelectedOwnerIdForAssign] =
     useState<string>(OWNER_NONE_VALUE);
+  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
+  const [selectedAircraftForService, setSelectedAircraftForService] =
+    useState<Aircraft | null>(null);
+  const [selectedServiceType, setSelectedServiceType] = useState<ServiceType | "oil_topoff">("readiness");
+  const [serviceNotes, setServiceNotes] = useState("");
 
-  const quickActionMutation = useMutation<void, Error, { action: QuickAction; aircraft: Aircraft }>({
-    mutationFn: async ({ action, aircraft }) => {
+  const serviceMutation = useMutation<void, Error, { serviceType: ServiceType | "oil_topoff"; aircraft: Aircraft; notes: string }>({
+    mutationFn: async ({ serviceType, aircraft, notes }) => {
       if (!aircraft?.id) {
         throw new Error("Missing aircraft identifier");
       }
 
-      if (action === "readiness") {
-        const { error } = await supabase
-          .from("service_tasks")
-          .insert([
-            {
-              aircraft_id: aircraft.id,
-              type: "readiness",
-              status: "pending",
-              notes: "Created from staff dashboard quick action",
-            },
-          ]);
-
-        if (error) {
-          throw new Error(error.message ?? "Unable to create readiness task.");
-        }
-        return;
-      }
-
-      if (action === "oil") {
+      if (serviceType === "oil_topoff") {
         const { error } = await supabase
           .from("consumable_events")
           .insert([
@@ -130,7 +140,7 @@ export function AircraftTable({
               kind: "OIL",
               quantity: 2,
               unit: "qt",
-              notes: "Top-off request from staff dashboard quick action",
+              notes: notes || "Top-off request from staff dashboard",
             },
           ]);
 
@@ -140,62 +150,79 @@ export function AircraftTable({
         return;
       }
 
-      if (action === "avionics") {
-        const { error } = await supabase
-          .from("service_tasks")
-          .insert([
-            {
-              aircraft_id: aircraft.id,
-              type: "avionics_db_update",
-              status: "pending",
-              notes: "Scheduled from staff dashboard quick action",
-            },
-          ]);
+      // All other services create service_tasks
+      const { error } = await supabase
+        .from("service_tasks")
+        .insert([
+          {
+            aircraft_id: aircraft.id,
+            type: serviceType,
+            status: "pending",
+            notes: notes || `Service task created from staff dashboard`,
+          },
+        ]);
 
-        if (error) {
-          throw new Error(error.message ?? "Unable to create avionics database update task.");
-        }
-        return;
+      if (error) {
+        throw new Error(error.message ?? `Unable to create ${serviceType} task.`);
       }
-
-      throw new Error("Unknown quick action");
+      return;
     },
-    onSuccess: (_, { action, aircraft }) => {
-      const actionSummary: Record<QuickAction, string> = {
-        readiness: "Readiness task created",
-        oil: "Oil top-off logged",
-        avionics: "Avionics database update scheduled",
-      };
+    onSuccess: (_, { serviceType, aircraft }) => {
+      const serviceOption = SERVICE_OPTIONS.find(opt => opt.value === serviceType);
+      const serviceLabel = serviceOption?.label || serviceType;
 
       toast({
-        title: "Quick action completed",
-        description: `${actionSummary[action]} for ${aircraft.tailNumber}.`,
+        title: "Service added",
+        description: `${serviceLabel} created for ${aircraft.tailNumber}.`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
       queryClient.invalidateQueries({ queryKey: ["/api/service-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/aircraft/full"] });
+      
+      // Reset dialog state
+      setIsServiceDialogOpen(false);
+      setSelectedAircraftForService(null);
+      setSelectedServiceType("readiness");
+      setServiceNotes("");
     },
-    onError: (error, { action, aircraft }) => {
-      const actionSummary: Record<QuickAction, string> = {
-        readiness: "readiness task",
-        oil: "oil top-off",
-        avionics: "avionics database update",
-      };
+    onError: (error, { serviceType, aircraft }) => {
+      const serviceOption = SERVICE_OPTIONS.find(opt => opt.value === serviceType);
+      const serviceLabel = serviceOption?.label || serviceType;
 
       toast({
-        title: `Failed to create ${actionSummary[action]}`,
+        title: `Failed to create ${serviceLabel}`,
         description: error.message || "Please try again.",
         variant: "destructive",
       });
 
-      console.error("Quick action failed", {
-        action,
+      console.error("Service creation failed", {
+        serviceType,
         aircraftId: aircraft.id,
         error,
       });
     },
   });
+
+  function handleOpenServiceDialog(aircraft: Aircraft) {
+    setSelectedAircraftForService(aircraft);
+    setSelectedServiceType("readiness");
+    setServiceNotes("");
+    setIsServiceDialogOpen(true);
+  }
+
+  function handleSubmitService(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedAircraftForService) {
+      return;
+    }
+
+    serviceMutation.mutate({
+      serviceType: selectedServiceType,
+      aircraft: selectedAircraftForService,
+      notes: serviceNotes,
+    });
+  }
 
   const filteredAircraft =
     baseFilter === "all"
@@ -371,7 +398,7 @@ export function AircraftTable({
               <TableHead>Class</TableHead>
               <TableHead>Base</TableHead>
               <TableHead>Owner</TableHead>
-              <TableHead className="text-right">Quick Actions</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -410,63 +437,26 @@ export function AircraftTable({
                         <span className="sr-only">Assign to client</span>
                       </Button>
                       <Button
-                        size="icon"
-                        variant="ghost"
+                        size="sm"
+                        variant="outline"
                         disabled={
-                          quickActionMutation.isPending &&
-                          quickActionMutation.variables?.aircraft.id === a.id
+                          serviceMutation.isPending &&
+                          serviceMutation.variables?.aircraft.id === a.id
                         }
-                        onClick={() =>
-                          quickActionMutation.mutate({ action: "readiness", aircraft: a })
-                        }
-                        data-testid={`button-readiness-${a.id}`}
+                        onClick={() => handleOpenServiceDialog(a)}
+                        data-testid={`button-add-service-${a.id}`}
                       >
-                        {quickActionMutation.isPending &&
-                        quickActionMutation.variables?.aircraft.id === a.id &&
-                        quickActionMutation.variables?.action === "readiness" ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                        {serviceMutation.isPending &&
+                        serviceMutation.variables?.aircraft.id === a.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Adding...
+                          </>
                         ) : (
-                          <Plus className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        disabled={
-                          quickActionMutation.isPending &&
-                          quickActionMutation.variables?.aircraft.id === a.id
-                        }
-                        onClick={() =>
-                          quickActionMutation.mutate({ action: "oil", aircraft: a })
-                        }
-                        data-testid={`button-topoff-${a.id}`}
-                      >
-                        {quickActionMutation.isPending &&
-                        quickActionMutation.variables?.aircraft.id === a.id &&
-                        quickActionMutation.variables?.action === "oil" ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Wrench className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        disabled={
-                          quickActionMutation.isPending &&
-                          quickActionMutation.variables?.aircraft.id === a.id
-                        }
-                        onClick={() =>
-                          quickActionMutation.mutate({ action: "avionics", aircraft: a })
-                        }
-                        data-testid={`button-db-update-${a.id}`}
-                      >
-                        {quickActionMutation.isPending &&
-                        quickActionMutation.variables?.aircraft.id === a.id &&
-                        quickActionMutation.variables?.action === "avionics" ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Database className="h-4 w-4" />
+                          <>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Service
+                          </>
                         )}
                       </Button>
                     </div>
@@ -715,6 +705,96 @@ export function AircraftTable({
                   </>
                 ) : (
                   "Save Assignment"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isServiceDialogOpen} onOpenChange={(open) => {
+        if (!open && !serviceMutation.isPending) {
+          setIsServiceDialogOpen(false);
+          setSelectedAircraftForService(null);
+          setSelectedServiceType("readiness");
+          setServiceNotes("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Service</DialogTitle>
+            <DialogDescription>
+              Select a service type to add for {selectedAircraftForService?.tailNumber || "this aircraft"}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmitService} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Aircraft</Label>
+              <div className="rounded-md border bg-muted px-3 py-2 font-mono">
+                {selectedAircraftForService?.tailNumber ?? "N/A"}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service-type">Service Type</Label>
+              <Select
+                value={selectedServiceType}
+                onValueChange={(value) => setSelectedServiceType(value as ServiceType | "oil_topoff")}
+              >
+                <SelectTrigger id="service-type" data-testid="select-service-type">
+                  <SelectValue placeholder="Select service type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SERVICE_OPTIONS.map((service) => (
+                    <SelectItem key={service.value} value={service.value}>
+                      {service.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service-notes">Notes (Optional)</Label>
+              <Textarea
+                id="service-notes"
+                placeholder="Add any notes or details about this service..."
+                value={serviceNotes}
+                onChange={(e) => setServiceNotes(e.target.value)}
+                rows={3}
+                data-testid="textarea-service-notes"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (!serviceMutation.isPending) {
+                    setIsServiceDialogOpen(false);
+                    setSelectedAircraftForService(null);
+                    setSelectedServiceType("readiness");
+                    setServiceNotes("");
+                  }
+                }}
+                disabled={serviceMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={serviceMutation.isPending}
+                data-testid="button-submit-service"
+              >
+                {serviceMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  "Add Service"
                 )}
               </Button>
             </DialogFooter>

@@ -89,22 +89,122 @@ export function useAircraft(aircraftId?: string) {
   // Update aircraft mutation
   const updateAircraft = useMutation({
     mutationFn: async ({ id, data: updateData }: { id: string; data: Partial<AircraftFormData> }) => {
-      // Validate partial input
-      const validated = aircraftSchema.partial().parse(updateData);
+      // Prepare update data - handle empty strings and undefined values
+      const preparedData: Record<string, any> = {};
+      
+      for (const [key, value] of Object.entries(updateData)) {
+        // Skip undefined values
+        if (value === undefined) {
+          continue;
+        }
+        
+        // Convert empty strings to null for nullable fields
+        if (value === "") {
+          // For nullable fields, set to null
+          if (["year", "class", "hobbs_hours", "tach_hours", "image_url", "base_location"].includes(key)) {
+            preparedData[key] = null;
+          } else if (["make", "model", "tail_number"].includes(key)) {
+            // For required string fields, skip empty strings (don't update)
+            continue;
+          } else {
+            preparedData[key] = null;
+          }
+        } else {
+          preparedData[key] = value;
+        }
+      }
+
+      // If no valid fields to update, throw error
+      if (Object.keys(preparedData).length === 0) {
+        throw new Error("No valid fields to update");
+      }
+
+      // Create a lenient schema for partial updates
+      // For string fields that are being updated, allow empty strings to be converted
+      const updatePayload: AircraftUpdate = {};
+      
+      // Handle each field type appropriately
+      if ("make" in preparedData && preparedData.make !== null && preparedData.make !== "") {
+        updatePayload.make = String(preparedData.make).trim();
+        if (updatePayload.make.length === 0) {
+          throw new Error("Make cannot be empty");
+        }
+      }
+      if ("model" in preparedData && preparedData.model !== null && preparedData.model !== "") {
+        updatePayload.model = String(preparedData.model).trim();
+        if (updatePayload.model.length === 0) {
+          throw new Error("Model cannot be empty");
+        }
+      }
+      if ("tail_number" in preparedData && preparedData.tail_number !== null && preparedData.tail_number !== "") {
+        updatePayload.tail_number = String(preparedData.tail_number).trim().toUpperCase();
+      }
+      if ("year" in preparedData) {
+        if (preparedData.year === null) {
+          updatePayload.year = null;
+        } else {
+          const yearNum = Number(preparedData.year);
+          if (isNaN(yearNum)) {
+            throw new Error("Year must be a valid number");
+          }
+          updatePayload.year = yearNum;
+        }
+      }
+      if ("class" in preparedData) {
+        updatePayload.class = preparedData.class === null || preparedData.class === "" ? null : String(preparedData.class).trim();
+      }
+      if ("hobbs_hours" in preparedData) {
+        if (preparedData.hobbs_hours === null) {
+          updatePayload.hobbs_hours = null;
+        } else {
+          const hoursNum = Number(preparedData.hobbs_hours);
+          if (isNaN(hoursNum) || hoursNum < 0) {
+            throw new Error("Hobbs hours must be a valid number >= 0");
+          }
+          updatePayload.hobbs_hours = hoursNum;
+        }
+      }
+      if ("tach_hours" in preparedData) {
+        if (preparedData.tach_hours === null) {
+          updatePayload.tach_hours = null;
+        } else {
+          const hoursNum = Number(preparedData.tach_hours);
+          if (isNaN(hoursNum) || hoursNum < 0) {
+            throw new Error("Tach hours must be a valid number >= 0");
+          }
+          updatePayload.tach_hours = hoursNum;
+        }
+      }
+      if ("base_location" in preparedData) {
+        updatePayload.base_location = preparedData.base_location === null || preparedData.base_location === "" ? null : String(preparedData.base_location).trim();
+      }
+      if ("image_url" in preparedData) {
+        updatePayload.image_url = preparedData.image_url === null || preparedData.image_url === "" ? null : String(preparedData.image_url).trim();
+      }
+
+      // Check if we have anything to update
+      if (Object.keys(updatePayload).length === 0) {
+        throw new Error("No valid fields to update");
+      }
 
       const { data, error } = await supabase
         .from("aircraft")
-        .update(validated as AircraftUpdate)
+        .update(updatePayload)
         .eq("id", id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error updating aircraft:", error);
+        throw new Error(error.message || "Failed to update aircraft");
+      }
       return data;
     },
     onSuccess: (_, variables) => {
+      // Invalidate all relevant query keys
       queryClient.invalidateQueries({ queryKey: ["aircraft", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["aircraft", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/aircraft"] });
     },
   });
 
