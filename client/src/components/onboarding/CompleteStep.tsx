@@ -29,7 +29,7 @@ export function CompleteStep({ onComplete, personalInfo }: CompleteStepProps) {
       <div className="space-y-2">
         <h2 className="text-3xl font-bold">Welcome Aboard{personalInfo?.full_name ? `, ${personalInfo.full_name.split(' ')[0]}` : ''}!</h2>
         <p className="text-lg text-muted-foreground">
-          Your Freedom Aviation membership is now active.
+          Your quote has been submitted and we'll be in touch within 24 hours.
         </p>
       </div>
 
@@ -41,7 +41,7 @@ export function CompleteStep({ onComplete, personalInfo }: CompleteStepProps) {
             <div>
               <p className="font-medium">Check Your Email</p>
               <p className="text-sm text-muted-foreground">
-                We've sent you a welcome email with important information
+                You'll receive a copy of your quote and next steps
               </p>
             </div>
           </div>
@@ -51,7 +51,7 @@ export function CompleteStep({ onComplete, personalInfo }: CompleteStepProps) {
             <div>
               <p className="font-medium">Explore Your Dashboard</p>
               <p className="text-sm text-muted-foreground">
-                View your aircraft, request services, and track maintenance
+                View your aircraft and personalize your profile
               </p>
             </div>
           </div>
@@ -59,9 +59,9 @@ export function CompleteStep({ onComplete, personalInfo }: CompleteStepProps) {
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
             <div>
-              <p className="font-medium">Schedule Your First Service</p>
+              <p className="font-medium">We'll Contact You Soon</p>
               <p className="text-sm text-muted-foreground">
-                Our team is ready to take care of your aircraft
+                Our team will reach out to finalize your membership details
               </p>
             </div>
           </div>

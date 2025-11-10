@@ -59,6 +59,8 @@ export interface Database {
           image_url: string | null
           owner_id: string | null
           base_location: string | null
+          has_tks: boolean | null
+          has_oxygen: boolean | null
           created_at: string
           updated_at: string
         }
@@ -74,6 +76,8 @@ export interface Database {
           image_url?: string | null
           owner_id?: string | null
           base_location?: string | null
+          has_tks?: boolean | null
+          has_oxygen?: boolean | null
           created_at?: string
           updated_at?: string
         }
@@ -89,6 +93,8 @@ export interface Database {
           image_url?: string | null
           owner_id?: string | null
           base_location?: string | null
+          has_tks?: boolean | null
+          has_oxygen?: boolean | null
           created_at?: string
           updated_at?: string
         }

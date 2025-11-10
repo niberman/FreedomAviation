@@ -15,6 +15,8 @@ export const aircraftSchema = z.object({
   tach_hours: z.number().min(0).optional().nullable(),
   image_url: z.string().url().optional().nullable(),
   base_location: z.string().optional().nullable(),
+  has_tks: z.boolean().optional().nullable(),
+  has_oxygen: z.boolean().optional().nullable(),
 });
 
 export type AircraftFormData = z.infer<typeof aircraftSchema>;
@@ -101,7 +103,7 @@ export function useAircraft(aircraftId?: string) {
         // Convert empty strings to null for nullable fields
         if (value === "") {
           // For nullable fields, set to null
-          if (["year", "class", "hobbs_hours", "tach_hours", "image_url", "base_location"].includes(key)) {
+          if (["year", "class", "hobbs_hours", "tach_hours", "image_url", "base_location", "has_tks", "has_oxygen"].includes(key)) {
             preparedData[key] = null;
           } else if (["make", "model", "tail_number"].includes(key)) {
             // For required string fields, skip empty strings (don't update)
@@ -180,6 +182,12 @@ export function useAircraft(aircraftId?: string) {
       }
       if ("image_url" in preparedData) {
         updatePayload.image_url = preparedData.image_url === null || preparedData.image_url === "" ? null : String(preparedData.image_url).trim();
+      }
+      if ("has_tks" in preparedData) {
+        updatePayload.has_tks = preparedData.has_tks === null ? null : Boolean(preparedData.has_tks);
+      }
+      if ("has_oxygen" in preparedData) {
+        updatePayload.has_oxygen = preparedData.has_oxygen === null ? null : Boolean(preparedData.has_oxygen);
       }
 
       // Check if we have anything to update

@@ -34,9 +34,14 @@ CREATE TABLE public.aircraft (
   image_url TEXT,
   owner_id UUID REFERENCES public.user_profiles(id),
   base_location TEXT,
+  has_tks BOOLEAN DEFAULT false,
+  has_oxygen BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+COMMENT ON COLUMN public.aircraft.has_tks IS 'Whether the aircraft has TKS ice protection system - determines pricing class';
+COMMENT ON COLUMN public.aircraft.has_oxygen IS 'Whether the aircraft has oxygen system - determines pricing class';
 
 -- Memberships table
 CREATE TABLE public.memberships (
