@@ -33,6 +33,9 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { AircraftTable } from "@/components/aircraft-table";
 import { MaintenanceList } from "@/components/maintenance-list";
 import { ClientsTable } from "@/components/clients-table";
+import { ServiceRequestEditDialog } from "@/components/service-request-edit-dialog";
+import { FlightLogsList } from "@/components/flight-logs-list";
+import { CFISchedule } from "@/components/cfi-schedule";
 
 interface InstructionInvoice {
   id: string;
@@ -66,6 +69,8 @@ export default function StaffDashboard() {
   const [hours, setHours] = useState("");
   const [ratePerHour, setRatePerHour] = useState("150");
   const [showPreview, setShowPreview] = useState(false);
+  const [selectedServiceRequest, setSelectedServiceRequest] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
 
   // Fetch owners
@@ -278,6 +283,16 @@ export default function StaffDashboard() {
             created_at,
             aircraft_id,
             user_id,
+            assigned_to,
+            notes,
+            fuel_grade,
+            fuel_quantity,
+            o2_topoff,
+            tks_topoff,
+            gpu_required,
+            hangar_pullout,
+            is_extra_charge,
+            credits_used,
             aircraft:aircraft_id(tail_number),
             owner:user_id(full_name, email)
           `)
@@ -292,7 +307,7 @@ export default function StaffDashboard() {
           // Fetch service requests without nested relations
           const srResult = await supabase
             .from('service_requests')
-            .select('id, service_type, requested_departure, description, status, priority, airport, created_at, aircraft_id, user_id')
+            .select('id, service_type, requested_departure, description, status, priority, airport, created_at, aircraft_id, user_id, assigned_to, notes, fuel_grade, fuel_quantity, o2_topoff, tks_topoff, gpu_required, hangar_pullout, is_extra_charge, credits_used')
             .order('created_at', { ascending: false });
           
           if (srResult.error) {
@@ -364,6 +379,44 @@ export default function StaffDashboard() {
     // Refetch every 30 seconds to catch new requests
     refetchInterval: 30000,
   });
+
+  // Handle service request status change
+  const handleStatusChange = async (requestId: string, status: "pending" | "in_progress" | "completed") => {
+    try {
+      const { error } = await supabase
+        .from("service_requests")
+        .update({ status })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status updated",
+        description: `Service request status changed to ${status}`,
+      });
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+    } catch (error) {
+      console.error("Error updating service request status:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update status",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  // Handle service request card selection
+  const handleCardSelect = (requestId: string) => {
+    const request = serviceRequests.find((sr: any) => sr.id === requestId);
+    if (request) {
+      setSelectedServiceRequest(request);
+      setIsEditDialogOpen(true);
+    }
+  };
 
   // Handle service requests loading errors
   useEffect(() => {
@@ -877,39 +930,53 @@ export default function StaffDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <KanbanBoard items={serviceRequests
-                .filter((sr: any) => sr && sr.id) // Filter out any null/undefined items or items without id
-                .map((sr: any) => {
-                  // Map database statuses to Kanban board statuses
-                  const statusMap: Record<string, 'new' | 'in_progress' | 'done'> = {
-                    'pending': 'new',
-                    'in_progress': 'in_progress',
-                    'completed': 'done',
-                    'cancelled': 'done', // Treat cancelled as done
-                  };
-                  
-                  // Format requested date/time
-                  let requestedFor = 'TBD';
-                  if (sr.requested_departure) {
-                    const date = new Date(sr.requested_departure);
-                    requestedFor = format(date, 'MMM d, yyyy HH:mm');
-                  } else if (sr.airport) {
-                    requestedFor = sr.airport;
-                  }
-                  
-                  // Use description for display
-                  const displayNotes = sr.description || '';
-                  
-                  return {
-                    id: sr.id,
-                    tailNumber: sr.aircraft?.tail_number || 'N/A',
-                    type: sr.service_type,
-                    requestedFor,
-                    notes: displayNotes,
-                    status: statusMap[sr.status] || 'new',
-                    ownerName: sr.owner?.full_name || sr.owner?.email || undefined,
-                  };
-                })} />
+              <>
+                <KanbanBoard 
+                  items={serviceRequests
+                    .filter((sr: any) => sr && sr.id) // Filter out any null/undefined items or items without id
+                    .map((sr: any) => {
+                      // Map database statuses to Kanban board statuses
+                      const statusMap: Record<string, 'new' | 'in_progress' | 'done'> = {
+                        'pending': 'new',
+                        'in_progress': 'in_progress',
+                        'completed': 'done',
+                        'cancelled': 'done', // Treat cancelled as done
+                      };
+                      
+                      // Format requested date/time
+                      let requestedFor = 'TBD';
+                      if (sr.requested_departure) {
+                        const date = new Date(sr.requested_departure);
+                        requestedFor = format(date, 'MMM d, yyyy HH:mm');
+                      } else if (sr.airport) {
+                        requestedFor = sr.airport;
+                      }
+                      
+                      // Use description for display
+                      const displayNotes = sr.description || '';
+                      
+                      return {
+                        id: sr.id,
+                        tailNumber: sr.aircraft?.tail_number || 'N/A',
+                        type: sr.service_type,
+                        requestedFor,
+                        notes: displayNotes,
+                        status: statusMap[sr.status] || 'new',
+                        ownerName: sr.owner?.full_name || sr.owner?.email || undefined,
+                      };
+                    })}
+                  onCardSelect={handleCardSelect}
+                  onStatusChange={handleStatusChange}
+                />
+                <ServiceRequestEditDialog
+                  open={isEditDialogOpen}
+                  onOpenChange={setIsEditDialogOpen}
+                  serviceRequest={selectedServiceRequest}
+                  onSuccess={() => {
+                    refetchServiceRequests();
+                  }}
+                />
+              </>
             )}
           </TabsContent>
 
@@ -1061,10 +1128,12 @@ export default function StaffDashboard() {
               </p>
             </div>
 
+            <CFISchedule />
+
             {/* Instruction Requests */}
-            <Card>
+            <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Flight Instruction Requests</CardTitle>
+                <CardTitle>Pending Instruction Requests</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Instruction requests from owners awaiting CFI assignment
                 </p>
@@ -1194,11 +1263,7 @@ export default function StaffDashboard() {
                 Review and sign off on flight logs
               </p>
             </div>
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Flight logs functionality coming soon.</p>
-              </CardContent>
-            </Card>
+            <FlightLogsList />
           </TabsContent>
 
           {/* Invoices */}

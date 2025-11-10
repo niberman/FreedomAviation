@@ -1,6 +1,7 @@
 import { defaultDashboardNav } from "./layout";
 
 export const ownerDashboardNavItems = [
+  { href: "/", label: "Home", exact: true },
   { href: "/dashboard", label: "Overview", exact: true },
   { href: "/dashboard/more", label: "Operations" },
 ];

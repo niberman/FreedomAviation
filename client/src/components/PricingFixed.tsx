@@ -56,7 +56,13 @@ export default function PricingFixed() {
   const hangarCost = selectedHangar.cost;
 
   const handleContinue = (packageId: string) => {
-    navigate(`/contact?source=pricing_${packageId}&hangar=${selectedHangarId}`);
+<<<<<<< Current (Your changes)
+    // Navigate to onboarding with pre-selected package
+    navigate(`/onboarding?package=${packageId}&hangar=${selectedHangarId}`);
+=======
+    // Redirect to onboarding flow with selected pricing
+    navigate(`/onboarding?tier=${packageId}&hangar=${selectedHangarId}`);
+>>>>>>> Incoming (Background Agent changes)
   };
 
   // Show loading state
@@ -297,7 +303,7 @@ export default function PricingFixed() {
                         onClick={() => handleContinue(pkg.slug)}
                         data-testid={`button-continue-${pkg.id}`}
                       >
-                        Continue
+                        Start Your Membership
                       </Button>
                     </CardContent>
                   </Card>

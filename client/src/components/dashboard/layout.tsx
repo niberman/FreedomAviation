@@ -43,9 +43,11 @@ export function DashboardLayout({
         <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Freedom Aviation
-              </p>
+              <Link href="/" className="hover:opacity-80 transition-opacity">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-foreground">
+                  Freedom Aviation
+                </p>
+              </Link>
               <h1 className="text-2xl font-bold tracking-tight" data-testid={titleTestId}>
                 {title}
               </h1>

@@ -308,3 +308,178 @@ For now, update your Vercel environment variable EMAIL_FROM to: Freedom Aviation
   }
 }
 
+/**
+ * Welcome email data
+ */
+interface WelcomeEmailData {
+  userName: string;
+  userEmail: string;
+}
+
+/**
+ * Generate HTML email template for welcome email
+ */
+function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
+  const BRAND = {
+    name: "Freedom Aviation",
+    email: "info@freedomaviationco.com",
+    phone: "(970) 618-2094",
+    address: "7565 S Peoria St, Englewood, CO 80112",
+    dashboardUrl: "https://www.freedomaviationco.com/dashboard",
+  };
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Freedom Aviation</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; background-color: #1f2937; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Freedom Aviation</h1>
+              <p style="margin: 8px 0 0; color: #d1d5db; font-size: 14px;">Colorado-Based. Front Range Focused.</p>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 24px; color: #111827; font-size: 24px; font-weight: 600;">Welcome Aboard, ${escapeHtml(data.userName)}!</h2>
+              
+              <p style="margin: 0 0 16px; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                We're thrilled to have you as part of the Freedom Aviation family. Your membership is now active, and we're ready to provide you with exceptional aircraft management services.
+              </p>
+              
+              <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                Here's what you can expect from us:
+              </p>
+              
+              <!-- Features -->
+              <table role="presentation" style="width: 100%; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 16px; background-color: #f9fafb; border-radius: 6px; margin-bottom: 12px;">
+                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 16px; font-weight: 600;">🛩️ Expert Aircraft Care</h3>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                      Professional detailing, maintenance tracking, and readiness services tailored to your aircraft and flying schedule.
+                    </p>
+                  </td>
+                </tr>
+                <tr><td style="height: 12px;"></td></tr>
+                <tr>
+                  <td style="padding: 16px; background-color: #f9fafb; border-radius: 6px; margin-bottom: 12px;">
+                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 16px; font-weight: 600;">📱 Digital Owner Portal</h3>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                      Access your aircraft information, request services, view maintenance logs, and manage everything from one convenient dashboard.
+                    </p>
+                  </td>
+                </tr>
+                <tr><td style="height: 12px;"></td></tr>
+                <tr>
+                  <td style="padding: 16px; background-color: #f9fafb; border-radius: 6px;">
+                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 16px; font-weight: 600;">🔧 Proactive Maintenance</h3>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                      We'll keep you informed about upcoming maintenance, inspections, and any service your aircraft needs.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- CTA Button -->
+              <div style="margin: 32px 0; text-align: center;">
+                <a href="${BRAND.dashboardUrl}" style="display: inline-block; padding: 14px 32px; background-color: #1f2937; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                  Access Your Dashboard
+                </a>
+              </div>
+              
+              <p style="margin: 24px 0 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                If you have any questions or need assistance, don't hesitate to reach out. We're here to help!
+              </p>
+              
+              <p style="margin: 24px 0 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                Clear skies,<br>
+                <strong>The Freedom Aviation Team</strong>
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0 0 8px; color: #6b7280; font-size: 12px; text-align: center;">
+                ${BRAND.email} | ${BRAND.phone}
+              </p>
+              <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                ${BRAND.address}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+/**
+ * Send welcome email to new members
+ */
+export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
+  const emailService = process.env.EMAIL_SERVICE || "console";
+  
+  const html = generateWelcomeEmailHTML(data);
+  const text = `
+Welcome to Freedom Aviation, ${data.userName}!
+
+We're thrilled to have you as part of the Freedom Aviation family. Your membership is now active, and we're ready to provide you with exceptional aircraft management services.
+
+What you can expect from us:
+
+🛩️ Expert Aircraft Care
+Professional detailing, maintenance tracking, and readiness services tailored to your aircraft and flying schedule.
+
+📱 Digital Owner Portal
+Access your aircraft information, request services, view maintenance logs, and manage everything from one convenient dashboard.
+
+🔧 Proactive Maintenance
+We'll keep you informed about upcoming maintenance, inspections, and any service your aircraft needs.
+
+Access your dashboard: https://www.freedomaviationco.com/dashboard
+
+If you have any questions or need assistance, don't hesitate to reach out. We're here to help!
+
+Clear skies,
+The Freedom Aviation Team
+
+Freedom Aviation
+${process.env.EMAIL_FROM || "info@freedomaviationco.com"}
+(970) 618-2094
+  `;
+
+  switch (emailService) {
+    case "console":
+      console.log(`[CONSOLE MODE] WELCOME EMAIL would be sent to ${data.userEmail}`);
+      console.log("To actually send emails, set EMAIL_SERVICE=resend and RESEND_API_KEY");
+      return;
+
+    case "smtp":
+      return sendViaSMTP(data.userEmail, "Welcome to Freedom Aviation!", html, text);
+
+    case "resend":
+      return sendViaResend(data.userEmail, "Welcome to Freedom Aviation!", html, text);
+
+    default:
+      console.warn(`⚠️ Unknown email service: ${emailService}, using console mode`);
+      return;
+  }
+}
+

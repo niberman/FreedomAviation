@@ -21,6 +21,7 @@ import Pricing from "./pages/Pricing";
 import Contact from "./pages/Contact";
 import HangarLocations from "./pages/HangarLocations";
 import About from "./pages/About";
+import Onboarding from "./pages/onboarding";
 import OwnerDashboard from "./pages/owner-dashboard";
 import OwnerMore from "./pages/owner-more";
 import StaffDashboard from "./pages/staff-dashboard";
@@ -72,6 +73,11 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/onboarding">
+        <ProtectedRoute>
+          <Onboarding />
+        </ProtectedRoute>
+      </Route>
       <Route path="/pricing" component={Pricing} />
       <Route path="/contact" component={Contact} />
       <Route path="/about" component={About} />
@@ -151,7 +157,8 @@ function App() {
     currentPath.startsWith("/dashboard") ||
     currentPath.startsWith("/staff") ||
     currentPath.startsWith("/admin");
-  const showMarketingChrome = !isDashboardRoute && currentPath !== "/demo";
+  const isOnboarding = currentPath.startsWith("/onboarding");
+  const showMarketingChrome = !isDashboardRoute && !isOnboarding && currentPath !== "/demo";
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });

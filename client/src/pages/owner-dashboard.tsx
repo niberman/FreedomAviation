@@ -10,7 +10,7 @@ import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT, DEMO_USER } from "@/lib/demo-data";
 import logoImage from "@assets/falogo.png";
 import { Link, useLocation } from "wouter";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Home } from "lucide-react";
 import { EditableField } from "@/components/owner/EditableField";
 import { useAircraft } from "@/lib/hooks/useAircraft";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,7 @@ import { useEffect } from "react";
 import { isStaffRole } from "@/lib/roles";
 import { DashboardLayout } from "@/components/dashboard/layout";
 import { ownerDashboardNavItems } from "@/components/dashboard/nav-items";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
@@ -158,6 +159,8 @@ export default function OwnerDashboard() {
   const readinessStatus = hasOpenTask ? "Needs Service" : "Ready";
   const readinessVariant = hasOpenTask ? "destructive" : "default";
 
+  const queryClient = useQueryClient();
+  
   const handleAircraftUpdate = async (field: string, value: string | number | null) => {
     if (!aircraft?.id || isDemo) return;
     
@@ -166,16 +169,26 @@ export default function OwnerDashboard() {
         id: aircraft.id,
         data: { [field]: value },
       });
+      
+      // Explicitly invalidate the owner dashboard's aircraft query
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }] 
+      });
+      
       toast({
         title: "Aircraft updated",
         description: "Your aircraft information has been updated successfully.",
       });
     } catch (error) {
+      console.error("Error updating aircraft:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to update aircraft";
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update aircraft",
+        description: errorMessage,
         variant: "destructive",
       });
+      // Re-throw error so EditableField can keep the editor open
+      throw error;
     }
   };
   return (
@@ -184,7 +197,17 @@ export default function OwnerDashboard() {
       description="Welcome back to Freedom Aviation"
       navItems={ownerDashboardNavItems}
       titleTestId="text-dashboard-title"
-      showHeader={false}
+      actions={
+        <div className="flex items-center gap-2">
+          <Link href="/">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Home className="h-4 w-4" />
+              Home
+            </Button>
+          </Link>
+          <ThemeToggle />
+        </div>
+      }
     >
       {isDemo && <DemoBanner />}
 
@@ -202,10 +225,10 @@ export default function OwnerDashboard() {
         <CardContent>
           {aircraft ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="text-sm text-muted-foreground">Tail Number</div>
-                  <div className="text-2xl font-bold" data-testid="text-tail-number">
+                  <div className="text-xl sm:text-2xl font-bold truncate" data-testid="text-tail-number">
                     {aircraft.tail_number}
                   </div>
                   {!isDemo && (
@@ -226,11 +249,11 @@ export default function OwnerDashboard() {
                       />
                       <EditableField
                         value={aircraft.year}
-                        onSave={(value) => handleAircraftUpdate("year", value ? Number(value) : null)}
+                        onSave={(value) => handleAircraftUpdate("year", value !== null && value !== "" ? Number(value) : null)}
                         label="Year"
                         type="number"
                         format={(v) => v?.toString() || "N/A"}
-                        parse={(v) => v ? Number(v) : null}
+                        parse={(v) => v === "" || v === null ? null : Number(v)}
                         placeholder="2024"
                         className="text-sm"
                       />
@@ -248,11 +271,11 @@ export default function OwnerDashboard() {
                 <div className="space-y-2">
                   <EditableField
                     value={aircraft.hobbs_hours}
-                    onSave={(value) => handleAircraftUpdate("hobbs_hours", value ? Number(value) : null)}
+                    onSave={(value) => handleAircraftUpdate("hobbs_hours", value !== null && value !== "" ? Number(value) : null)}
                     label="Hobbs Time"
                     type="number"
-                    format={(v) => v ? `${Number(v).toFixed(1)} hrs` : "N/A"}
-                    parse={(v) => v ? Number(v) : null}
+                    format={(v) => v !== null && v !== undefined ? `${Number(v).toFixed(1)} hrs` : "N/A"}
+                    parse={(v) => v === "" || v === null ? null : Number(v)}
                     placeholder="0.0"
                     disabled={isDemo}
                     className="text-xl font-semibold"
@@ -262,11 +285,11 @@ export default function OwnerDashboard() {
                 <div className="space-y-2">
                   <EditableField
                     value={aircraft.tach_hours}
-                    onSave={(value) => handleAircraftUpdate("tach_hours", value ? Number(value) : null)}
+                    onSave={(value) => handleAircraftUpdate("tach_hours", value !== null && value !== "" ? Number(value) : null)}
                     label="Tach Time"
                     type="number"
-                    format={(v) => v ? `${Number(v).toFixed(1)} hrs` : "N/A"}
-                    parse={(v) => v ? Number(v) : null}
+                    format={(v) => v !== null && v !== undefined ? `${Number(v).toFixed(1)} hrs` : "N/A"}
+                    parse={(v) => v === "" || v === null ? null : Number(v)}
                     placeholder="0.0"
                     disabled={isDemo}
                     className="text-xl font-semibold"
@@ -290,6 +313,9 @@ export default function OwnerDashboard() {
           )}
         </CardContent>
       </Card>
+      {aircraft === null && (hookAircraftList.isLoading || aircraftList === undefined) && (
+        <div className="p-4 animate-pulse text-muted-foreground text-sm">Loading aircraft information…</div>
+      )}
 
       {aircraft && (user || isDemo) && (
         <QuickActions 

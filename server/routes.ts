@@ -1015,6 +1015,240 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding: Create Stripe subscription
+  app.post("/api/onboarding/create-subscription", async (req: Request, res: Response) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+    
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    try {
+      if (!stripe || !supabase) {
+        return res.status(503).json({ error: "Stripe or Supabase not configured" });
+      }
+
+      const { userId, membershipSelection, personalInfo } = req.body;
+
+      if (!userId || !membershipSelection) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Get user profile
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('email, full_name')
+        .eq('id', userId)
+        .single();
+
+      if (!userProfile) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Calculate price (cents)
+      const priceMap: Record<string, number> = {
+        'class-i': 200,
+        'class-ii': 550,
+        'class-iii': 1000,
+      };
+      const multiplierMap: Record<string, number> = {
+        '0-10': 1.0,
+        '10-25': 1.45,
+        '25-40': 1.9,
+        '40+': 2.2,
+      };
+
+      const basePrice = priceMap[membershipSelection.package_id] || 550;
+      const multiplier = multiplierMap[membershipSelection.hours_band] || 1.45;
+      const monthlyPrice = Math.round(basePrice * multiplier);
+      const priceInCents = monthlyPrice * 100;
+
+      // Create or get Stripe customer
+      let customer;
+      const existingCustomers = await stripe.customers.list({
+        email: userProfile.email,
+        limit: 1,
+      });
+
+      if (existingCustomers.data.length > 0) {
+        customer = existingCustomers.data[0];
+      } else {
+        customer = await stripe.customers.create({
+          email: userProfile.email,
+          name: personalInfo?.full_name || userProfile.full_name,
+          metadata: {
+            user_id: userId,
+          },
+        });
+      }
+
+      // Create price if it doesn't exist (or use existing)
+      const price = await stripe.prices.create({
+        currency: 'usd',
+        unit_amount: priceInCents,
+        recurring: {
+          interval: 'month',
+        },
+        product_data: {
+          name: `Freedom Aviation ${membershipSelection.package_id.toUpperCase()} Membership`,
+          description: `${membershipSelection.hours_band} hours per month`,
+        },
+      });
+
+      // Create subscription
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [{ price: price.id }],
+        payment_behavior: 'default_incomplete',
+        payment_settings: {
+          payment_method_types: ['card'],
+          save_default_payment_method: 'on_subscription',
+        },
+        expand: ['latest_invoice.payment_intent'],
+        metadata: {
+          user_id: userId,
+          package_id: membershipSelection.package_id,
+          hours_band: membershipSelection.hours_band,
+        },
+      });
+
+      const invoice = subscription.latest_invoice as any;
+      const paymentIntent = invoice?.payment_intent;
+
+      // Save customer and subscription IDs to user profile
+      await supabase
+        .from('user_profiles')
+        .update({
+          stripe_customer_id: customer.id,
+          stripe_subscription_id: subscription.id,
+        })
+        .eq('id', userId);
+
+      res.json({
+        clientSecret: paymentIntent?.client_secret,
+        subscriptionId: subscription.id,
+        customerId: customer.id,
+      });
+    } catch (error: any) {
+      console.error('Error creating subscription:', error);
+      res.status(500).json({
+        error: 'Failed to create subscription',
+        message: error.message,
+      });
+    }
+  });
+
+  // Onboarding: Get Stripe info
+  app.get("/api/onboarding/stripe-info", async (req: Request, res: Response) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+    
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+
+      if (!token) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+
+      if (authError || !user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('stripe_customer_id, stripe_subscription_id')
+        .eq('id', user.id)
+        .single();
+
+      res.json({
+        customerId: profile?.stripe_customer_id,
+        subscriptionId: profile?.stripe_subscription_id,
+      });
+    } catch (error: any) {
+      console.error('Error getting stripe info:', error);
+      res.status(500).json({ error: 'Failed to get stripe info' });
+    }
+  });
+
+  // Onboarding: Send welcome email
+  app.post("/api/onboarding/welcome-email", async (req: Request, res: Response) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+    
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    try {
+      if (!supabase) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "Missing userId" });
+      }
+
+      // Get user profile
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('email, full_name')
+        .eq('id', userId)
+        .single();
+
+      if (!userProfile) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Import and call sendWelcomeEmail function
+      const { sendWelcomeEmail } = await import('./lib/email.js');
+      
+      await sendWelcomeEmail({
+        userName: userProfile.full_name || userProfile.email,
+        userEmail: userProfile.email,
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error sending welcome email:', error);
+      res.status(500).json({
+        error: 'Failed to send welcome email',
+        message: error.message,
+      });
+    }
+  });
+
   // Handle OPTIONS preflight for create client endpoint
   app.options("/api/clients/create", (req: Request, res: Response) => {
     const origin = req.headers.origin;
