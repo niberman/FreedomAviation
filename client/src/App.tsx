@@ -33,6 +33,7 @@ import StaffAircraft from "./pages/staff/aircraft";
 import StaffOperations from "./pages/staff/operations";
 import StaffSettings from "./pages/staff/settings";
 import UnifiedPricingConfigurator from "./pages/admin/UnifiedPricingConfigurator";
+import PricingConfiguratorPage from "./pages/pricing-configurator";
 import NotFound from "./pages/not-found";
 import SkyHarbour from "./pages/partners/SkyHarbour";
 import FAHangar from "./pages/partners/FAHangar";
@@ -79,6 +80,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/pricing" component={Pricing} />
+      <Route path="/pricing-configurator" component={PricingConfiguratorPage} />
       <Route path="/contact" component={Contact} />
       <Route path="/about" component={About} />
       <Route path="/hangar-locations" component={HangarLocations} />
@@ -141,6 +143,11 @@ function Router() {
       <Route path="/staff/settings">
         <StaffProtectedRoute>
           <StaffSettings />
+        </StaffProtectedRoute>
+      </Route>
+      <Route path="/staff/pricing">
+        <StaffProtectedRoute>
+          <UnifiedPricingConfigurator />
         </StaffProtectedRoute>
       </Route>
       <Route path="/partners/sky-harbour" component={SkyHarbour} />

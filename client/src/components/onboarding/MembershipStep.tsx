@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,16 +16,42 @@ interface MembershipStepProps {
 
 export function MembershipStep({ initialData, aircraftInfo, onComplete, onBack, saving }: MembershipStepProps) {
   const [selectedPackage, setSelectedPackage] = useState<'class-i' | 'class-ii' | 'class-iii'>(
-    initialData?.package_id || 'class-ii'
+    (initialData?.package_id as any) || 'class-ii'
   );
-  const [selectedHoursBand, setSelectedHoursBand] = useState<'0-10' | '10-25' | '25-40' | '40+'>(
-    initialData?.hours_band || '10-25'
+  const [selectedHoursBand, setSelectedHoursBand] = useState<'0-20' | '20-50' | '50+'>(
+    initialData?.hours_band || '20-50'
   );
+
+  // Get hangar info from URL params or localStorage (passed from pricing page)
+  const [hangarId, setHangarId] = useState<string>(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('hangar') || localStorage.getItem('fa:hangar') || 'none';
+  });
+
+  const [hangarCost, setHangarCost] = useState<number>(initialData?.hangar_cost || 0);
+
+  useEffect(() => {
+    // You could fetch hangar cost from database here if needed
+    // For now, we'll just use 0 for 'none' or get from localStorage
+    if (hangarId === 'none') {
+      setHangarCost(0);
+    }
+  }, [hangarId]);
+
+  const selectedPackageData = PACKAGES.find(p => p.id === selectedPackage);
+  const selectedHoursBandData = selectedPackageData?.hours.find(h => h.range === selectedHoursBand);
+  
+  const baseMonthlyPrice = selectedPackageData && selectedHoursBandData
+    ? Math.round(selectedPackageData.baseMonthly * selectedHoursBandData.priceMultiplier)
+    : 0;
 
   const handleSubmit = () => {
     onComplete({
       package_id: selectedPackage,
       hours_band: selectedHoursBand,
+      hangar_id: hangarId,
+      hangar_cost: hangarCost,
+      base_monthly: baseMonthlyPrice,
     });
   };
 
@@ -50,24 +76,18 @@ export function MembershipStep({ initialData, aircraftInfo, onComplete, onBack, 
   };
 
   // Get recommended hours band based on average monthly hours
-  const getRecommendedHoursBand = (): '0-10' | '10-25' | '25-40' | '40+' => {
-    const avgHours = aircraftInfo?.average_monthly_hours || 15;
+  const getRecommendedHoursBand = (): '0-20' | '20-50' | '50+' => {
+    const avgHours = aircraftInfo?.average_monthly_hours || 25;
     
-    if (avgHours >= 40) return '40+';
-    if (avgHours >= 25) return '25-40';
-    if (avgHours >= 10) return '10-25';
-    return '0-10';
+    if (avgHours >= 50) return '50+';
+    if (avgHours >= 20) return '20-50';
+    return '0-20';
   };
 
   const recommendedPackage = getRecommendedPackage();
   const recommendedHoursBand = getRecommendedHoursBand();
 
-  const selectedPackageData = PACKAGES.find(p => p.id === selectedPackage);
-  const selectedHoursBandData = selectedPackageData?.hours.find(h => h.range === selectedHoursBand);
-  
-  const monthlyPrice = selectedPackageData && selectedHoursBandData
-    ? Math.round(selectedPackageData.baseMonthly * selectedHoursBandData.priceMultiplier)
-    : 0;
+  const monthlyPrice = baseMonthlyPrice;
 
   return (
     <div className="space-y-6">
@@ -234,7 +254,7 @@ export function MembershipStep({ initialData, aircraftInfo, onComplete, onBack, 
               Saving...
             </>
           ) : (
-            'Continue to Payment'
+            'Continue to Quote'
           )}
         </Button>
       </div>

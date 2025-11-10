@@ -27,7 +27,16 @@ const supabaseAnonKey =
   process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn("⚠️  Supabase credentials not set. Some features may not work.");
+  console.error("❌ CRITICAL: Supabase credentials not set!");
+  console.error("   Required environment variables:");
+  console.error("   - SUPABASE_URL or VITE_SUPABASE_URL:", supabaseUrl ? "✓" : "✗ MISSING");
+  console.error("   - SUPABASE_SERVICE_ROLE_KEY:", supabaseServiceKey ? "✓" : "✗ MISSING");
+  console.error("   - SUPABASE_ANON_KEY or VITE_SUPABASE_ANON_KEY:", supabaseAnonKey ? "✓" : "✗ MISSING");
+  console.error("   Some features will NOT work until these are set.");
+}
+
+if (!supabaseAnonKey) {
+  console.warn("⚠️  SUPABASE_ANON_KEY not set. Authentication may not work properly.");
 }
 
 // Service role client for admin operations (bypasses RLS)
@@ -1059,10 +1068,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'class-iii': 1000,
       };
       const multiplierMap: Record<string, number> = {
-        '0-10': 1.0,
-        '10-25': 1.45,
-        '25-40': 1.9,
-        '40+': 2.2,
+        '0-20': 1.0,
+        '20-50': 1.45,
+        '50+': 1.9,
       };
 
       const basePrice = priceMap[membershipSelection.package_id] || 550;
@@ -1380,40 +1388,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "https://www.freedomaviationco.com",
       "http://localhost:5000",
       "http://localhost:5173",
+      "http://localhost:5002",
     ];
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
     }
     try {
+      console.log("📋 /api/service-requests - Request received");
+      
+      // Check Supabase configuration with detailed logging
       if (!supabase || !supabaseAnon) {
-        return res.status(503).json({ error: "Supabase not configured" });
+        console.error("❌ Supabase not configured:");
+        console.error("  - supabaseUrl:", supabaseUrl ? "✓ Set" : "✗ Missing");
+        console.error("  - supabaseServiceKey:", supabaseServiceKey ? "✓ Set" : "✗ Missing");
+        console.error("  - supabaseAnonKey:", supabaseAnonKey ? "✓ Set" : "✗ Missing");
+        console.error("  - supabase client:", supabase ? "✓ Initialized" : "✗ Not initialized");
+        console.error("  - supabaseAnon client:", supabaseAnon ? "✓ Initialized" : "✗ Not initialized");
+        return res.status(503).json({ 
+          error: "Supabase not configured",
+          message: "Server is missing required Supabase environment variables. Check SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SUPABASE_ANON_KEY.",
+          details: {
+            hasUrl: !!supabaseUrl,
+            hasServiceKey: !!supabaseServiceKey,
+            hasAnonKey: !!supabaseAnonKey,
+          }
+        });
       }
+      
       // Require staff or admin role
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-      if (!token) return res.status(401).json({ error: "Unauthorized" });
+      
+      if (!token) {
+        console.warn("⚠️ No authorization token provided");
+        return res.status(401).json({ 
+          error: "Unauthorized",
+          message: "Missing authorization token. Please log in."
+        });
+      }
+      
+      console.log("🔐 Verifying user token...");
       const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
-      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
-      const { data: profile } = await supabase
+      
+      if (authError || !user) {
+        console.error("❌ Auth verification failed:", authError?.message);
+        return res.status(401).json({ 
+          error: "Unauthorized",
+          message: "Invalid or expired token. Please log in again."
+        });
+      }
+      
+      console.log("✓ User authenticated:", user.id);
+      
+      // Check user role
+      const { data: profile, error: profileError } = await supabase
         .from("user_profiles")
         .select("role")
         .eq("id", user.id)
         .single();
-      if (!profile || !["admin", "cfi", "staff"].includes(profile.role)) {
-        return res.status(403).json({ error: "Forbidden" });
+      
+      if (profileError) {
+        console.error("❌ Error fetching user profile:", profileError);
+        return res.status(500).json({ 
+          error: "Failed to verify permissions",
+          message: profileError.message
+        });
       }
+      
+      if (!profile || !["admin", "cfi", "staff"].includes(profile.role)) {
+        console.warn("⚠️ User lacks required role. User role:", profile?.role);
+        return res.status(403).json({ 
+          error: "Forbidden",
+          message: "You don't have permission to access this resource. Required role: admin, cfi, or staff."
+        });
+      }
+      
+      console.log("✓ User has required role:", profile.role);
+      console.log("📊 Fetching service requests...");
+      
       // Fetch recent service requests, join owner & aircraft
       const { data: requests, error } = await supabase
         .from("service_requests")
         .select(`*, owner:user_id(full_name,email), aircraft:aircraft_id(tail_number)`)   
         .order("created_at", { ascending: false })
         .limit(200);
-      if (error) throw error;
-      res.json({ serviceRequests: requests });
+      
+      if (error) {
+        console.error("❌ Error fetching service requests:", error);
+        throw error;
+      }
+      
+      console.log(`✓ Successfully fetched ${requests?.length || 0} service requests`);
+      res.json({ serviceRequests: requests || [] });
     } catch (err: any) {
-      console.error("❌ Error in /api/service-requests:", err);
-      res.status(500).json({ error: "Failed to load service requests", message: err.message });
+      console.error("❌ Unexpected error in /api/service-requests:", err);
+      res.status(500).json({ 
+        error: "Failed to load service requests", 
+        message: err.message,
+        details: err.code ? `Error code: ${err.code}` : undefined
+      });
     }
   });
 

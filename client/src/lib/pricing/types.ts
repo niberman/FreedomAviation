@@ -30,6 +30,8 @@ export type RowInput = {
   custom_price?: number | null;
   hangar_cost?: number | null;
   location?: LocationRef | null;
+  has_tks?: boolean | null;
+  has_oxygen?: boolean | null;
 };
 
 export type RowOutput = RowInput & {

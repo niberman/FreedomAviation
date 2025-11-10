@@ -145,8 +145,19 @@ export default function UnifiedPricingConfigurator() {
     }
   };
 
-  const calculatePackagePrice = (baseMonthly: number, hangarCost: number) => {
-    return baseMonthly + hangarCost;
+  // Hour multipliers from pricing-packages.ts
+  const HOUR_MULTIPLIERS = {
+    '0-10': 1.0,
+    '10-25': 1.45,
+    '25-40': 1.9,
+    '40+': 2.2,
+  };
+
+  const [selectedHourBand, setSelectedHourBand] = useState<'0-10' | '10-25' | '25-40' | '40+'>('10-25');
+
+  const calculatePackagePrice = (baseMonthly: number, hangarCost: number, hourBand?: '0-10' | '10-25' | '25-40' | '40+') => {
+    const multiplier = HOUR_MULTIPLIERS[hourBand || selectedHourBand];
+    return Math.round(baseMonthly * multiplier) + hangarCost;
   };
 
   if (assumptionsQuery.isLoading || locationsQuery.isLoading || classesQuery.isLoading) {
@@ -226,6 +237,26 @@ export default function UnifiedPricingConfigurator() {
               <CardDescription>
                 Each package combines base service pricing with location-specific hangar costs
               </CardDescription>
+              <div className="mt-4 flex items-center gap-3">
+                <Label htmlFor="hour-band-selector" className="text-sm font-medium">
+                  Monthly Flight Hours:
+                </Label>
+                <div className="flex gap-2">
+                  {(['0-10', '10-25', '25-40', '40+'] as const).map((band) => (
+                    <Button
+                      key={band}
+                      variant={selectedHourBand === band ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedHourBand(band)}
+                    >
+                      {band} hrs
+                      <Badge variant="secondary" className="ml-2">
+                        ×{HOUR_MULTIPLIERS[band]}
+                      </Badge>
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-8">
@@ -237,6 +268,10 @@ export default function UnifiedPricingConfigurator() {
                         <p className="text-sm text-muted-foreground">{serviceClass.description}</p>
                         <p className="text-sm font-medium mt-1">
                           Base Service: ${serviceClass.base_monthly?.toFixed(2)}/month
+                          <span className="text-muted-foreground ml-2">
+                            → ${Math.round((serviceClass.base_monthly || 0) * HOUR_MULTIPLIERS[selectedHourBand]).toFixed(2)}/month 
+                            <span className="text-xs"> (at {selectedHourBand} hrs)</span>
+                          </span>
                         </p>
                       </div>
                       <Badge variant="outline">
@@ -264,6 +299,14 @@ export default function UnifiedPricingConfigurator() {
                                 <div className="flex justify-between text-sm">
                                   <span className="text-muted-foreground">Base Service:</span>
                                   <span>${serviceClass.base_monthly?.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">Hour Multiplier ({selectedHourBand}):</span>
+                                  <span>×{HOUR_MULTIPLIERS[selectedHourBand]}</span>
+                                </div>
+                                <div className="flex justify-between text-sm font-medium">
+                                  <span className="text-muted-foreground">Scaled Service:</span>
+                                  <span>${Math.round((serviceClass.base_monthly || 0) * HOUR_MULTIPLIERS[selectedHourBand]).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                   <span className="text-muted-foreground">Hangar Cost:</span>

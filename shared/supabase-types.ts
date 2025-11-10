@@ -24,6 +24,8 @@ export interface Aircraft {
   tach_hours?: number;
   image_url?: string;
   owner_id?: string;
+  has_tks?: boolean;
+  has_oxygen?: boolean;
   created_at: string;
   updated_at: string;
 }

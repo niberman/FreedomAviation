@@ -11,7 +11,7 @@ import { isStaffRole } from "@/lib/roles";
 import logoImage from "@assets/falogo.png";
 
 export default function Login() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,6 +20,19 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
+
+  // Check URL params for action and set isRegister accordingly
+  const [fromQuote, setFromQuote] = useState(false);
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'register') {
+      setIsRegister(true);
+    }
+    if (params.get('from') === 'quote') {
+      setFromQuote(true);
+    }
+  }, []);
 
   // Helper function to determine redirect based on user role
   const getRedirectPath = async (userId: string): Promise<string> => {
@@ -157,10 +170,55 @@ export default function Login() {
     try {
       await signUp(email, password, fullName.trim() ? { full_name: fullName.trim() } : undefined);
       
-      toast({
-        title: "Account created!",
-        description: "Redirecting to complete your profile...",
-      });
+      // Check for pending quote data
+      const pendingQuoteStr = sessionStorage.getItem('pendingQuote');
+      
+      if (pendingQuoteStr) {
+        try {
+          const quoteData = JSON.parse(pendingQuoteStr);
+          
+          // Wait a moment for the user to be fully created
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Get the newly created user
+          const { data: userData } = await supabase.auth.getUser();
+          
+          if (userData?.user) {
+            // Save the quote
+            await supabase.from("support_tickets").insert([{
+              owner_id: userData.user.id,
+              subject: "Pricing Quote Request",
+              body: JSON.stringify({
+                aircraft_class: quoteData.aircraft_class,
+                monthly_hours: quoteData.monthly_hours,
+                monthly_price: quoteData.monthly_price,
+                source: "signup_flow",
+              }),
+              status: "open",
+            }]);
+            
+            // Clear the pending quote
+            sessionStorage.removeItem('pendingQuote');
+            
+            toast({
+              title: "Account created!",
+              description: "Your quote has been saved. Let's complete your profile...",
+            });
+          }
+        } catch (quoteError) {
+          console.error('Error saving pending quote:', quoteError);
+          // Don't block the flow if quote saving fails
+          toast({
+            title: "Account created!",
+            description: "Redirecting to complete your profile...",
+          });
+        }
+      } else {
+        toast({
+          title: "Account created!",
+          description: "Redirecting to complete your profile...",
+        });
+      }
       
       // Redirect to onboarding flow
       setTimeout(() => {
@@ -185,7 +243,11 @@ export default function Login() {
           </div>
           <CardTitle className="text-2xl">Freedom Aviation</CardTitle>
           <CardDescription>
-            {isRegister ? "Create your account" : "Sign in to your owner portal"}
+            {fromQuote && isRegister 
+              ? "Create your account to save your quote" 
+              : isRegister 
+                ? "Create your account" 
+                : "Sign in to your owner portal"}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,5 +1,5 @@
 export type HoursBand = {
-  range: "0-10" | "10-25" | "25-40" | "40+";
+  range: "0-20" | "20-50" | "50+";
   detailsPerMonth: string; // "1", "2", "3–4", "Unlimited"
   serviceFrequency: string; // "Weekly readiness", etc.
   priceMultiplier: number; // 1.0, 1.45, 1.9, 2.2
@@ -26,28 +26,22 @@ export const ALWAYS_INCLUDED = [
 
 const HOURS_BANDS: HoursBand[] = [
   {
-    range: "0-10",
+    range: "0-20",
     detailsPerMonth: "1",
     serviceFrequency: "Weekly readiness",
     priceMultiplier: 1.0,
   },
   {
-    range: "10-25",
+    range: "20-50",
     detailsPerMonth: "2",
     serviceFrequency: "Pre-/post-flight cleaning",
     priceMultiplier: 1.45,
   },
   {
-    range: "25-40",
-    detailsPerMonth: "3–4",
-    serviceFrequency: "After-every-flight wipe + bi-weekly full",
-    priceMultiplier: 1.9,
-  },
-  {
-    range: "40+",
+    range: "50+",
     detailsPerMonth: "Unlimited",
     serviceFrequency: "After every flight",
-    priceMultiplier: 2.2,
+    priceMultiplier: 1.9,
   },
 ];
 

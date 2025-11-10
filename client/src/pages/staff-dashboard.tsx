@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Calendar, FileText, DollarSign, Wrench, Plane } from "lucide-react";
+import { Calendar, FileText, DollarSign, Wrench, Plane, Settings2 } from "lucide-react";
 import logoImage from "@assets/falogo.png";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -268,24 +268,54 @@ export default function StaffDashboard() {
   const { data: serviceRequests = [], refetch: refetchServiceRequests, error: serviceRequestsError, isLoading: isLoadingServiceRequests } = useQuery({
     queryKey: ['/api/service-requests'],
     queryFn: async () => {
-      // Use backend REST endpoint for consistency and RLS bypass
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token;
-      const res = await fetch(`/api/service-requests`, {
-        headers: {
-          ...(authToken && { Authorization: `Bearer ${authToken}` }),
-        },
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: res.statusText }));
-        throw new Error(err.message || 'Failed to load service requests');
+      try {
+        // Use backend REST endpoint for consistency and RLS bypass
+        const { data: { session } } = await supabase.auth.getSession();
+        const authToken = session?.access_token;
+        
+        if (!authToken) {
+          console.warn('⚠️ No auth token available for service requests');
+          throw new Error('Not authenticated. Please log in to view service requests.');
+        }
+        
+        const res = await fetch(`/api/service-requests`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+        
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ 
+            error: 'Network error',
+            message: res.statusText 
+          }));
+          
+          // Provide more helpful error messages
+          if (res.status === 503) {
+            throw new Error(err.message || 'Server configuration error. Please contact support.');
+          } else if (res.status === 401) {
+            throw new Error('Session expired. Please log out and log back in.');
+          } else if (res.status === 403) {
+            throw new Error('You do not have permission to view service requests.');
+          }
+          
+          throw new Error(err.message || `Failed to load service requests (${res.status})`);
+        }
+        
+        const json = await res.json();
+        return json.serviceRequests || [];
+      } catch (error) {
+        console.error('❌ Error fetching service requests:', error);
+        throw error;
       }
-      const json = await res.json();
-      return json.serviceRequests || [];
     },
     // Refetch every 30 seconds to catch new requests
     refetchInterval: 30000,
+    // Retry with exponential backoff
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // Handle service request status change
@@ -757,7 +787,7 @@ export default function StaffDashboard() {
           </div>
 
           <Tabs defaultValue="invoices" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 h-auto">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 h-auto">
               <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
               <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>
               <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
@@ -765,6 +795,7 @@ export default function StaffDashboard() {
               <TabsTrigger value="schedule" data-testid="tab-schedule" className="text-xs sm:text-sm">Schedule</TabsTrigger>
               <TabsTrigger value="logs" data-testid="tab-logs" className="text-xs sm:text-sm">Flight Logs</TabsTrigger>
               <TabsTrigger value="invoices" data-testid="tab-invoices" className="text-xs sm:text-sm">Invoices</TabsTrigger>
+              <TabsTrigger value="pricing" data-testid="tab-pricing" className="text-xs sm:text-sm">Pricing</TabsTrigger>
             </TabsList>
 
           {/* Service Requests */}
@@ -1548,6 +1579,32 @@ export default function StaffDashboard() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          {/* Pricing Configurator */}
+          <TabsContent value="pricing" className="space-y-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-2xl font-semibold">Pricing Configurator</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Manage service packages, pricing tiers, and hangar locations
+              </p>
+            </div>
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="text-muted-foreground mb-4">
+                  For full pricing management controls, visit the dedicated pricing configurator page.
+                </p>
+                <Link href="/staff/pricing">
+                  <Button size="lg">
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    Open Pricing Configurator
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
         </div>

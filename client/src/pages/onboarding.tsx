@@ -12,7 +12,7 @@ import { WelcomeStep } from "@/components/onboarding/WelcomeStep";
 import { PersonalInfoStep } from "@/components/onboarding/PersonalInfoStep";
 import { AircraftInfoStep } from "@/components/onboarding/AircraftInfoStep";
 import { MembershipStep } from "@/components/onboarding/MembershipStep";
-import { PaymentStep } from "@/components/onboarding/PaymentStep";
+import { QuoteStep } from "@/components/onboarding/QuoteStep";
 import { CompleteStep } from "@/components/onboarding/CompleteStep";
 import { supabase } from "@/lib/supabase";
 
@@ -29,7 +29,7 @@ export default function Onboarding() {
     completed: false,
   });
 
-  const steps: OnboardingStep[] = ['welcome', 'personal-info', 'aircraft-info', 'membership', 'payment', 'complete'];
+  const steps: OnboardingStep[] = ['welcome', 'personal-info', 'aircraft-info', 'membership', 'quote', 'complete'];
   const currentStepIndex = steps.indexOf(currentStep);
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
 
@@ -181,10 +181,10 @@ export default function Onboarding() {
     goToNextStep();
   };
 
-  const handlePaymentComplete = async (stripeCustomerId: string, stripeSubscriptionId: string) => {
+  const handleQuoteComplete = async () => {
+    // Save quote completion status
     await saveOnboardingData({
-      stripe_customer_id: stripeCustomerId,
-      stripe_subscription_id: stripeSubscriptionId,
+      quote_generated: true,
     });
     goToNextStep();
   };
@@ -291,11 +291,12 @@ export default function Onboarding() {
               />
             )}
             
-            {currentStep === 'payment' && (
-              <PaymentStep
+            {currentStep === 'quote' && (
+              <QuoteStep
                 membershipSelection={onboardingData.membership_selection}
                 personalInfo={onboardingData.personal_info}
-                onComplete={handlePaymentComplete}
+                aircraftInfo={onboardingData.aircraft_info}
+                onComplete={handleQuoteComplete}
                 onBack={goToPreviousStep}
                 saving={saving}
               />

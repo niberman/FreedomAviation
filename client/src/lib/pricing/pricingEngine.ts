@@ -24,17 +24,17 @@ export const BASE_MEMBERSHIP_FEE: Record<SizeClass, Record<ComplexityBand, numbe
 
 // Base operations labor rate by size class (per hour)
 export const BASE_OPS_LABOR_RATE: Record<SizeClass, number> = {
-  small_piston: 50,
-  hp_piston: 70,
-  turboprop: 120,
-  light_jet: 180,
+  small_piston: 5,
+  hp_piston: 7,
+  turboprop: 12,
+  light_jet: 18,
 } as const;
 
 // Consumables unit rates (per relative unit)
 export const CONSUMABLE_UNIT_RATE = {
-  tks: 40,     // per unit of TKS per hour
-  oxygen: 30,  // per unit of oxygen per hour
-  oil: 10,     // per unit of oil per hour
+  tks: 4,     // per unit of TKS per hour
+  oxygen: 3,  // per unit of oxygen per hour
+  oil: 1,     // per unit of oil per hour
 } as const;
 
 // Pricing input interface

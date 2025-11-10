@@ -4,6 +4,10 @@ import { Assumptions, ClassCfg, RowInput, RowOutput } from './types';
 /**
  * Calculate pricing row with hangar cost logic
  * Hangar cost priority: override > location default > 0
+ * 
+ * Note: Class selection should be based on aircraft features:
+ * - Class I: Aircraft with only oil (no TKS, no oxygen)
+ * - Class II: Aircraft with TKS and/or oxygen systems
  */
 export function calcRow(a: Assumptions, cls: ClassCfg, row: RowInput): RowOutput {
   const final_price = Number(row.custom_price ?? cls.default_price) || 0;
@@ -37,6 +41,18 @@ export function calcRow(a: Assumptions, cls: ClassCfg, row: RowInput): RowOutput
     net_revenue,
     margin_pct,
   };
+}
+
+/**
+ * Determine the appropriate pricing class based on aircraft features
+ * Class I: Aircraft with only oil (no TKS, no oxygen)
+ * Class II: Aircraft with TKS and/or oxygen systems
+ */
+export function determineClassByFeatures(has_tks: boolean | null | undefined, has_oxygen: boolean | null | undefined): 'class-i' | 'class-ii' {
+  if (has_tks || has_oxygen) {
+    return 'class-ii';
+  }
+  return 'class-i';
 }
 
 /**

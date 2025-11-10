@@ -1,4 +1,4 @@
-export type OnboardingStep = 'welcome' | 'personal-info' | 'aircraft-info' | 'membership' | 'payment' | 'complete';
+export type OnboardingStep = 'welcome' | 'personal-info' | 'aircraft-info' | 'membership' | 'quote' | 'complete';
 
 export interface PersonalInfo {
   full_name: string;
@@ -22,8 +22,11 @@ export interface AircraftInfo {
 }
 
 export interface MembershipSelection {
-  package_id: 'class-i' | 'class-ii' | 'class-iii';
-  hours_band: '0-10' | '10-25' | '25-40' | '40+';
+  package_id: string;
+  hours_band?: '0-20' | '20-50' | '50+';
+  hangar_id?: string;
+  hangar_cost?: number;
+  base_monthly?: number;
   addons?: string[];
 }
 
@@ -33,6 +36,7 @@ export interface OnboardingData {
   aircraft_info?: AircraftInfo;
   membership_selection?: MembershipSelection;
   completed: boolean;
+  quote_generated?: boolean;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
 }

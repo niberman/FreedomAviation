@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Plus, PlusCircle, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +85,8 @@ interface NewAircraftState {
   baseLocation: string;
   year: string;
   ownerId: string;
+  hasTks: boolean;
+  hasOxygen: boolean;
 }
 
 const createInitialAircraftState = (): NewAircraftState => ({
@@ -94,6 +97,8 @@ const createInitialAircraftState = (): NewAircraftState => ({
   baseLocation: "",
   year: "",
   ownerId: OWNER_NONE_VALUE,
+  hasTks: false,
+  hasOxygen: false,
 });
 
 export function AircraftTable({
@@ -308,7 +313,7 @@ export function AircraftTable({
 
     setIsSubmitting(true);
     try {
-      const payload: Record<string, string | number | null> = {
+      const payload: Record<string, string | number | boolean | null> = {
         tail_number: tailNumber,
         make: newAircraft.make.trim() || null,
         model: newAircraft.model.trim() || null,
@@ -328,6 +333,8 @@ export function AircraftTable({
           ? newAircraft.ownerId
           : null;
       payload.owner_id = ownerId;
+      payload.has_tks = newAircraft.hasTks;
+      payload.has_oxygen = newAircraft.hasOxygen;
 
       const { error } = await supabase.from("aircraft").insert(payload);
 
@@ -608,6 +615,47 @@ export function AircraftTable({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-base">Aircraft Systems</Label>
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="aircraft-tks"
+                      checked={newAircraft.hasTks}
+                      onCheckedChange={(checked) =>
+                        setNewAircraft((prev) => ({
+                          ...prev,
+                          hasTks: checked === true,
+                        }))
+                      }
+                      data-testid="checkbox-aircraft-tks"
+                    />
+                    <Label htmlFor="aircraft-tks" className="font-normal cursor-pointer">
+                      TKS Ice Protection
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="aircraft-oxygen"
+                      checked={newAircraft.hasOxygen}
+                      onCheckedChange={(checked) =>
+                        setNewAircraft((prev) => ({
+                          ...prev,
+                          hasOxygen: checked === true,
+                        }))
+                      }
+                      data-testid="checkbox-aircraft-oxygen"
+                    />
+                    <Label htmlFor="aircraft-oxygen" className="font-normal cursor-pointer">
+                      Oxygen System
+                    </Label>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Systems determine pricing class: Class I (oil only) or Class II (TKS/oxygen)
+                </p>
               </div>
             </div>
 

@@ -194,7 +194,7 @@ export default function OwnerDashboard() {
   return (
     <DashboardLayout
       title="Owner Dashboard"
-      description="Welcome back to Freedom Aviation"
+      description="Welcome back"
       navItems={ownerDashboardNavItems}
       titleTestId="text-dashboard-title"
       actions={

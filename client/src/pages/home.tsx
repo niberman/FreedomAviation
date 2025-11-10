@@ -1,15 +1,18 @@
+import { useState } from "react";
 import { HeroSection } from "@/components/hero-section";
 import { FeaturesGrid } from "@/components/features-grid";
-import { MembershipTiers } from "@/components/membership-tiers";
 import OwnerPortalDemo from "@/components/OwnerPortalDemo";
-import { Testimonials } from "@/components/testimonials";
 import { Seo, getLocalBusinessJsonLd } from "@/components/Seo";
 import { allKeywords } from "@/seo/keywords";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Calculator } from "lucide-react";
+import { SimpleCalculatorDialog } from "@/components/simple-calculator-dialog";
+
 export default function Home() {
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+
   return (
     <div className="min-h-screen">
       <Seo
@@ -37,8 +40,43 @@ export default function Home() {
         </p>
       </div>
       <FeaturesGrid />
-      <MembershipTiers />
+      
+      {/* Simplified Pricing CTA */}
+      <section className="py-16 md:py-20 bg-gradient-to-b from-background to-muted/20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Ready to Experience True Freedom?
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Get your personalized quote in 2 simple steps. See exactly what it costs.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                size="lg" 
+                className="w-full sm:w-auto"
+                onClick={() => setCalculatorOpen(true)}
+              >
+                <Calculator className="mr-2 h-5 w-5" />
+                Get Instant Quote
+              </Button>
+              <Link href="/contact">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                  Schedule Tour
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <OwnerPortalDemo />
+      
+      <SimpleCalculatorDialog 
+        open={calculatorOpen}
+        onOpenChange={setCalculatorOpen}
+      />
     </div>
   );
 }
