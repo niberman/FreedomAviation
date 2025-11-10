@@ -29,3 +29,4 @@ echo "   and be different from your anon key"
 echo ""
 echo "✓ Fix script complete. Restart your dev server after updating the service_role key."
 
+

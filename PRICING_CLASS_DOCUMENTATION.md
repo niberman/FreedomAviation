@@ -162,3 +162,4 @@ The pricing configurator uses aircraft features to:
 4. **Scalable**: Easy to add new features in the future (e.g., air conditioning, de-ice)
 5. **Simple Administration**: Clear rules, no subjective pricing decisions
 
+
