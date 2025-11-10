@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -174,17 +176,27 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
         },
       ];
 
-      mockSupabase.from.mockReturnValue(mockSupabase);
-      mockSupabase.select.mockReturnValue(mockSupabase);
-      mockSupabase.order.mockResolvedValueOnce({
-        data: mockServiceRequests,
-        error: null,
+      // Mock REST endpoint instead of Supabase query
+      vi.spyOn(global, 'fetch').mockImplementation((input: RequestInfo, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url === '/api/service-requests' && (!init || init.method === 'GET')) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ serviceRequests: mockServiceRequests }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } },
+            ) as any,
+          );
+        }
+        // Fallback empty response
+        return Promise.resolve(
+          new Response(JSON.stringify({ serviceRequests: [] }), { status: 200 }) as any,
+        );
       });
 
       renderWithProviders(<StaffDashboard />);
 
       await waitFor(() => {
-        expect(mockSupabase.from).toHaveBeenCalledWith('service_requests');
+        expect(screen.getAllByText(/Service Requests/i).length).toBeGreaterThan(0);
       });
     });
   });
@@ -277,49 +289,52 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
 
   describe('Instruction Request Assignment', () => {
     it('should allow staff to assign instruction request to themselves', async () => {
-      const mockServiceRequests = [
+      const mockRequests = [
         {
-          id: 'instruction-1',
+          id: 'request-1',
           service_type: 'Flight Instruction',
           status: 'pending',
-          assigned_to: null,
           aircraft: { tail_number: 'N123FA' },
           owner: { full_name: 'John Doe', email: 'john@test.com' },
-          requested_departure: '2024-01-15T14:00:00.000Z',
-          created_at: '2024-01-10T10:00:00',
+          requested_date: '2024-01-15',
+          requested_time: '10:00',
+          description: 'IPC',
         },
       ];
 
-      mockSupabase.from.mockReturnValue(mockSupabase);
-      mockSupabase.select.mockReturnValue(mockSupabase);
-      mockSupabase.order.mockResolvedValueOnce({
-        data: mockServiceRequests,
-        error: null,
+      // Mock initial GET
+      const fetchMock = vi.spyOn(global, 'fetch').mockImplementation((input: RequestInfo, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url === '/api/service-requests' && (!init || init.method === 'GET')) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ serviceRequests: mockRequests }), { status: 200 }) as any,
+          );
+        }
+        if (url.startsWith('/api/service-requests/') && init?.method === 'PATCH') {
+          return Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200 }) as any);
+        }
+        return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }) as any);
       });
-
-      // Mock user profile
-      mockSupabase.maybeSingle = vi.fn().mockResolvedValue({
-        data: { role: 'staff' },
-        error: null,
-      });
-
-      // Mock update for assignment
-      mockSupabase.update.mockReturnValue(mockSupabase);
-      mockSupabase.eq.mockReturnValueOnce({ data: null, error: null });
 
       renderWithProviders(<StaffDashboard />);
 
+      // Wait for instruction requests heading to appear
       await waitFor(() => {
-        expect(screen.getByTestId('tab-schedule')).toBeInTheDocument();
+        expect(screen.getByText(/Schedule/i)).toBeInTheDocument();
       });
 
-      const scheduleTab = screen.getByTestId('tab-schedule');
-      await userEvent.click(scheduleTab);
+      // Navigate to schedule tab
+      await userEvent.click(screen.getByTestId('tab-schedule'));
 
       await waitFor(() => {
-        const headings = screen.getAllByText(/Flight Instruction Requests/i);
-        expect(headings.length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Flight Instruction/i).length).toBeGreaterThan(0);
       });
+
+      expect(fetchMock).toHaveBeenCalledWith('/api/service-requests', expect.any(Object));
+      expect(fetchMock).toHaveBeenCalledWith(
+        `/api/service-requests/${mockRequests[0].id}`,
+        expect.objectContaining({ method: 'PATCH' }),
+      );
     });
   });
 

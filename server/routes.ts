@@ -1098,7 +1098,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         product_data: {
           name: `Freedom Aviation ${membershipSelection.package_id.toUpperCase()} Membership`,
-          description: `${membershipSelection.hours_band} hours per month`,
+          metadata: {
+            hours_band: membershipSelection.hours_band,
+          },
         },
       });
 
@@ -1367,6 +1369,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to create client",
         message: error?.message || "Unknown error occurred"
       });
+    }
+  });
+
+  // Staff: List or update service requests
+  app.get("/api/service-requests", async (req: Request, res: Response) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+    try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+      // Require staff or admin role
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (!profile || !["admin", "cfi", "staff"].includes(profile.role)) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      // Fetch recent service requests, join owner & aircraft
+      const { data: requests, error } = await supabase
+        .from("service_requests")
+        .select(`*, owner:user_id(full_name,email), aircraft:aircraft_id(tail_number)`)   
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      res.json({ serviceRequests: requests });
+    } catch (err: any) {
+      console.error("❌ Error in /api/service-requests:", err);
+      res.status(500).json({ error: "Failed to load service requests", message: err.message });
+    }
+  });
+
+  // Update service request status or assignment (staff/admin only)
+  app.patch("/api/service-requests/:id", async (req: Request, res: Response) => {
+    try {
+      if (!supabase || !supabaseAnon) return res.status(503).json({ error: "Supabase not configured" });
+      const { id } = req.params;
+      const { status, assigned_to } = req.body;
+      if (!id) return res.status(400).json({ error: "Missing id" });
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (!profile || !["admin", "cfi", "staff"].includes(profile.role)) return res.status(403).json({ error: "Forbidden" });
+      const updatePayload: any = {};
+      if (status) updatePayload.status = status;
+      if (assigned_to !== undefined) updatePayload.assigned_to = assigned_to;
+      if (Object.keys(updatePayload).length === 0) return res.status(400).json({ error: "No fields to update" });
+      const { error } = await supabase
+        .from("service_requests")
+        .update(updatePayload)
+        .eq("id", id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("❌ Error updating service request:", err);
+      res.status(500).json({ error: "Failed to update service request", message: err.message });
     }
   });
 

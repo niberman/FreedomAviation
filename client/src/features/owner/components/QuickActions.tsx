@@ -383,13 +383,14 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
               variant="default" 
               className="w-full justify-start" 
               data-testid="button-prepare-aircraft"
+              aria-label="Prepare my aircraft"
               onClick={() => setOpenPrep(true)}
             >
               <Plane className="mr-2 h-4 w-4" />
               Prepare My Aircraft
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-label="Prepare Aircraft Dialog">
             <DialogHeader>
               <DialogTitle>Prepare My Aircraft</DialogTitle>
               <DialogDescription>
@@ -566,13 +567,14 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
               variant="outline" 
               className="w-full justify-start" 
               data-testid="button-request-service"
+              aria-label="Request service"
               onClick={() => setOpenService(true)}
             >
               <Wrench className="mr-2 h-4 w-4" />
               Request Service
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-label="Request Service Dialog">
             <DialogHeader>
               <DialogTitle>Request Service</DialogTitle>
               <DialogDescription>
@@ -638,13 +640,14 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
               variant="outline" 
               className="w-full justify-start" 
               data-testid="button-request-instruction"
+              aria-label="Request flight instruction"
               onClick={() => setOpenInstruction(true)}
             >
               <GraduationCap className="mr-2 h-4 w-4" />
               Request Flight Instruction
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-label="Flight Instruction Dialog">
             <DialogHeader>
               <DialogTitle>Request Flight Instruction</DialogTitle>
               <DialogDescription>
