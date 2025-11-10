@@ -56,13 +56,8 @@ export default function PricingFixed() {
   const hangarCost = selectedHangar.cost;
 
   const handleContinue = (packageId: string) => {
-<<<<<<< Current (Your changes)
     // Navigate to onboarding with pre-selected package
     navigate(`/onboarding?package=${packageId}&hangar=${selectedHangarId}`);
-=======
-    // Redirect to onboarding flow with selected pricing
-    navigate(`/onboarding?tier=${packageId}&hangar=${selectedHangarId}`);
->>>>>>> Incoming (Background Agent changes)
   };
 
   // Show loading state
