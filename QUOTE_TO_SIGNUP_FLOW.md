@@ -116,3 +116,4 @@ All three paths now lead to account creation for non-authenticated users.
 4. Quote expiration handling
 5. Quote history in user dashboard
 
+

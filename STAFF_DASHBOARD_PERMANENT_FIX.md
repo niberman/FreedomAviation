@@ -109,3 +109,4 @@ If you still encounter issues after following these steps:
 3. Ensure your Supabase project is active and accessible
 4. Check that your user account has admin/staff/cfi role in the `user_profiles` table
 
+

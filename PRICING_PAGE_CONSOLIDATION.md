@@ -227,3 +227,4 @@ Single page = better metrics!
 **Status:** ✅ Complete  
 **Risk Level:** 🟢 Low (backward compatible, simple redirect)  
 
+

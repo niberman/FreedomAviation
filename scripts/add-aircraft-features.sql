@@ -32,3 +32,4 @@ END $$;
 -- Create index for feature-based queries
 CREATE INDEX IF NOT EXISTS idx_aircraft_features ON public.aircraft(has_tks, has_oxygen);
 
+

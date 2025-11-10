@@ -34,3 +34,4 @@ INSERT INTO public.pricing_classes (name, slug, base_monthly, description, featu
 -- - has_tks = false AND has_oxygen = false → Class I
 -- - has_tks = true OR has_oxygen = true → Class II
 
+

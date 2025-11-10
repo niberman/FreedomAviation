@@ -186,3 +186,4 @@ For questions or issues with this implementation:
 3. Verify aircraft features are correctly set in database
 4. Test pricing calculator with sample aircraft
 
+
