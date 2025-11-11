@@ -33,7 +33,7 @@ export const BRAND = {
     },
     faHangar: {
       name: "Freedom Aviation Hangar (Fox 9)",
-      monthlyCost: 1500,
+      monthlyCost: undefined, // Dynamic pricing - contact for quote
       description: "Our dedicated hangar facility",
     },
   },

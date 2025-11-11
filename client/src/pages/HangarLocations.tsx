@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, CheckCircle2, Building2, MapPin } from "lucide-react";
 import { useLocations } from "../features/pricing/hooks";
 import { Loader2 } from "lucide-react";
-import { Seo } from "@/components/Seo";
-import { SEO_KEYWORDS } from "@/seo/keywords";
+import { Seo, getBreadcrumbJsonLd } from "@/components/Seo";
+import { brandKeywords } from "@/seo/keywords";
+import { Helmet } from "react-helmet-async";
 
 export default function HangarLocations() {
   const locationsQuery = useLocations();
@@ -23,19 +24,20 @@ export default function HangarLocations() {
   return (
     <div className="min-h-screen">
       <Seo
-        title="Hangar Locations - Premium Aircraft Storage at KAPA"
-        description="Professional aircraft storage solutions at Centennial Airport. From our Freedom Aviation Hangar to premium Sky Harbour facilities, transparent pricing integrated into your management package."
-        keywords={[
-          ...SEO_KEYWORDS.services,
-          ...SEO_KEYWORDS.modifiers,
-          ...SEO_KEYWORDS.partners,
-          'aircraft hangar KAPA',
-          'Centennial Airport hangars',
-          'aircraft storage Colorado',
-          'premium hangar facilities'
-        ].join(", ")}
+        title="Hangar Locations at Centennial Airport - Freedom Aviation Colorado"
+        description="Freedom Aviation offers premium aircraft hangar facilities at Centennial Airport (KAPA) Colorado. From our Freedom Aviation Hangar to Sky Harbour facilities, transparent pricing integrated into your management package. Climate-controlled hangars with 24/7 access."
+        keywords={brandKeywords()}
         canonical="/hangar-locations"
       />
+      {/* Breadcrumb Schema */}
+      <Helmet>
+        <script type="application/ld+json">
+          {JSON.stringify(getBreadcrumbJsonLd([
+            { name: "Home", url: "/" },
+            { name: "Hangar Locations", url: "/hangar-locations" }
+          ]))}
+        </script>
+      </Helmet>
       
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary to-primary/80 text-primary-foreground py-24">
@@ -89,8 +91,14 @@ export default function HangarLocations() {
                         {location.description}
                       </p>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold">${location.hangar_cost_monthly}</span>
-                        <span className="text-muted-foreground">/month</span>
+                        {location.hangar_cost_monthly ? (
+                          <>
+                            <span className="text-3xl font-bold">${location.hangar_cost_monthly}</span>
+                            <span className="text-muted-foreground">/month</span>
+                          </>
+                        ) : (
+                          <span className="text-2xl font-bold text-muted-foreground">Contact for Pricing</span>
+                        )}
                       </div>
                     </div>
 

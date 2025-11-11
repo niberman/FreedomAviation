@@ -1528,6 +1528,332 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Note: The webhook route needs express.raw() middleware, but we need to apply it conditionally
   // We'll handle this by registering the route separately with raw body parsing
 
+  // ========================================
+  // Google Calendar Integration Routes
+  // ========================================
+  
+  /**
+   * GET /api/google-calendar/auth-url
+   * Get Google Calendar OAuth authorization URL
+   */
+  app.get("/api/google-calendar/auth-url", async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+      // Check if user is a CFI
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      
+      if (!profile || !["admin", "cfi"].includes(profile.role)) {
+        return res.status(403).json({ error: "Only CFIs can connect Google Calendar" });
+      }
+
+      const { getAuthorizationUrl } = await import("./lib/google-calendar.js");
+      const authUrl = getAuthorizationUrl();
+      
+      // Store user ID in state parameter (you might want to encrypt this)
+      const stateParam = Buffer.from(JSON.stringify({ userId: user.id })).toString('base64');
+      const urlWithState = `${authUrl}&state=${stateParam}`;
+      
+      res.json({ authUrl: urlWithState });
+    } catch (err: any) {
+      console.error("❌ Error generating auth URL:", err);
+      res.status(500).json({ error: "Failed to generate authorization URL", message: err.message });
+    }
+  });
+
+  /**
+   * GET /api/google-calendar/callback
+   * OAuth callback handler
+   */
+  app.get("/api/google-calendar/callback", async (req: Request, res: Response) => {
+    try {
+      const { code, state } = req.query;
+      
+      if (!code || typeof code !== 'string') {
+        return res.status(400).send("Missing authorization code");
+      }
+
+      // Decode state to get user ID
+      const stateData = JSON.parse(Buffer.from(state as string, 'base64').toString());
+      const userId = stateData.userId;
+
+      const { getTokensFromCode } = await import("./lib/google-calendar.js");
+      const tokens = await getTokensFromCode(code);
+
+      // Store tokens in database
+      const { error } = await supabase
+        .from("google_calendar_tokens")
+        .upsert({
+          user_id: userId,
+          access_token: tokens.access_token!,
+          refresh_token: tokens.refresh_token || null,
+          token_expiry: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
+          sync_enabled: true,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) throw error;
+
+      // Redirect back to dashboard with success message
+      res.redirect("/staff-dashboard?calendar_connected=true");
+    } catch (err: any) {
+      console.error("❌ Error in OAuth callback:", err);
+      res.redirect("/staff-dashboard?calendar_error=true");
+    }
+  });
+
+  /**
+   * GET /api/google-calendar/status
+   * Check if user has Google Calendar connected
+   */
+  app.get("/api/google-calendar/status", async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+      const { hasGoogleCalendarConnected } = await import("./lib/google-calendar.js");
+      const connected = await hasGoogleCalendarConnected(user.id);
+      
+      // Get sync status if connected
+      let syncEnabled = false;
+      if (connected) {
+        const { data: tokenData } = await supabase
+          .from("google_calendar_tokens")
+          .select("sync_enabled, last_sync_at")
+          .eq("user_id", user.id)
+          .single();
+        
+        syncEnabled = tokenData?.sync_enabled || false;
+      }
+
+      res.json({ connected, syncEnabled });
+    } catch (err: any) {
+      console.error("❌ Error checking calendar status:", err);
+      res.status(500).json({ error: "Failed to check calendar status", message: err.message });
+    }
+  });
+
+  /**
+   * POST /api/google-calendar/disconnect
+   * Disconnect Google Calendar
+   */
+  app.post("/api/google-calendar/disconnect", async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+      const { error } = await supabase
+        .from("google_calendar_tokens")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("❌ Error disconnecting calendar:", err);
+      res.status(500).json({ error: "Failed to disconnect calendar", message: err.message });
+    }
+  });
+
+  /**
+   * POST /api/google-calendar/toggle-sync
+   * Enable/disable automatic sync
+   */
+  app.post("/api/google-calendar/toggle-sync", async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+      const { enabled } = req.body;
+      
+      const { error } = await supabase
+        .from("google_calendar_tokens")
+        .update({ sync_enabled: enabled })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      res.json({ success: true, enabled });
+    } catch (err: any) {
+      console.error("❌ Error toggling sync:", err);
+      res.status(500).json({ error: "Failed to toggle sync", message: err.message });
+    }
+  });
+
+  /**
+   * POST /api/google-calendar/sync-slot
+   * Manually sync a schedule slot to Google Calendar
+   */
+  app.post("/api/google-calendar/sync-slot", async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+      const { slotId } = req.body;
+      
+      if (!slotId) {
+        return res.status(400).json({ error: "Missing slotId" });
+      }
+
+      // Fetch slot
+      const { data: slot, error: slotError } = await supabase
+        .from("cfi_schedule")
+        .select("*")
+        .eq("id", slotId)
+        .single();
+
+      if (slotError || !slot) {
+        return res.status(404).json({ error: "Schedule slot not found" });
+      }
+
+      // Verify user owns this slot
+      if (slot.cfi_id !== user.id) {
+        return res.status(403).json({ error: "Unauthorized to sync this slot" });
+      }
+
+      const { syncSlotToCalendar } = await import("./lib/google-calendar.js");
+      const eventId = await syncSlotToCalendar(slot);
+
+      res.json({ success: true, eventId });
+    } catch (err: any) {
+      console.error("❌ Error syncing slot:", err);
+      res.status(500).json({ error: "Failed to sync slot", message: err.message });
+    }
+  });
+
+  /**
+   * POST /api/google-calendar/sync-all
+   * Sync all schedule slots for a user to Google Calendar
+   */
+  app.post("/api/google-calendar/sync-all", async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+      // Fetch all user's slots
+      const { data: slots, error: slotsError } = await supabase
+        .from("cfi_schedule")
+        .select("*")
+        .eq("cfi_id", user.id);
+
+      if (slotsError) throw slotsError;
+
+      const { syncSlotToCalendar } = await import("./lib/google-calendar.js");
+      
+      let synced = 0;
+      let errors = 0;
+
+      for (const slot of slots || []) {
+        try {
+          await syncSlotToCalendar(slot);
+          synced++;
+        } catch (err) {
+          console.error(`Failed to sync slot ${slot.id}:`, err);
+          errors++;
+        }
+      }
+
+      // Update last sync time
+      await supabase
+        .from("google_calendar_tokens")
+        .update({ last_sync_at: new Date().toISOString() })
+        .eq("user_id", user.id);
+
+      res.json({ success: true, synced, errors, total: slots?.length || 0 });
+    } catch (err: any) {
+      console.error("❌ Error syncing all slots:", err);
+      res.status(500).json({ error: "Failed to sync slots", message: err.message });
+    }
+  });
+
+  /**
+   * GET /api/google-calendar/calendars
+   * Get list of user's Google Calendars
+   */
+  app.get("/api/google-calendar/calendars", async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+      const { getUserCalendars } = await import("./lib/google-calendar.js");
+      const calendars = await getUserCalendars(user.id);
+
+      res.json({ calendars });
+    } catch (err: any) {
+      console.error("❌ Error fetching calendars:", err);
+      res.status(500).json({ error: "Failed to fetch calendars", message: err.message });
+    }
+  });
+
+  /**
+   * POST /api/google-calendar/select-calendar
+   * Select which calendar to use for syncing
+   */
+  app.post("/api/google-calendar/select-calendar", async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+
+      const { calendarId } = req.body;
+      
+      if (!calendarId) {
+        return res.status(400).json({ error: "Missing calendarId" });
+      }
+
+      const { error } = await supabase
+        .from("google_calendar_tokens")
+        .update({ calendar_id: calendarId })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("❌ Error selecting calendar:", err);
+      res.status(500).json({ error: "Failed to select calendar", message: err.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

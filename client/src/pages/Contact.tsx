@@ -11,8 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Mail, Phone, MapPin, CheckCircle2 } from "lucide-react";
-import { Seo } from "@/components/Seo";
+import { Seo, getLocalBusinessJsonLd, getBreadcrumbJsonLd } from "@/components/Seo";
+import { brandKeywords } from "@/seo/keywords";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Helmet } from "react-helmet-async";
 
 export default function Contact() {
   const [source, setSource] = useState("contact-page");
@@ -42,10 +44,23 @@ export default function Contact() {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Contact Us - Freedom Aviation"
-        description="Get in touch with Freedom Aviation for premium aircraft management and flight instruction at Centennial Airport (KAPA). We're here to help."
+        title="Contact Freedom Aviation - Centennial Airport Colorado Aircraft Management"
+        description="Contact Freedom Aviation for premium aircraft management and flight instruction at Centennial Airport (KAPA) Colorado. Call (970) 618-2094 or email. Serving Denver and the Front Range."
+        keywords={brandKeywords()}
         canonical="/contact"
       />
+      {/* Local Business and Breadcrumb Schema */}
+      <Helmet>
+        <script type="application/ld+json">
+          {JSON.stringify(getLocalBusinessJsonLd())}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(getBreadcrumbJsonLd([
+            { name: "Home", url: "/" },
+            { name: "Contact", url: "/contact" }
+          ]))}
+        </script>
+      </Helmet>
 
       {/* Hero Header */}
       <section className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground py-20">

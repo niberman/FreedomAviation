@@ -157,7 +157,9 @@ export function OnboardingPricingStep({ data, updateData, onNext }: OnboardingPr
                       <p className="text-sm text-muted-foreground">{location.description}</p>
                     )}
                   </div>
-                  <span className="font-semibold">+${location.hangar_cost_monthly}/mo</span>
+                  <span className="font-semibold">
+                    {location.hangar_cost_monthly ? `+$${location.hangar_cost_monthly}/mo` : 'Contact for pricing'}
+                  </span>
                 </div>
               </label>
             ))}
@@ -181,7 +183,9 @@ export function OnboardingPricingStep({ data, updateData, onNext }: OnboardingPr
               {selectedHangar !== "none" && selectedLocation && (
                 <div className="flex justify-between text-sm">
                   <span>{selectedLocation.name} Hangar</span>
-                  <span>+${selectedLocation.hangar_cost_monthly}/mo</span>
+                  <span>
+                    {selectedLocation.hangar_cost_monthly ? `+$${selectedLocation.hangar_cost_monthly}/mo` : 'Contact for pricing'}
+                  </span>
                 </div>
               )}
               <div className="border-t pt-2 mt-2">

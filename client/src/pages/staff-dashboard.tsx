@@ -36,6 +36,7 @@ import { ClientsTable } from "@/components/clients-table";
 import { ServiceRequestEditDialog } from "@/components/service-request-edit-dialog";
 import { FlightLogsList } from "@/components/flight-logs-list";
 import { CFISchedule } from "@/components/cfi-schedule";
+import UnifiedPricingConfigurator from "./admin/UnifiedPricingConfigurator";
 
 interface InstructionInvoice {
   id: string;
@@ -1583,28 +1584,7 @@ export default function StaffDashboard() {
 
           {/* Pricing Configurator */}
           <TabsContent value="pricing" className="space-y-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-2xl font-semibold">Pricing Configurator</h2>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Manage service packages, pricing tiers, and hangar locations
-              </p>
-            </div>
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground mb-4">
-                  For full pricing management controls, visit the dedicated pricing configurator page.
-                </p>
-                <Link href="/staff/pricing">
-                  <Button size="lg">
-                    <Settings2 className="h-4 w-4 mr-2" />
-                    Open Pricing Configurator
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <UnifiedPricingConfigurator />
           </TabsContent>
         </Tabs>
         </div>

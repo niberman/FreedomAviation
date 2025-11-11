@@ -7,6 +7,7 @@ type AuthContextType = {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string, metadata?: { full_name?: string }) => Promise<void>;
   signOut: () => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
@@ -61,6 +62,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async () => {
+    // Get the base URL for redirects
+    let baseUrl = window.location.origin;
+    
+    // In production, ensure we use www domain if applicable
+    if (window.location.hostname === 'freedomaviationco.com') {
+      baseUrl = 'https://www.freedomaviationco.com';
+    }
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${baseUrl}/login`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+    if (error) throw error;
+  };
+
   const signUp = async (email: string, password: string, metadata?: { full_name?: string }) => {
     const { error } = await supabase.auth.signUp({
       email,
@@ -102,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, updatePassword, resetPasswordForEmail }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signInWithGoogle, signUp, signOut, updatePassword, resetPasswordForEmail }}>
       {children}
     </AuthContext.Provider>
   );
