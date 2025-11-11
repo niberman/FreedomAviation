@@ -2,72 +2,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Star, Sparkles } from "lucide-react";
+import { PRICING_TIERS, CORE_FEATURES } from "@/lib/unified-pricing";
 
 export function MembershipTiers() {
-  // Class I – Basic
-  const classIBasic = {
-    name: "Class I – Basic",
-    price: 199,
-    originalPrice: 350,
-    aircraft: "For light piston aircraft such as C172, C182, Archer, Cherokee",
-    features: [
-      "1 full detail per month",
-      "Weekly readiness & fluid top-offs",
-      "Oil & basic maintenance oversight",
-      "Avionics database updates",
-      "Exterior & interior cleaning",
-      "Hangar & ramp coordination",
-      "Digital owner portal with logs & notifications"
-    ]
-  };
-
-  // Class II – Premium
-  const classIIPremium = {
-    name: "Class II – Premium",
-    price: 799,
-    originalPrice: 1199,
-    aircraft: "For high-performance / TAA aircraft such as SR20, DA40, Mooney",
-    features: [
-      "2 full details per month",
-      "Pre-/post-flight readiness service",
-      "Oil, TKS, and O₂ management",
-      "Composite & paint care",
-      "Avionics database management",
-      "Priority scheduling for service",
-      "Advanced maintenance tracking",
-      "Quarterly aircraft performance review",
-      "Discounted fuel coordination"
-    ]
-  };
-
-  // Class III – Elite
-  const classIIIElite = {
-    name: "Class III – Elite",
-    price: 1499,
-    originalPrice: 2000,
-    aircraft: "For turbine singles and light jets such as Vision Jet, TBM",
-    features: [
-      "Concierge-level readiness after every flight",
-      "4 full details per month + post-flight wipes",
-      "Turbine soot & brightwork care",
-      "Oil, O₂, and TKS replenishment",
-      "Comprehensive insurance coordination",
-      "Priority maintenance slots",
-      "Annual avionics & software updates",
-      "Trip planning & logistics support",
-      "Guaranteed aircraft availability"
-    ]
-  };
-
   // Turbo Founders Membership (Hero Product)
   const turboFounders = {
     name: "Turbo Founders Membership",
-    price: 599,
-    originalPrice: 1000,
+    price: 1199,
+    originalPrice: 2000,
     aircraft: "For SR22T Turbo owners",
     badge: "Founders Edition",
     features: [
-      "Everything in Class II Premium, plus:",
+      "Everything in High Performance tier, plus:",
       "Priority concierge line and personalized support",
       "Guaranteed 48-hour turnaround",
       "Dedicated maintenance management with proactive tracking",
@@ -76,7 +22,14 @@ export function MembershipTiers() {
     ]
   };
 
-  const standardTiers = [classIBasic, classIIPremium, classIIIElite];
+  // Map unified pricing to display tiers with promotional pricing
+  const displayTiers = PRICING_TIERS.map(tier => ({
+    name: tier.title,
+    price: tier.baseMonthly,
+    originalPrice: Math.round(tier.baseMonthly * 1.5), // Show 33% discount
+    aircraft: `${tier.description} such as ${tier.examples.join(', ')}`,
+    features: CORE_FEATURES.map(f => f.name),
+  }));
 
   return (
     <div className="py-16 md:py-20 bg-gradient-to-b from-background to-muted/20">
@@ -148,7 +101,7 @@ export function MembershipTiers() {
 
         {/* Standard Tiers Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-12 md:mb-16">
-          {standardTiers.map((tier, idx) => (
+          {displayTiers.map((tier, idx) => (
             <Card
               key={idx}
               className="hover-elevate transition-all border-2 hover:border-primary/50 flex flex-col h-full"

@@ -1,3 +1,5 @@
+import type { PricingTier, HoursRange } from '@/lib/unified-pricing';
+
 export type OnboardingStep = 'welcome' | 'personal-info' | 'aircraft-info' | 'membership' | 'quote' | 'complete';
 
 export interface PersonalInfo {
@@ -22,8 +24,8 @@ export interface AircraftInfo {
 }
 
 export interface MembershipSelection {
-  package_id: string;
-  hours_band?: '0-20' | '20-50' | '50+';
+  package_id: PricingTier | string; // Support both new and legacy formats
+  hours_band?: HoursRange;
   hangar_id?: string;
   hangar_cost?: number;
   base_monthly?: number;

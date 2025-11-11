@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MembershipSelection, PersonalInfo } from "@/types/onboarding";
-import { PACKAGES } from "@/lib/pricing-packages";
+import { PRICING_TIERS, calculateMonthlyPrice, type PricingTier, type HoursRange } from "@/lib/unified-pricing";
 import { Loader2, CreditCard, Lock, AlertCircle } from "lucide-react";
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -133,10 +133,9 @@ export function PaymentStep({ membershipSelection, personalInfo, onComplete, onB
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const selectedPackage = PACKAGES.find(p => p.id === membershipSelection?.package_id);
-  const selectedHoursBand = selectedPackage?.hours.find(h => h.range === membershipSelection?.hours_band);
-  const monthlyPrice = selectedPackage && selectedHoursBand
-    ? Math.round(selectedPackage.baseMonthly * selectedHoursBand.priceMultiplier)
+  const selectedTier = PRICING_TIERS.find(t => t.id === membershipSelection?.package_id);
+  const monthlyPrice = membershipSelection?.package_id && membershipSelection?.hours_band
+    ? calculateMonthlyPrice(membershipSelection.package_id as PricingTier, membershipSelection.hours_band as HoursRange)
     : 0;
 
   useEffect(() => {
@@ -218,7 +217,7 @@ export function PaymentStep({ membershipSelection, personalInfo, onComplete, onB
         <CardContent className="py-6 space-y-4">
           <div className="flex justify-between items-start">
             <div>
-              <p className="font-semibold">{selectedPackage?.title}</p>
+              <p className="font-semibold">{selectedTier?.title}</p>
               <p className="text-sm text-muted-foreground">
                 {membershipSelection?.hours_band} hours per month
               </p>
