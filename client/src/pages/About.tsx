@@ -1,8 +1,8 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Seo } from "@/components/Seo";
-import { SEO_KEYWORDS } from "@/seo/keywords";
+import { Seo, getBreadcrumbJsonLd } from "@/components/Seo";
+import { brandKeywords } from "@/seo/keywords";
 import { 
   Shield, 
   Eye, 
@@ -13,23 +13,26 @@ import {
 } from "lucide-react";
 import heroImage from "@assets/stock_images/premium_cirrus_sr22t_b2f4f8b8.jpg";
 import aircraftImage from "@assets/stock_images/modern_sleek_aircraf_8d8e0a84.jpg";
+import { Helmet } from "react-helmet-async";
 
 export default function About() {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="About Us - Premium Aircraft Management for Owner-Pilots"
-        description="Learn about Freedom Aviation's mission to make aircraft ownership effortless, safe, and rewarding. Expert technical care with personalized concierge service for owner-pilots."
-        keywords={[
-          ...SEO_KEYWORDS.services,
-          ...SEO_KEYWORDS.modifiers,
-          "about Freedom Aviation",
-          "aircraft management company",
-          "owner-pilot services",
-          "aviation team Colorado"
-        ].join(", ")}
+        title="About Freedom Aviation - Colorado Aircraft Management Experts at KAPA"
+        description="Learn about Freedom Aviation's mission to make aircraft ownership effortless at Centennial Airport Colorado. Expert aircraft management, transparent pricing, and personalized service for owner-pilots across the Front Range since 2024."
+        keywords={brandKeywords()}
         canonical="/about"
       />
+      {/* Breadcrumb Schema */}
+      <Helmet>
+        <script type="application/ld+json">
+          {JSON.stringify(getBreadcrumbJsonLd([
+            { name: "Home", url: "/" },
+            { name: "About", url: "/about" }
+          ]))}
+        </script>
+      </Helmet>
 
       {/* Hero Section */}
       <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">

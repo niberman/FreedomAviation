@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -25,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock, User, MapPin, Plus } from "lucide-react";
+import { Clock, User, MapPin, Plus, RefreshCw, Calendar as CalendarIcon, Link2, Unlink } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface ScheduleSlot {
   id: string;
@@ -50,6 +51,7 @@ export function CFISchedule() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<ScheduleSlot | null>(null);
+  const [showCalendarSettings, setShowCalendarSettings] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -58,6 +60,25 @@ export function CFISchedule() {
     end_time: "10:00",
     status: "available" as const,
     notes: "",
+  });
+
+  // Check Google Calendar connection status
+  const { data: calendarStatus, refetch: refetchCalendarStatus } = useQuery({
+    queryKey: ["google-calendar-status"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return { connected: false, syncEnabled: false };
+
+      const response = await fetch("/api/google-calendar/status", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error("Failed to fetch calendar status");
+      return response.json();
+    },
+    enabled: !!user,
   });
 
   // Fetch CFIs
@@ -174,6 +195,172 @@ export function CFISchedule() {
     },
   });
 
+  // Connect to Google Calendar
+  const connectGoogleCalendar = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+
+      const response = await fetch("/api/google-calendar/auth-url", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error("Failed to get authorization URL");
+      const data = await response.json();
+      return data.authUrl;
+    },
+    onSuccess: (authUrl) => {
+      // Open Google OAuth in new window
+      window.open(authUrl, "_blank", "width=600,height=800");
+      
+      // Poll for connection status
+      const pollInterval = setInterval(async () => {
+        const result = await refetchCalendarStatus();
+        if (result.data?.connected) {
+          clearInterval(pollInterval);
+          toast({
+            title: "Google Calendar Connected",
+            description: "Your availability will now sync with Google Calendar.",
+          });
+        }
+      }, 2000);
+
+      // Stop polling after 2 minutes
+      setTimeout(() => clearInterval(pollInterval), 120000);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to connect Google Calendar",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Disconnect Google Calendar
+  const disconnectGoogleCalendar = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+
+      const response = await fetch("/api/google-calendar/disconnect", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error("Failed to disconnect");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Calendar Disconnected",
+        description: "Google Calendar has been disconnected.",
+      });
+      refetchCalendarStatus();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to disconnect calendar",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Toggle automatic sync
+  const toggleSync = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+
+      const response = await fetch("/api/google-calendar/toggle-sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ enabled }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to toggle sync");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.enabled ? "Sync Enabled" : "Sync Disabled",
+        description: data.enabled 
+          ? "New schedule slots will automatically sync to Google Calendar."
+          : "Automatic syncing has been disabled.",
+      });
+      refetchCalendarStatus();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to toggle sync",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Sync all slots to Google Calendar
+  const syncAllSlots = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+
+      const response = await fetch("/api/google-calendar/sync-all", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error("Failed to sync slots");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Sync Complete",
+        description: `Successfully synced ${data.synced} of ${data.total} slots.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["cfi-schedule"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to sync slots",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Check for calendar connection success from OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("calendar_connected") === "true") {
+      toast({
+        title: "Success",
+        description: "Google Calendar connected successfully!",
+      });
+      refetchCalendarStatus();
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("calendar_error") === "true") {
+      toast({
+        title: "Error",
+        description: "Failed to connect Google Calendar. Please try again.",
+        variant: "destructive",
+      });
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [toast, refetchCalendarStatus]);
+
   // Get week days
   const weekStart = selectedDate ? startOfWeek(selectedDate) : new Date();
   const weekEnd = selectedDate ? endOfWeek(selectedDate) : new Date();
@@ -193,17 +380,33 @@ export function CFISchedule() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h3 className="text-lg font-semibold">CFI Schedule</h3>
           <p className="text-sm text-muted-foreground">
             View and manage flight instruction availability
           </p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Availability
-        </Button>
+        <div className="flex items-center gap-2">
+          {calendarStatus?.connected ? (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <CalendarIcon className="h-3 w-3" />
+              Google Calendar Connected
+            </Badge>
+          ) : null}
+          <Button
+            onClick={() => setShowCalendarSettings(true)}
+            variant="outline"
+            size="sm"
+          >
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Calendar Settings
+          </Button>
+          <Button onClick={() => setShowAddDialog(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Availability
+          </Button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-[300px_1fr] gap-6">
@@ -473,6 +676,103 @@ export function CFISchedule() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Google Calendar Settings Dialog */}
+      <Dialog open={showCalendarSettings} onOpenChange={setShowCalendarSettings}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Google Calendar Integration</DialogTitle>
+            <DialogDescription>
+              Sync your instructor availability with Google Calendar
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {!calendarStatus?.connected ? (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg bg-muted/50">
+                  <h4 className="font-medium mb-2">Why Connect Google Calendar?</h4>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li>Automatically sync your availability</li>
+                    <li>See your schedule across all devices</li>
+                    <li>Prevent double-booking</li>
+                    <li>Keep everything in one place</li>
+                  </ul>
+                </div>
+                <Button
+                  onClick={() => connectGoogleCalendar.mutate()}
+                  disabled={connectGoogleCalendar.isPending}
+                  className="w-full"
+                >
+                  <Link2 className="h-4 w-4 mr-2" />
+                  {connectGoogleCalendar.isPending ? "Connecting..." : "Connect Google Calendar"}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50 dark:bg-green-950/20">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
+                      <CalendarIcon className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Connected</p>
+                      <p className="text-sm text-muted-foreground">
+                        Your schedule syncs with Google Calendar
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="auto-sync">Automatic Sync</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically sync new slots to Google Calendar
+                      </p>
+                    </div>
+                    <Switch
+                      id="auto-sync"
+                      checked={calendarStatus?.syncEnabled || false}
+                      onCheckedChange={(checked) => toggleSync.mutate(checked)}
+                      disabled={toggleSync.isPending}
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t space-y-3">
+                    <Button
+                      onClick={() => syncAllSlots.mutate()}
+                      disabled={syncAllSlots.isPending}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${syncAllSlots.isPending ? 'animate-spin' : ''}`} />
+                      {syncAllSlots.isPending ? "Syncing..." : "Sync All Slots Now"}
+                    </Button>
+
+                    <Button
+                      onClick={() => disconnectGoogleCalendar.mutate()}
+                      disabled={disconnectGoogleCalendar.isPending}
+                      variant="destructive"
+                      className="w-full"
+                    >
+                      <Unlink className="h-4 w-4 mr-2" />
+                      {disconnectGoogleCalendar.isPending ? "Disconnecting..." : "Disconnect Calendar"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCalendarSettings(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

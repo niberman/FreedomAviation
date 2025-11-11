@@ -414,11 +414,22 @@ INSERT INTO public.pricing_packages (name, description, class, monthly_base_rate
   );
 
 -- Create a function to handle new user registration
+-- Supports both email/password signup and OAuth (Google, etc.)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.user_profiles (id, email, full_name)
-  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name');
+  INSERT INTO public.user_profiles (id, email, full_name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    -- Try multiple fields for name: full_name (email signup), name (Google OAuth), or email username as fallback
+    COALESCE(
+      NEW.raw_user_meta_data->>'full_name',
+      NEW.raw_user_meta_data->>'name',
+      split_part(NEW.email, '@', 1)
+    ),
+    'owner' -- Default role for new users
+  );
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

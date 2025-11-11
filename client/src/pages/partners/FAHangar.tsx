@@ -15,7 +15,7 @@ export default function FAHangar() {
 
   // Find FA Hangar location pricing
   const faHangar = locations?.find(loc => loc.slug === 'freedom-aviation-hangar' || loc.slug === 'f9');
-  const hangarCost = faHangar?.hangar_cost_monthly || 1500; // Fallback to 1500
+  const hangarCost = faHangar?.hangar_cost_monthly; // Dynamic pricing - may be undefined
 
   if (isLoading) {
     return (
@@ -162,8 +162,14 @@ export default function FAHangar() {
               <div className="border-b pb-4">
                 <h3 className="font-semibold text-lg mb-2">How does hangar pricing work?</h3>
                 <p className="text-muted-foreground">
-                  The Freedom Aviation Hangar has a cost of ${hangarCost.toLocaleString()}/month, which is transparently
-                  reflected in our pricing calculator. This is included in your total monthly management fee.
+                  {hangarCost ? (
+                    <>The Freedom Aviation Hangar has a cost of ${hangarCost.toLocaleString()}/month, which is transparently
+                    reflected in our pricing calculator. This is included in your total monthly management fee.</>
+                  ) : (
+                    <>Freedom Aviation Hangar pricing varies based on availability and specific requirements. 
+                    Contact us for current rates and to discuss your aircraft's needs. Pricing is transparently 
+                    included in your total monthly management fee.</>
+                  )}
                 </p>
               </div>
               <div className="border-b pb-4">
@@ -173,7 +179,7 @@ export default function FAHangar() {
                   coordination with our team. Both our hangar and Sky Harbour offer the same premium amenities 
                   and benefits, with the main difference being pricing and location. The Freedom Aviation Hangar 
                   provides the same climate control, 24/7 access, secure facilities, concierge service, and all 
-                  other premium benefits at a competitive rate of ${hangarCost.toLocaleString()}/month.
+                  other premium benefits{hangarCost ? ` at a competitive rate of $${hangarCost.toLocaleString()}/month` : '. Contact us for current pricing'}.
                 </p>
               </div>
             </div>
@@ -202,7 +208,9 @@ export default function FAHangar() {
                 name: "How does hangar pricing work?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: `The Freedom Aviation Hangar has a cost of $${hangarCost.toLocaleString()}/month, which is transparently reflected in our pricing calculator. This is included in your total monthly management fee.`,
+                  text: hangarCost 
+                    ? `The Freedom Aviation Hangar has a cost of $${hangarCost.toLocaleString()}/month, which is transparently reflected in our pricing calculator. This is included in your total monthly management fee.`
+                    : "Freedom Aviation Hangar pricing varies based on availability and specific requirements. Contact us for current rates. Pricing is transparently included in your total monthly management fee.",
                 },
               },
             ],
