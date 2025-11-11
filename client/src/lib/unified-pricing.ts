@@ -506,15 +506,8 @@ export function getPricingTable(tierId: PricingTier): Array<{
 }
 
 // ============================================================================
-// Exports
+// Type Re-exports (constants are already exported above)
 // ============================================================================
-
-export {
-  HOURS_BANDS,
-  CORE_FEATURES,
-  AVAILABLE_ADDONS,
-  PRICING_TIERS,
-};
 
 // Type exports for external use
 export type {
