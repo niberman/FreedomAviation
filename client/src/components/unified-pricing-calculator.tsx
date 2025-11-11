@@ -4,7 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Check, Plus, Info } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Check, Plus, Info, ArrowRight, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -153,114 +154,159 @@ export function UnifiedPricingCalculator({
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Card className="border-2">
-        <CardContent className="p-8">
-          {/* Aircraft Tier Selection */}
-          <div className="mb-8">
-            <Label className="text-lg font-semibold mb-4 block">
-              1. Select Your Aircraft Type
-            </Label>
-            <div className="grid md:grid-cols-3 gap-3">
-              {PRICING_TIERS.map((tier) => (
-                <button
-                  key={tier.id}
-                  onClick={() => {
-                    setSelectedTier(tier.id);
-                    // Reset addons when tier changes as some may not be applicable
-                    setSelectedAddons(prev => 
-                      prev.filter(addonId => {
-                        const addon = AVAILABLE_ADDONS.find(a => a.id === addonId);
-                        return !addon?.applicableTiers || addon.applicableTiers.includes(tier.id);
-                      })
-                    );
-                  }}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    selectedTier === tier.id
-                      ? 'border-primary bg-primary/5 shadow-md'
-                      : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <div className="font-semibold mb-1">{tier.name}</div>
-                  <div className="text-sm text-muted-foreground mb-2">
-                    {tier.examples.join(', ')}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    From ${tier.baseMonthly.toLocaleString()}/mo
-                  </div>
-                </button>
-              ))}
+    <div className="max-w-5xl mx-auto">
+      <Card className="border-2 shadow-2xl overflow-hidden">
+        <CardContent className="p-0">
+          {/* Step Indicator */}
+          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-8 py-6 border-b">
+            <div className="flex items-center justify-between max-w-2xl mx-auto">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">1</div>
+                <span className="font-medium text-sm">Aircraft Type</span>
+              </div>
+              <div className="flex-1 h-px bg-border mx-4" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">2</div>
+                <span className="font-medium text-sm">Usage Level</span>
+              </div>
+              <div className="flex-1 h-px bg-border mx-4" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">3</div>
+                <span className="font-medium text-sm hidden sm:inline">Add-ons</span>
+                <span className="font-medium text-sm sm:hidden">+</span>
+              </div>
             </div>
           </div>
 
-          {/* Hours Selection */}
-          <div className="mb-8">
-            <Label className="text-lg font-semibold mb-4 block">
-              2. Monthly Flight Hours
-            </Label>
-            <div className="grid grid-cols-3 gap-3">
-              {HOURS_BANDS.map((band) => {
-                const price = calculateMonthlyPrice(selectedTier, band.range);
-                return (
+          <div className="p-8 md:p-10">
+            {/* Aircraft Tier Selection */}
+            <div className="mb-10">
+              <Label className="text-xl font-bold mb-6 block flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">1</div>
+                Choose Your Aircraft Type
+              </Label>
+              <div className="grid md:grid-cols-3 gap-4">
+                {PRICING_TIERS.map((tier) => (
                   <button
-                    key={band.range}
-                    onClick={() => setSelectedHours(band.range)}
-                    className={`p-4 border-2 rounded-lg text-center transition-all ${
-                      selectedHours === band.range
-                        ? 'border-primary bg-primary/5 shadow-md'
-                        : 'border-border hover:border-primary/50'
+                    key={tier.id}
+                    onClick={() => {
+                      setSelectedTier(tier.id);
+                      // Reset addons when tier changes as some may not be applicable
+                      setSelectedAddons(prev => 
+                        prev.filter(addonId => {
+                          const addon = AVAILABLE_ADDONS.find(a => a.id === addonId);
+                          return !addon?.applicableTiers || addon.applicableTiers.includes(tier.id);
+                        })
+                      );
+                    }}
+                    className={`group p-5 border-2 rounded-xl text-left transition-all hover:scale-105 ${
+                      selectedTier === tier.id
+                        ? 'border-primary bg-primary/10 shadow-lg scale-105'
+                        : 'border-border hover:border-primary/50 hover:shadow-md'
                     }`}
                   >
-                    <div className="font-semibold mb-1">{band.label}</div>
-                    <div className="text-sm text-muted-foreground mb-2">
-                      {band.detailsPerMonth} detail{band.detailsPerMonth !== '1' ? 's' : ''}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-2 h-2 rounded-full ${selectedTier === tier.id ? 'bg-primary' : 'bg-muted-foreground'}`} />
+                      <div className="font-bold text-lg">{tier.name}</div>
                     </div>
-                    <div className="text-lg font-bold text-primary">
-                      ${price.toLocaleString()}
+                    <div className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                      {tier.examples.join(', ')}
+                    </div>
+                    <div className="text-sm font-semibold text-primary">
+                      From ${tier.baseMonthly.toLocaleString()}/mo
                     </div>
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Optional Addons */}
-          {showAddons && applicableAddons.length > 0 && (
-            <div className="mb-8 pb-8 border-b">
-              <Label className="text-lg font-semibold mb-4 block">
-                3. Optional Enhancements (Optional)
+            {/* Hours Selection */}
+            <div className="mb-10">
+              <Label className="text-xl font-bold mb-6 block flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">2</div>
+                Select Monthly Usage
               </Label>
-              <div className="grid md:grid-cols-2 gap-4">
-                {applicableAddons.map((addon) => (
-                  <div
-                    key={addon.id}
-                    className={`p-4 border-2 rounded-lg transition-all cursor-pointer ${
-                      selectedAddons.includes(addon.id)
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/30'
-                    }`}
-                    onClick={() => toggleAddon(addon.id)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={selectedAddons.includes(addon.id)}
-                        onCheckedChange={() => toggleAddon(addon.id)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold">{addon.name}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {HOURS_BANDS.map((band) => {
+                  const price = calculateMonthlyPrice(selectedTier, band.range);
+                  return (
+                    <button
+                      key={band.range}
+                      onClick={() => setSelectedHours(band.range)}
+                      className={`group p-6 border-2 rounded-xl text-center transition-all hover:scale-105 ${
+                        selectedHours === band.range
+                          ? 'border-primary bg-primary/10 shadow-lg scale-105'
+                          : 'border-border hover:border-primary/50 hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <div className={`w-2 h-2 rounded-full ${selectedHours === band.range ? 'bg-primary' : 'bg-muted-foreground'}`} />
+                        <div className="font-bold text-lg">{band.label}</div>
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-3">
+                        {band.detailsPerMonth} detail{band.detailsPerMonth !== '1' ? 's' : ''} • {band.serviceFrequency}
+                      </div>
+                      <div className="text-2xl font-bold text-primary">
+                        ${price.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">/month</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Optional Addons */}
+            {showAddons && applicableAddons.length > 0 && (
+              <div className="mb-10">
+                <Label className="text-xl font-bold mb-6 block flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">3</div>
+                  Add Optional Enhancements
+                </Label>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {applicableAddons.map((addon) => (
+                    <div
+                      key={addon.id}
+                      className={`group p-5 border-2 rounded-xl transition-all cursor-pointer ${
+                        selectedAddons.includes(addon.id)
+                          ? 'border-primary bg-primary/10 shadow-lg'
+                          : 'border-border hover:border-primary/30 hover:shadow-md'
+                      }`}
+                      onClick={() => toggleAddon(addon.id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          checked={selectedAddons.includes(addon.id)}
+                          onCheckedChange={() => toggleAddon(addon.id)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="font-bold">{addon.name}</span>
+                            <div className="text-sm font-bold text-primary whitespace-nowrap">
+                              +${addon.monthlyPrice.toLocaleString()}/mo
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            {addon.description}
+                          </p>
                           <TooltipProvider>
                             <Tooltip>
-                              <TooltipTrigger>
-                                <Info className="h-4 w-4 text-muted-foreground" />
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-auto p-0 text-xs hover:bg-transparent">
+                                  <Info className="h-3 w-3 mr-1" />
+                                  View details
+                                </Button>
                               </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="max-w-xs">
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div>
                                   <p className="font-semibold mb-2">{addon.name}</p>
                                   <ul className="text-sm space-y-1">
                                     {addon.features.map((feature, i) => (
-                                      <li key={i}>• {feature}</li>
+                                      <li key={i} className="flex items-start gap-1">
+                                        <Check className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                        {feature}
+                                      </li>
                                     ))}
                                   </ul>
                                 </div>
@@ -268,106 +314,131 @@ export function UnifiedPricingCalculator({
                             </Tooltip>
                           </TooltipProvider>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {addon.description}
-                        </p>
-                        <div className="text-sm font-semibold text-primary">
-                          +${addon.monthlyPrice.toLocaleString()}/mo
-                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Result Card */}
-          <div className="bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-xl p-8 mb-8">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div className="flex-1">
-                <div className="text-sm opacity-90 mb-1">Your Monthly Price</div>
-                <div className="text-5xl font-bold mb-2">
-                  ${totalPrice.toLocaleString()}
-                  <span className="text-2xl">/mo</span>
-                </div>
-                <div className="text-sm opacity-90 mb-3">
-                  {selectedTierData.name} • {selectedHoursData.label}
-                </div>
-                
-                {/* Price Breakdown */}
-                <div className="text-xs opacity-75 space-y-1">
-                  <div>Base service: ${basePrice.toLocaleString()}/mo</div>
-                  {selectedAddons.length > 0 && (
-                    <div>
-                      {selectedAddons.map(addonId => {
-                        const addon = AVAILABLE_ADDONS.find(a => a.id === addonId);
-                        return addon ? (
-                          <div key={addonId}>
-                            + {addon.name}: ${addon.monthlyPrice.toLocaleString()}/mo
-                          </div>
-                        ) : null;
-                      })}
+            {/* Result Card - Prominent */}
+            <div className="relative">
+              {/* Decorative background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-primary/80 rounded-2xl blur-sm" />
+              
+              <div className="relative bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-2xl p-8 md:p-10 shadow-2xl">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+                  <div className="flex-1">
+                    <Badge className="mb-3 bg-white/20 text-white hover:bg-white/30 border-white/20">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Your Custom Quote
+                    </Badge>
+                    
+                    <div className="text-sm opacity-90 mb-2">Total Monthly Investment</div>
+                    <div className="flex items-baseline gap-3 mb-4">
+                      <div className="text-6xl md:text-7xl font-bold">
+                        ${totalPrice.toLocaleString()}
+                      </div>
+                      <div className="text-2xl opacity-90">/month</div>
                     </div>
-                  )}
-                  <div className="pt-1 mt-1 border-t border-primary-foreground/20">
-                    {selectedHoursData.serviceFrequency}
-                  </div>
-                </div>
-              </div>
-              <Button 
-                size="lg" 
-                variant="secondary"
-                onClick={handleGetQuote}
-                disabled={saving}
-                className="w-full md:w-auto text-lg px-8 py-6 h-auto"
-              >
-                {saving ? 'Saving...' : ctaText}
-              </Button>
-            </div>
-          </div>
-
-          {/* What's Included */}
-          {!compact && (
-            <div className="pt-8 border-t">
-              <h3 className="font-semibold mb-4">What's Included in Base Service</h3>
-              <div className="grid md:grid-cols-2 gap-x-8 gap-y-2">
-                {CORE_FEATURES.map((feature, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-medium">{feature.name}</span>
-                      {feature.description && (
-                        <span className="text-muted-foreground"> — {feature.description}</span>
+                    
+                    <div className="flex flex-wrap items-center gap-3 mb-6">
+                      <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                        {selectedTierData.name}
+                      </Badge>
+                      <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                        {selectedHoursData.label}
+                      </Badge>
+                      {selectedAddons.length > 0 && (
+                        <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                          +{selectedAddons.length} Enhancement{selectedAddons.length !== 1 ? 's' : ''}
+                        </Badge>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Tier-specific premium features */}
-              {selectedTierData.premiumFeatures && selectedTierData.premiumFeatures.length > 0 && (
-                <div className="mt-6 pt-6 border-t">
-                  <h4 className="font-semibold mb-3 text-sm text-primary">
-                    {selectedTierData.name} Premium Features
-                  </h4>
-                  <div className="grid md:grid-cols-2 gap-x-8 gap-y-2">
-                    {selectedTierData.premiumFeatures.map((feature, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm">
-                        <Plus className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-medium">{feature.name}</span>
-                          {feature.description && (
-                            <span className="text-muted-foreground"> — {feature.description}</span>
-                          )}
+                    
+                    {/* Price Breakdown */}
+                    <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                      <div className="text-xs font-semibold opacity-90 mb-2">Price Breakdown</div>
+                      <div className="space-y-1.5 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="opacity-90">Base service</span>
+                          <span className="font-semibold">${basePrice.toLocaleString()}</span>
+                        </div>
+                        {selectedAddons.map(addonId => {
+                          const addon = AVAILABLE_ADDONS.find(a => a.id === addonId);
+                          return addon ? (
+                            <div key={addonId} className="flex justify-between items-center">
+                              <span className="opacity-90">+ {addon.name}</span>
+                              <span className="font-semibold">${addon.monthlyPrice.toLocaleString()}</span>
+                            </div>
+                          ) : null;
+                        })}
+                        <div className="pt-2 mt-2 border-t border-white/20 text-xs opacity-75">
+                          Includes: {selectedHoursData.serviceFrequency.toLowerCase()}
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  </div>
+                  
+                  <div className="w-full lg:w-auto flex flex-col gap-3">
+                    <Button 
+                      size="lg" 
+                      variant="secondary"
+                      onClick={handleGetQuote}
+                      disabled={saving}
+                      className="text-lg px-10 py-7 h-auto shadow-xl hover:shadow-2xl transition-shadow font-bold"
+                    >
+                      {saving ? 'Processing...' : ctaText}
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                    <p className="text-xs text-center text-white/70">
+                      No credit card required • Instant quote
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
-          )}
+
+            {/* What's Included - Compact */}
+            {!compact && (
+              <div className="mt-10 pt-10 border-t">
+                <h3 className="text-lg font-bold mb-6 text-center">✓ Everything Included in Your Plan</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {CORE_FEATURES.slice(0, 6).map((feature, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm p-3 rounded-lg bg-muted/30">
+                      <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                      <div className="font-medium">{feature.name}</div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Tier-specific premium features */}
+                {selectedTierData.premiumFeatures && selectedTierData.premiumFeatures.length > 0 && (
+                  <div className="mt-6">
+                    <div className="text-center mb-4">
+                      <Badge className="bg-primary/10 text-primary border-primary/20">
+                        <Plus className="h-3 w-3 mr-1" />
+                        {selectedTierData.name} Premium Includes
+                      </Badge>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {selectedTierData.premiumFeatures.map((feature, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm p-3 rounded-lg bg-primary/5 border border-primary/20">
+                          <Sparkles className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                          <div>
+                            <div className="font-semibold">{feature.name}</div>
+                            {feature.description && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{feature.description}</div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
