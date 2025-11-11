@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { SimplePricingCalculator } from "./simple-pricing-calculator";
+import { UnifiedPricingCalculator } from "./unified-pricing-calculator";
 
 interface SimpleCalculatorDialogProps {
   open: boolean;
@@ -22,7 +22,7 @@ export function SimpleCalculatorDialog({ open, onOpenChange }: SimpleCalculatorD
             Simple, transparent pricing in 2 steps
           </DialogDescription>
         </DialogHeader>
-        <SimplePricingCalculator onQuoteGenerated={() => setTimeout(() => onOpenChange(false), 1500)} />
+        <UnifiedPricingCalculator onQuoteGenerated={() => setTimeout(() => onOpenChange(false), 1500)} />
       </DialogContent>
     </Dialog>
   );

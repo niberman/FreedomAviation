@@ -4,7 +4,7 @@ import { Seo } from "@/components/Seo";
 import { locationKeywords } from "@/seo/keywords";
 import { isFixedPricing } from "@/lib/flags";
 import PricingFixed from "@/components/PricingFixed";
-import { SimplePricingCalculator } from "@/components/simple-pricing-calculator";
+import { UnifiedPricingCalculator } from "@/components/unified-pricing-calculator";
 
 export default function Pricing() {
   // If fixed pricing mode is enabled, use the fixed component
@@ -36,7 +36,7 @@ export default function Pricing() {
       {/* Interactive Pricing Calculator */}
       <section className="py-16 bg-background">
         <div className="container mx-auto px-6">
-          <SimplePricingCalculator />
+          <UnifiedPricingCalculator />
         </div>
       </section>
 
