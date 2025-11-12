@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -19,7 +19,6 @@ import ForgotPassword from "./pages/forgot-password";
 import ResetPassword from "./pages/reset-password";
 import Pricing from "./pages/Pricing";
 import Contact from "./pages/Contact";
-import HangarLocations from "./pages/HangarLocations";
 import About from "./pages/About";
 import Onboarding from "./pages/onboarding";
 import OwnerDashboard from "./pages/owner-dashboard";
@@ -83,7 +82,7 @@ function Router() {
       <Route path="/pricing-configurator" component={PricingConfiguratorPage} />
       <Route path="/contact" component={Contact} />
       <Route path="/about" component={About} />
-      <Route path="/hangar-locations" component={HangarLocations} />
+      <Redirect path="/hangar-locations" to="/pricing" />
       <Route path="/demo" component={OwnerDashboard} />
       <Route path="/dashboard">
         <ProtectedRoute>

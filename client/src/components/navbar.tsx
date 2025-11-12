@@ -59,7 +59,6 @@ export function NavBar() {
     { href: "/", label: "Home" },
     { href: "/about", label: "About" },
     { href: "/pricing", label: "Pricing" },
-    { href: "/hangar-locations", label: "Hangar Locations" },
     { href: "/contact", label: "Contact" },
   ];
 

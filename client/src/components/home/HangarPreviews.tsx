@@ -68,8 +68,8 @@ export default function HangarPreviews() {
                 Co-branded facilities and concierge staging for owner-pilots at KAPA.
               </p>
             </div>
-            <Link href="/hangars">
-              <Button variant="ghost" className="gap-2">View all hangars</Button>
+            <Link href="/pricing">
+              <Button variant="ghost" className="gap-2">View pricing & hangars</Button>
             </Link>
           </div>
 
