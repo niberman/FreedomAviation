@@ -3,19 +3,33 @@ import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Building2, MapPin, CheckCircle2, ArrowRight, Calculator, Users, Plane } from "lucide-react";
+import { 
+  Check, 
+  Building2, 
+  MapPin, 
+  CheckCircle2, 
+  ArrowRight, 
+  Calculator, 
+  Plane,
+  Shield,
+  Clock,
+  Users,
+  Zap,
+  Phone
+} from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SEO_KEYWORDS, locationKeywords } from "@/seo/keywords";
 import { UnifiedPricingCalculator } from "@/components/unified-pricing-calculator";
 import { useLocations } from "../features/pricing/hooks";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import heroImage from "@assets/stock_images/premium_cirrus_sr22t_b2f4f8b8.jpg";
 
 export default function Pricing() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const locationsQuery = useLocations();
-  const [showHangarInfo, setShowHangarInfo] = useState(false);
+  const [showFAQ, setShowFAQ] = useState(false);
 
   const locations = (locationsQuery.data || []).filter(loc => loc.slug !== 'none');
 
@@ -35,277 +49,305 @@ export default function Pricing() {
         canonical="/pricing"
       />
       
-      {/* Hero Header */}
-      <section className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground py-20">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Get Your Instant Quote</h1>
-            <p className="text-xl text-primary-foreground/90 max-w-2xl mx-auto mb-8">
-              Transparent pricing tailored to your needs. Build your custom package in minutes.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                variant="secondary"
-                onClick={() => document.getElementById('calculator')?.scrollIntoView({ behavior: 'smooth' })}
-              >
-                <Calculator className="mr-2 h-5 w-5" />
-                Calculate Your Price
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="bg-white/10 hover:bg-white/20 border-white/30"
-                onClick={() => setShowHangarInfo(!showHangarInfo)}
-              >
-                <Building2 className="mr-2 h-5 w-5" />
-                View Hangar Options
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Quick Info Cards */}
-      <section className="py-12 border-b">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            <Card className="text-center">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold flex items-center justify-center gap-2">
-                  <Plane className="h-5 w-5 text-primary" />
-                  3 Service Tiers
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  From Essential to Elite - choose the level of service that fits your needs
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold flex items-center justify-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  Based on Flight Hours
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Fair pricing that scales with your actual aircraft usage
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold flex items-center justify-center gap-2">
-                  <Building2 className="h-5 w-5 text-primary" />
-                  Flexible Hangar Options
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Premium hangar facilities or bring your own storage solution
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Calculator Section */}
-      <section id="calculator" className="py-16">
-        <div className="container mx-auto px-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">Build Your Custom Package</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Select your service tier and estimated flight hours to see transparent monthly pricing. 
-                Add premium services and hangar options to complete your package.
-              </p>
-            </div>
-
-            <Card className="p-6">
-              <UnifiedPricingCalculator 
-                showAddons={true}
-                ctaText={user ? "Save Quote & Continue" : "Get Quote & Sign Up"}
-                onQuoteGenerated={() => {
-                  if (user) {
-                    navigate('/onboarding');
-                  }
-                }}
-              />
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Hangar Locations Section (Collapsible) */}
-      {showHangarInfo && locationsQuery.isSuccess && (
-        <section className="py-16 bg-muted/30">
-          <div className="container mx-auto px-6">
-            <div className="max-w-6xl mx-auto">
-              <h2 className="text-3xl font-bold mb-4 text-center">Premium Hangar Locations</h2>
-              <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
-                Choose from our partner hangar facilities at Centennial Airport (KAPA). 
-                All locations include premium amenities and 24/7 access.
+      {/* Hero Section with Background */}
+      <section className="relative min-h-[50vh] sm:min-h-[60vh] flex items-center overflow-hidden">
+        {/* Background Image with Overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${heroImage})` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/95 to-background/70" />
+        
+        {/* Content */}
+        <div className="relative z-10 container mx-auto px-4 sm:px-6 py-12 sm:py-16 md:py-20">
+          <div className="max-w-5xl">
+            <div className="space-y-4 sm:space-y-6">
+              <Badge className="px-3 sm:px-4 py-1 text-xs sm:text-sm" variant="secondary">
+                Transparent Pricing • No Hidden Fees
+              </Badge>
+              
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight leading-tight">
+                Aircraft Management
+                <span className="block text-primary">Made Simple</span>
+              </h1>
+              
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-2xl">
+                Get an instant quote for premium aircraft management services at Centennial Airport. 
+                Fair, transparent pricing that scales with your needs.
               </p>
               
-              <div className="grid md:grid-cols-2 gap-8 mb-12">
-                {locations.map((location) => (
-                  <Card key={location.id} className="hover-elevate">
-                    <CardHeader>
-                      <div className="flex items-center gap-3 mb-2">
-                        <Building2 className="h-8 w-8 text-primary" />
-                        <div>
-                          <CardTitle className="text-2xl">{location.name}</CardTitle>
-                          <CardDescription className="flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            KAPA · Centennial Airport
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-6">
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                          {location.description}
-                        </p>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-bold">${location.hangar_cost_monthly}</span>
-                          <span className="text-muted-foreground">/month</span>
-                        </div>
-                      </div>
-
-                      {location.features?.amenities && location.features.amenities.length > 0 && (
-                        <div className="space-y-2">
-                          {location.features.amenities.slice(0, 4).map((amenity: string, idx: number) => (
-                            <div key={idx} className="flex items-center gap-2">
-                              <Check className="h-4 w-4 text-green-600" />
-                              <span className="text-sm">{amenity}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
+                <Button 
+                  size="lg" 
+                  className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto"
+                  onClick={() => document.getElementById('calculator')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  Get Your Custom Quote
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <a href="tel:+19706182094" className="w-full sm:w-auto">
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto"
+                  >
+                    <Phone className="mr-2 h-5 w-5" />
+                    Call (970) 618-2094
+                  </Button>
+                </a>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-              {/* Own Hangar Option */}
-              <Card className="mb-12">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <Plane className="h-8 w-8 text-primary mt-1" />
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold mb-2">Have Your Own Hangar?</h3>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        No problem! You can use our management services with your existing hangar or tie-down. 
-                        Simply select "No Hangar" in the calculator to see base service pricing.
-                      </p>
-                      <Button variant="outline" size="sm" onClick={() => setShowHangarInfo(false)}>
-                        Hide Hangar Options
-                      </Button>
-                    </div>
+      {/* Value Props */}
+      <section className="py-8 sm:py-10 md:py-12 bg-muted/30">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 max-w-6xl mx-auto">
+            <div className="text-center space-y-2 sm:space-y-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold text-sm sm:text-base">Instant Quotes</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Get accurate pricing in seconds</p>
+            </div>
+            
+            <div className="text-center space-y-2 sm:space-y-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold text-sm sm:text-base">No Hidden Fees</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">What you see is what you pay</p>
+            </div>
+            
+            <div className="text-center space-y-2 sm:space-y-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold text-sm sm:text-base">Flexible Plans</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Scale up or down anytime</p>
+            </div>
+            
+            <div className="text-center space-y-2 sm:space-y-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold text-sm sm:text-base">Month-to-Month</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">No long-term contracts</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Calculator Section - Now the main focus */}
+      <section id="calculator" className="py-12 sm:py-16 md:py-20">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto">
+            {/* Section Header */}
+            <div className="text-center mb-8 sm:mb-10 md:mb-12 space-y-3 sm:space-y-4 px-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold">Configure Your Package</h2>
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+                Choose your service level, flight hours, and add-ons. See your exact monthly price instantly.
+              </p>
+            </div>
+
+            {/* Calculator Card with Shadow */}
+            <Card className="shadow-2xl border-0">
+              <CardContent className="p-4 sm:p-6 md:p-8 lg:p-12">
+                <UnifiedPricingCalculator 
+                  showAddons={true}
+                  ctaText={user ? "Save Quote & Continue" : "Get Quote & Sign Up"}
+                  onQuoteGenerated={() => {
+                    if (user) {
+                      navigate('/onboarding');
+                    }
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* What's Included */}
+      <section className="py-12 sm:py-16 md:py-20 bg-muted/50">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-8 sm:mb-10 md:mb-12 space-y-3 sm:space-y-4 px-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">Everything You Need, Nothing You Don't</h2>
+              <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
+                Our comprehensive service packages are designed by pilots, for pilots
+              </p>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+              {/* Essential Services */}
+              <Card className="border-2 hover:border-primary/20 transition-colors">
+                <CardHeader className="p-4 sm:p-6">
+                  <Badge className="w-fit mb-2 text-xs sm:text-sm">Essential Services</Badge>
+                  <CardTitle className="text-lg sm:text-xl">Core Management</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6 pt-0">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Pre & post-flight services</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Oil & fluid management</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Basic cleaning & tidy</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Maintenance coordination</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Performance Services */}
+              <Card className="border-2 hover:border-primary/20 transition-colors">
+                <CardHeader className="p-4 sm:p-6">
+                  <Badge className="w-fit mb-2 text-xs sm:text-sm" variant="secondary">Performance Services</Badge>
+                  <CardTitle className="text-lg sm:text-xl">Enhanced Care</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6 pt-0">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Everything in Essential</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">TKS fluid management</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Oxygen system service</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Enhanced cleaning</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Elite Services */}
+              <Card className="border-2 hover:border-primary/20 transition-colors relative sm:col-span-2 lg:col-span-1">
+                <div className="absolute -top-2 sm:-top-3 -right-2 sm:-right-3">
+                  <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs sm:text-sm">Most Popular</Badge>
+                </div>
+                <CardHeader className="p-4 sm:p-6">
+                  <Badge className="w-fit mb-2 text-xs sm:text-sm" variant="default">Elite Services</Badge>
+                  <CardTitle className="text-lg sm:text-xl">White-Glove Treatment</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6 pt-0">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Everything in Performance</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Concierge services</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">Priority scheduling</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm">VIP treatment</span>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {/* Membership Benefits */}
-      <section className="py-16">
-        <div className="container mx-auto px-6">
+      {/* Contact Section */}
+      <section className="py-16 md:py-20">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-center">Why Choose Freedom Aviation?</h2>
-            
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-base mb-2">All-Inclusive Pricing</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    No hidden fees or surprise charges. Your monthly price includes all services, 
-                    hangar costs, and access to our premium facilities.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-base mb-2">Flexible Membership</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Scale up or down based on your needs. Change service tiers or add-ons 
-                    anytime as your flying requirements evolve.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-base mb-2">Expert Team</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Professional pilots, certified mechanics, and dedicated support staff 
-                    ensure your aircraft is always ready when you are.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <CheckCircle2 className="h-8 w-8 text-green-600 mb-4" />
-                  <h3 className="font-semibold text-base mb-2">Owner Portal Access</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Track maintenance, schedule services, view invoices, and monitor your 
-                    aircraft 24/7 through our modern web and mobile app.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+              <CardContent className="p-6 sm:p-8 md:p-12 text-center">
+                <div className="mb-4 md:mb-6">
+                  <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1 text-xs sm:text-sm">
+                    Questions? We're Here to Help
+                  </Badge>
+                </div>
+                <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 md:mb-6">
+                  Talk to an Expert
+                </h3>
+                <p className="text-base sm:text-lg text-muted-foreground mb-6 md:mb-8 max-w-2xl mx-auto">
+                  Get personalized guidance on the right package for your aircraft. 
+                  Our team is ready to answer your questions.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+                  <a href="tel:+19706182094" className="w-full sm:w-auto">
+                    <Button size="lg" className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto">
+                      <Phone className="mr-2 h-5 w-5" />
+                      Call (970) 618-2094
+                    </Button>
+                  </a>
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto"
+                    onClick={() => document.getElementById('calculator')?.scrollIntoView({ behavior: 'smooth' })}
+                  >
+                    Or Get an Instant Quote
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-primary text-primary-foreground">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-            <p className="text-xl mb-8 text-primary-foreground/90">
-              Join the Freedom Aviation family and experience premium aircraft management 
-              tailored to owner-operators.
+      {/* Final CTA Section */}
+      <section className="py-16 md:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/80" />
+        <div className="relative z-10 container mx-auto px-4 sm:px-6">
+          <div className="max-w-4xl mx-auto text-center text-primary-foreground">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 md:mb-6">
+              Ready to Experience the Difference?
+            </h2>
+            <p className="text-lg sm:text-xl mb-6 md:mb-8 text-primary-foreground/90 px-4">
+              Join Freedom Aviation today and see why owner-pilots choose us for hassle-free aircraft management.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
               {user ? (
-                <Link href="/onboarding">
-                  <Button size="lg" variant="secondary">
+                <Link href="/onboarding" className="w-full sm:w-auto">
+                  <Button size="lg" variant="secondary" className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto">
                     Complete Your Membership
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
               ) : (
                 <>
-                  <Link href="/login">
-                    <Button size="lg" variant="secondary">
-                      Sign Up Now
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </Link>
                   <Button 
                     size="lg" 
-                    variant="outline"
-                    className="bg-white/10 hover:bg-white/20 border-white/30"
-                    onClick={() => document.getElementById('calculator')?.scrollIntoView({ behavior: 'smooth' })}
+                    variant="secondary"
+                    className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto"
+                    onClick={() => navigate('/login')}
                   >
-                    Back to Calculator
+                    Get Started Now
+                    <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
+                  <a href="tel:+19706182094" className="w-full sm:w-auto">
+                    <Button 
+                      size="lg" 
+                      variant="outline"
+                      className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto bg-white/10 hover:bg-white/20 border-white/30 text-white"
+                    >
+                      <Phone className="mr-2 h-5 w-5" />
+                      Call (970) 618-2094
+                    </Button>
+                  </a>
                 </>
               )}
             </div>
@@ -313,55 +355,49 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
-            <div className="space-y-6">
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-base mb-2">How accurate is the pricing calculator?</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Our calculator provides exact monthly pricing based on your selections. The price you see 
-                    is the price you pay - no hidden fees or surprises.
-                  </p>
-                </CardContent>
-              </Card>
+      {/* Compact FAQ Section */}
+      {showFAQ && (
+        <section className="py-12 sm:py-16 bg-muted/30">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="max-w-3xl mx-auto">
+              <div className="flex items-center justify-between mb-6 sm:mb-8">
+                <h2 className="text-2xl sm:text-3xl font-bold">Common Questions</h2>
+                <Button variant="ghost" size="sm" onClick={() => setShowFAQ(false)}>
+                  Close
+                </Button>
+              </div>
+              <div className="space-y-3 sm:space-y-4">
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <h3 className="font-semibold text-sm sm:text-base mb-2">Is the pricing really all-inclusive?</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Yes! The price shown in the calculator includes all services, hangar costs (if selected), and regular maintenance coordination. No hidden fees.
+                    </p>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-base mb-2">Can I change my plan later?</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Yes! You can upgrade, downgrade, or modify your services anytime. Changes take effect 
-                    at the start of your next billing cycle.
-                  </p>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <h3 className="font-semibold text-sm sm:text-base mb-2">Can I tour the facilities before signing up?</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Absolutely! We encourage prospective members to visit our facilities at KAPA. Call us to schedule a personal tour.
+                    </p>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-base mb-2">What if I fly more or less than estimated?</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    We review usage quarterly and can adjust your plan accordingly. You're never locked 
-                    into a specific hours band if your flying patterns change.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-base mb-2">Do I need to use your hangar facilities?</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    No, you can use our services with your own hangar or tie-down. Our hangar options 
-                    are available for those who want the convenience of integrated facilities.
-                  </p>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardContent className="p-4 sm:p-6">
+                    <h3 className="font-semibold text-sm sm:text-base mb-2">What aircraft types do you support?</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      We specialize in single and light twin-engine aircraft. Popular models include Cirrus, Cessna, Piper, Beechcraft, and Diamond aircraft.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }
