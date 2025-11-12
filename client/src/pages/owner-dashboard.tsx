@@ -197,6 +197,7 @@ export default function OwnerDashboard() {
       description="Welcome back"
       navItems={ownerDashboardNavItems}
       titleTestId="text-dashboard-title"
+      showHeader={false}
       actions={
         <div className="flex items-center gap-2">
           <Link href="/">

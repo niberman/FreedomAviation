@@ -265,6 +265,7 @@ export default function OwnerMore() {
       title="Operations & Billing"
       description="Manage your account, billing, and service history."
       navItems={ownerDashboardNavItems}
+      showHeader={false}
       actions={<ThemeToggle />}
     >
       {isDemo && <DemoBanner />}
