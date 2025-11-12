@@ -28,9 +28,9 @@ export function PartnerBadges() {
                     we offer flexible hangar options to fit your needs and budget.
                   </p>
                 </div>
-                <Link href="/hangar-locations">
-                  <Button variant="default" data-testid="button-view-hangar-locations">
-                    View All Hangar Options
+                <Link href="/pricing">
+                  <Button variant="default" data-testid="button-view-pricing">
+                    View Pricing & Locations
                   </Button>
                 </Link>
               </div>
