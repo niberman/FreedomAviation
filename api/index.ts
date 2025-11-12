@@ -156,13 +156,18 @@ async function initializeApp(): Promise<express.Express> {
         
         app.get("/manifest.webmanifest", (req, res) => {
           const manifestPath = path.join(distPath!, "manifest.webmanifest");
+          console.log("📄 Manifest request - checking path:", manifestPath);
+          console.log("📄 File exists:", fs.existsSync(manifestPath));
+          
           if (fs.existsSync(manifestPath)) {
             res.setHeader("Content-Type", "application/manifest+json");
             res.setHeader("Cache-Control", "public, max-age=3600");
+            res.setHeader("Access-Control-Allow-Origin", "*"); // Allow from any origin
             res.sendFile(manifestPath);
           } else {
             console.warn("⚠️ Manifest file not found at:", manifestPath);
-            res.status(404).json({ error: "Manifest not found" });
+            console.warn("⚠️ Directory contents:", fs.readdirSync(distPath!).slice(0, 10));
+            res.status(404).json({ error: "Manifest not found", path: manifestPath });
           }
         });
         
@@ -202,8 +207,19 @@ async function initializeApp(): Promise<express.Express> {
         });
         
         app.get("/manifest.webmanifest", (req, res) => {
+          console.warn("⚠️ Manifest requested but dist directory not found");
           res.setHeader("Content-Type", "application/manifest+json");
-          res.status(404).json({ error: "Manifest not found" });
+          res.setHeader("Access-Control-Allow-Origin", "*"); // Allow from any origin
+          // Return a minimal valid manifest instead of 404
+          res.json({
+            name: "Freedom Aviation",
+            short_name: "Freedom Aviation",
+            start_url: "/",
+            display: "standalone",
+            theme_color: "#1e40af",
+            background_color: "#ffffff",
+            icons: []
+          });
         });
       }
       

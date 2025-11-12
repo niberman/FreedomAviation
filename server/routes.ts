@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendInvoiceEmail } from "./lib/email.js";
+import { processEmailNotifications, webhookProcessNotification } from "./routes/email-notifications.js";
 
 // Initialize Stripe
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -1648,6 +1649,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/google-calendar/status", async (req: Request, res: Response) => {
     try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -1655,25 +1660,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
       if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
 
-      const { hasGoogleCalendarConnected } = await import("./lib/google-calendar.js");
-      const connected = await hasGoogleCalendarConnected(user.id);
-      
-      // Get sync status if connected
-      let syncEnabled = false;
-      if (connected) {
-        const { data: tokenData } = await supabase
-          .from("google_calendar_tokens")
-          .select("sync_enabled, last_sync_at")
-          .eq("user_id", user.id)
-          .single();
-        
-        syncEnabled = tokenData?.sync_enabled || false;
+      // Check if Google Calendar feature is configured
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        // Feature not configured, return gracefully
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Google Calendar integration not configured"
+        });
       }
 
-      res.json({ connected, syncEnabled });
+      // Try to check if calendar is connected
+      const { data: tokenData, error: tokenError } = await supabase
+        .from("google_calendar_tokens")
+        .select("sync_enabled, last_sync_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // If table doesn't exist or other error, return gracefully
+      if (tokenError) {
+        console.warn("⚠️ Google Calendar tokens table not accessible:", tokenError.message);
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Google Calendar feature not set up. Run the SQL migration script."
+        });
+      }
+
+      const connected = !!tokenData;
+      const syncEnabled = tokenData?.sync_enabled || false;
+
+      res.json({ connected, syncEnabled, featureAvailable: true });
     } catch (err: any) {
       console.error("❌ Error checking calendar status:", err);
-      res.status(500).json({ error: "Failed to check calendar status", message: err.message });
+      // Return a graceful error instead of 500
+      res.json({ 
+        connected: false, 
+        syncEnabled: false,
+        featureAvailable: false,
+        message: "Google Calendar feature unavailable"
+      });
     }
   });
 
@@ -1882,6 +1910,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to select calendar", message: err.message });
     }
   });
+
+  /**
+   * Email Notification Routes
+   */
+  
+  /**
+   * POST /api/email-notifications/process
+   * Process pending email notifications from the queue
+   * Protected by API key
+   */
+  app.post("/api/email-notifications/process", processEmailNotifications);
+
+  /**
+   * POST /api/webhooks/email-notification
+   * Webhook endpoint for Supabase to call when a notification is created
+   * This allows immediate processing instead of waiting for cron
+   */
+  app.post("/api/webhooks/email-notification", webhookProcessNotification);
 
   const httpServer = createServer(app);
 
