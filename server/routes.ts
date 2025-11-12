@@ -15,7 +15,9 @@ const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
 }) : null;
 
 // Initialize Supabase admin client (for server-side operations)
-// Prefer SUPABASE_URL for server-side (VITE_ prefix is for client-side)
+// IMPORTANT: In Vercel serverless functions, VITE_ prefixed variables are NOT available at runtime
+// They are only available during the build process. Use SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 
+// and SUPABASE_ANON_KEY (without VITE_ prefix) for serverless functions.
 const supabaseUrl =
   process.env.SUPABASE_URL ||
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -26,17 +28,44 @@ const supabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY;
 
+// Log which environment variables are available (for debugging)
+const envVars = {
+  SUPABASE_URL: !!process.env.SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+  VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  VITE_SUPABASE_ANON_KEY: !!process.env.VITE_SUPABASE_ANON_KEY,
+};
+
+console.log("🔍 Supabase environment variables check:");
+console.log("  - SUPABASE_URL:", envVars.SUPABASE_URL ? "✓ Set" : "✗ Missing");
+console.log("  - NEXT_PUBLIC_SUPABASE_URL:", envVars.NEXT_PUBLIC_SUPABASE_URL ? "✓ Set" : "✗ Missing");
+console.log("  - VITE_SUPABASE_URL:", envVars.VITE_SUPABASE_URL ? "✓ Set (NOTE: Not available in serverless runtime!)" : "✗ Missing");
+console.log("  - SUPABASE_SERVICE_ROLE_KEY:", envVars.SUPABASE_SERVICE_ROLE_KEY ? "✓ Set" : "✗ Missing");
+console.log("  - SUPABASE_ANON_KEY:", envVars.SUPABASE_ANON_KEY ? "✓ Set" : "✗ Missing");
+console.log("  - NEXT_PUBLIC_SUPABASE_ANON_KEY:", envVars.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "✓ Set" : "✗ Missing");
+console.log("  - VITE_SUPABASE_ANON_KEY:", envVars.VITE_SUPABASE_ANON_KEY ? "✓ Set (NOTE: Not available in serverless runtime!)" : "✗ Missing");
+
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error("❌ CRITICAL: Supabase credentials not set!");
-  console.error("   Required environment variables:");
-  console.error("   - SUPABASE_URL or VITE_SUPABASE_URL:", supabaseUrl ? "✓" : "✗ MISSING");
-  console.error("   - SUPABASE_SERVICE_ROLE_KEY:", supabaseServiceKey ? "✓" : "✗ MISSING");
-  console.error("   - SUPABASE_ANON_KEY or VITE_SUPABASE_ANON_KEY:", supabaseAnonKey ? "✓" : "✗ MISSING");
+  console.error("   Required environment variables for serverless functions:");
+  console.error("   - SUPABASE_URL:", supabaseUrl ? "✓" : "✗ MISSING (required)");
+  console.error("   - SUPABASE_SERVICE_ROLE_KEY:", supabaseServiceKey ? "✓" : "✗ MISSING (required)");
+  console.error("   - SUPABASE_ANON_KEY:", supabaseAnonKey ? "✓" : "✗ MISSING (required)");
+  console.error("");
+  console.error("   NOTE: VITE_ prefixed variables are NOT available in Vercel serverless functions.");
+  console.error("   They are only available during the build process for client-side code.");
+  console.error("   Make sure to set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SUPABASE_ANON_KEY");
+  console.error("   (without VITE_ prefix) in your Vercel project settings.");
+  console.error("");
   console.error("   Some features will NOT work until these are set.");
 }
 
 if (!supabaseAnonKey) {
   console.warn("⚠️  SUPABASE_ANON_KEY not set. Authentication may not work properly.");
+  console.warn("   Set SUPABASE_ANON_KEY (without VITE_ prefix) in your Vercel project settings.");
 }
 
 // Service role client for admin operations (bypasses RLS)
