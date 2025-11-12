@@ -8,7 +8,7 @@ ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
 CREATE TYPE membership_class AS ENUM ('I', 'II', 'III');
 CREATE TYPE service_status AS ENUM ('pending', 'in_progress', 'completed', 'cancelled');
 CREATE TYPE maintenance_status AS ENUM ('current', 'due_soon', 'overdue');
-CREATE TYPE user_role AS ENUM ('owner', 'staff', 'cfi', 'admin');
+CREATE TYPE user_role AS ENUM ('owner', 'staff', 'cfi', 'admin', 'ops', 'founder');
 
 -- Users table (extends Supabase auth.users)
 CREATE TABLE public.user_profiles (

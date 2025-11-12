@@ -286,14 +286,14 @@ export function ServiceRequestEditDialog({
           <div className="space-y-2">
             <Label htmlFor="assigned_to">Assigned To</Label>
             <Select
-              value={formData.assigned_to}
-              onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
+              value={formData.assigned_to || "unassigned"}
+              onValueChange={(value) => setFormData({ ...formData, assigned_to: value === "unassigned" ? "" : value })}
             >
               <SelectTrigger id="assigned_to">
                 <SelectValue placeholder="Unassigned" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
                 {staffUsers.map((staff) => (
                   <SelectItem key={staff.id} value={staff.id}>
                     {staff.full_name || staff.email}
@@ -320,14 +320,14 @@ export function ServiceRequestEditDialog({
               <div className="space-y-2">
                 <Label htmlFor="fuel_grade">Fuel Grade</Label>
                 <Select
-                  value={formData.fuel_grade}
-                  onValueChange={(value) => setFormData({ ...formData, fuel_grade: value })}
+                  value={formData.fuel_grade || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, fuel_grade: value === "none" ? "" : value })}
                 >
                   <SelectTrigger id="fuel_grade">
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="100LL">100LL</SelectItem>
                     <SelectItem value="Jet-A">Jet-A</SelectItem>
                     <SelectItem value="Jet-A+">Jet-A+</SelectItem>
