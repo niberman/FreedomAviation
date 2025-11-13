@@ -12,7 +12,7 @@ export type Json =
 export type MembershipClass = 'I' | 'II' | 'III'
 export type ServiceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
 export type MaintenanceStatus = 'current' | 'due_soon' | 'overdue'
-export type UserRole = 'owner' | 'cfi' | 'staff' | 'admin'
+export type UserRole = 'owner' | 'ops' | 'cfi' | 'staff' | 'admin' | 'founder'
 
 export interface Database {
   public: {
@@ -413,6 +413,41 @@ export interface Database {
           updated_at?: string
         }
       }
+      notification_preferences: {
+        Row: {
+          id: string
+          user_id: string
+          receive_service_requests: boolean
+          receive_flight_instruction_requests: boolean
+          receive_maintenance_alerts: boolean
+          receive_emergency_requests: boolean
+          email_enabled: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          receive_service_requests?: boolean
+          receive_flight_instruction_requests?: boolean
+          receive_maintenance_alerts?: boolean
+          receive_emergency_requests?: boolean
+          email_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          receive_service_requests?: boolean
+          receive_flight_instruction_requests?: boolean
+          receive_maintenance_alerts?: boolean
+          receive_emergency_requests?: boolean
+          email_enabled?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }
@@ -453,3 +488,7 @@ export type InstructorUpdate = Database['public']['Tables']['instructors']['Upda
 export type PricingPackage = Database['public']['Tables']['pricing_packages']['Row']
 export type PricingPackageInsert = Database['public']['Tables']['pricing_packages']['Insert']
 export type PricingPackageUpdate = Database['public']['Tables']['pricing_packages']['Update']
+
+export type NotificationPreferences = Database['public']['Tables']['notification_preferences']['Row']
+export type NotificationPreferencesInsert = Database['public']['Tables']['notification_preferences']['Insert']
+export type NotificationPreferencesUpdate = Database['public']['Tables']['notification_preferences']['Update']
