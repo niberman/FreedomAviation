@@ -211,6 +211,20 @@ export default function OwnerDashboard() {
       }
     >
       {isDemo && <DemoBanner />}
+      
+      {/* Minimal Navigation */}
+      <div className="flex items-center gap-2 mb-6">
+        <Link href="/dashboard">
+          <Button variant="default" size="sm">
+            Overview
+          </Button>
+        </Link>
+        <Link href="/dashboard/more">
+          <Button variant="outline" size="sm">
+            More
+          </Button>
+        </Link>
+      </div>
 
       <Card>
         <CardHeader className="flex flex-col items-start gap-2 pb-3 sm:flex-row sm:items-center sm:justify-between">

@@ -233,22 +233,6 @@ export default function Contact() {
                     </div>
                   </CardContent>
                 </Card>
-
-                <Card className="bg-muted/50">
-                  <CardContent className="p-6">
-                    <p className="text-sm text-muted-foreground">
-                      <strong className="text-foreground">
-                        Business Hours:
-                      </strong>
-                      <br />
-                      Monday - Friday: 8:00 AM - 6:00 PM MT
-                      <br />
-                      Saturday: 9:00 AM - 4:00 PM MT
-                      <br />
-                      Sunday: By appointment
-                    </p>
-                  </CardContent>
-                </Card>
               </div>
             </div>
           </div>
