@@ -149,7 +149,7 @@ function generateInvoiceEmailHTML(data: InvoiceEmailData): string {
   `;
 }
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   const map: Record<string, string> = {
     "&": "&amp;",
     "<": "&lt;",
