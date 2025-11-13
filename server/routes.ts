@@ -1567,6 +1567,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/google-calendar/auth-url", async (req: Request, res: Response) => {
     try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -1605,6 +1609,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/google-calendar/callback", async (req: Request, res: Response) => {
     try {
+      if (!supabase) {
+        return res.status(503).send("Supabase not configured");
+      }
+
       const { code, state } = req.query;
       
       if (!code || typeof code !== 'string') {
@@ -1648,6 +1656,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/google-calendar/status", async (req: Request, res: Response) => {
     try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -1683,6 +1695,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post("/api/google-calendar/disconnect", async (req: Request, res: Response) => {
     try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -1710,6 +1726,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post("/api/google-calendar/toggle-sync", async (req: Request, res: Response) => {
     try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -1739,6 +1759,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post("/api/google-calendar/sync-slot", async (req: Request, res: Response) => {
     try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -1784,6 +1808,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post("/api/google-calendar/sync-all", async (req: Request, res: Response) => {
     try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -1833,6 +1861,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/google-calendar/calendars", async (req: Request, res: Response) => {
     try {
+      if (!supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -1856,6 +1888,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post("/api/google-calendar/select-calendar", async (req: Request, res: Response) => {
     try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });

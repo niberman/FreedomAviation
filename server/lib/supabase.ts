@@ -14,7 +14,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 }
 
 // Service role client for admin operations (bypasses RLS)
-export const supabase = supabaseUrl && supabaseServiceKey
+const supabaseClient = supabaseUrl && supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -23,7 +23,10 @@ export const supabase = supabaseUrl && supabaseServiceKey
     })
   : null;
 
-if (!supabase) {
+if (!supabaseClient) {
   throw new Error("Failed to initialize Supabase client");
 }
+
+// Export as non-null since we throw above if it's null
+export const supabase = supabaseClient;
 
