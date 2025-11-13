@@ -229,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (!["admin", "cfi"].includes(profile.role)) {
+      if (!["admin", "cfi", "founder", "ops"].includes(profile.role)) {
         return res.status(403).json({
           error: "Forbidden",
           message: "Insufficient permissions",
@@ -1486,11 +1486,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      if (!profile || !["admin", "cfi", "staff"].includes(profile.role)) {
+      if (!profile || !["admin", "cfi", "staff", "founder", "ops"].includes(profile.role)) {
         console.warn("⚠️ User lacks required role. User role:", profile?.role);
         return res.status(403).json({ 
           error: "Forbidden",
-          message: "You don't have permission to access this resource. Required role: admin, cfi, or staff."
+          message: "You don't have permission to access this resource. Required role: admin, cfi, staff, founder, or ops."
         });
       }
       
@@ -1538,7 +1538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select("role")
         .eq("id", user.id)
         .single();
-      if (!profile || !["admin", "cfi", "staff"].includes(profile.role)) return res.status(403).json({ error: "Forbidden" });
+      if (!profile || !["admin", "cfi", "staff", "founder", "ops"].includes(profile.role)) return res.status(403).json({ error: "Forbidden" });
       const updatePayload: any = {};
       if (status) updatePayload.status = status;
       if (assigned_to !== undefined) updatePayload.assigned_to = assigned_to;
@@ -1582,7 +1582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .eq("id", user.id)
         .single();
       
-      if (!profile || !["admin", "cfi"].includes(profile.role)) {
+      if (!profile || !["admin", "cfi", "founder"].includes(profile.role)) {
         return res.status(403).json({ error: "Only CFIs can connect Google Calendar" });
       }
 
