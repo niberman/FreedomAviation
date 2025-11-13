@@ -8,7 +8,7 @@
 // ENUMS
 // ============================================
 
-export type UserRole = 'owner' | 'staff' | 'cfi' | 'admin';
+export type UserRole = 'owner' | 'staff' | 'cfi' | 'admin' | 'ops' | 'founder';
 export type MembershipClass = 'I' | 'II' | 'III';
 export type ServiceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 export type MaintenanceStatus = 'current' | 'due_soon' | 'overdue';
