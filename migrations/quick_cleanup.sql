@@ -107,3 +107,5 @@ BEGIN
   RAISE NOTICE 'Remaining tables: %', table_count;
 END $$;
 
+
+

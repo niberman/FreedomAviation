@@ -108,3 +108,5 @@ WHERE table_schema = 'public'
   AND table_type = 'BASE TABLE'
 ORDER BY rows DESC, table_name;
 
+
+

@@ -77,3 +77,5 @@ CREATE POLICY "Users can update own service requests" ON public.service_requests
 
 SELECT 'Safe schema setup complete!' as status;
 
+
+

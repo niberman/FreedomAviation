@@ -371,20 +371,19 @@ export default function StaffDashboard() {
   const { data: maintenanceItems = [] } = useQuery({
     queryKey: ['/api/maintenance'],
     queryFn: async () => {
+      // Use 'maintenance' table instead of 'maintenance_due'
       const { data, error } = await supabase
-        .from('maintenance_due')
+        .from('maintenance')
         .select(`
           id,
           aircraft_id,
-          item,
-          due_at_date,
-          due_at_hours,
-          severity,
-          remaining_hours,
-          remaining_days,
+          item_name,
+          due_date,
+          due_hobbs,
+          status,
           aircraft:aircraft_id(tail_number)
         `)
-        .order('due_at_date', { ascending: true });
+        .order('due_date', { ascending: true });
       if (error) throw error;
       
       // Fetch hobbs_hours separately for each aircraft
@@ -400,9 +399,14 @@ export default function StaffDashboard() {
           return acc;
         }, {});
         
-        // Add hobbs_hours to each maintenance item
+        // Add hobbs_hours to each maintenance item and map old field names to new
         return data.map((m: any) => ({
           ...m,
+          // Map new column names to old names for compatibility
+          item: m.item_name,
+          due_at_date: m.due_date,
+          due_at_hours: m.due_hobbs,
+          severity: m.status === 'overdue' ? 'critical' : m.status === 'due_soon' ? 'warning' : 'info',
           aircraft: m.aircraft ? {
             ...m.aircraft,
             hobbs_hours: hobbsMap[m.aircraft_id] || null
