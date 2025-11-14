@@ -76,10 +76,12 @@ export default function Login() {
         return "/dashboard";
       }
       
-      console.log('User role detected:', data.role);
+      // Trim the role to handle any whitespace issues
+      const trimmedRole = data.role?.trim() || null;
+      console.log('User role detected:', trimmedRole);
       
       // Redirect staff (admin, staff, or legacy cfi) to staff dashboard
-      if (isStaffRole(data.role)) {
+      if (isStaffRole(trimmedRole)) {
         console.log('Redirecting staff user to /staff');
         return "/staff";
       }
