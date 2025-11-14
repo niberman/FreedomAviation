@@ -47,7 +47,6 @@ export function ClientsTable() {
   const [editClientName, setEditClientName] = useState("");
   const [editClientPhone, setEditClientPhone] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
-  const [newClientPassword, setNewClientPassword] = useState("");
   const [newClientName, setNewClientName] = useState("");
   const [newClientPhone, setNewClientPhone] = useState("");
 
@@ -100,9 +99,9 @@ export function ClientsTable() {
         },
         body: JSON.stringify({
           email: newClientEmail,
-          password: newClientPassword,
           full_name: newClientName,
           phone: newClientPhone || null,
+          sendInvite: true,
         }),
       });
 
@@ -112,17 +111,16 @@ export function ClientsTable() {
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       queryClient.invalidateQueries({ queryKey: ['/api/owners'] });
       setIsAddDialogOpen(false);
       setNewClientEmail("");
-      setNewClientPassword("");
       setNewClientName("");
       setNewClientPhone("");
       toast({
-        title: "Client created",
-        description: "New client has been created successfully.",
+        title: "Invitation sent!",
+        description: data.message || "The user will receive an email to set their password and access the dashboard.",
       });
     },
     onError: (error: Error) => {
@@ -247,7 +245,7 @@ export function ClientsTable() {
           data-testid="button-add-client"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Client
+          Invite Client
         </Button>
       </div>
 
@@ -379,9 +377,9 @@ export function ClientsTable() {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Client</DialogTitle>
+            <DialogTitle>Invite New Client</DialogTitle>
             <DialogDescription>
-              Create a new client account. They will be able to log in with the email and password you provide.
+              Send an invitation to a new client. They will receive an email with a secure link to set their own password and access the dashboard.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddClient}>
@@ -397,20 +395,9 @@ export function ClientsTable() {
                   data-testid="input-add-client-email"
                   required
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-password">Password *</Label>
-                <Input
-                  id="add-password"
-                  type="password"
-                  placeholder="Enter password"
-                  value={newClientPassword}
-                  onChange={(e) => setNewClientPassword(e.target.value)}
-                  data-testid="input-add-client-password"
-                  required
-                  minLength={6}
-                />
-                <p className="text-xs text-muted-foreground">Password must be at least 6 characters</p>
+                <p className="text-xs text-muted-foreground">
+                  An invitation email will be sent to this address
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="add-name">Full Name *</Label>
@@ -448,7 +435,7 @@ export function ClientsTable() {
                 disabled={createClientMutation.isPending}
                 data-testid="button-create-client"
               >
-                {createClientMutation.isPending ? "Creating..." : "Create Client"}
+                {createClientMutation.isPending ? "Sending Invitation..." : "Send Invitation"}
               </Button>
             </DialogFooter>
           </form>

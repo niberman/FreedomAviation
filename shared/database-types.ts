@@ -41,6 +41,9 @@ export interface Aircraft {
   image_url?: string;
   owner_id?: string; // UUID, FK to user_profiles
   base_location?: string;
+  status?: string; // e.g., 'active', 'maintenance', 'inactive'
+  usable_fuel_gal?: number; // Usable fuel capacity in gallons
+  tabs_fuel_gal?: number; // Tabs fuel capacity in gallons
   has_tks?: boolean;
   has_oxygen?: boolean;
   created_at: string;
@@ -146,10 +149,9 @@ export interface ServiceRequest {
   priority: string;
   description?: string;
   airport?: string;
-  requested_departure?: string;
-  requested_date?: string;
-  requested_time?: string;
-  requested_for?: string;
+  requested_departure?: string; // TIMESTAMPTZ
+  requested_date?: string; // DATE - separate date field
+  requested_time?: string; // TIME - separate time field
   fuel_grade?: string;
   fuel_quantity?: number;
   cabin_provisioning?: Record<string, any>;
@@ -477,13 +479,17 @@ export interface Invoice {
   owner_id: string; // FK to user_profiles
   aircraft_id?: string; // FK to aircraft
   invoice_number: string;
-  amount: number;
+  amount: number; // Decimal amount in dollars
+  total_cents?: number; // Amount in cents (may be redundant with amount)
+  period_start?: string; // DATE - billing period start
+  period_end?: string; // DATE - billing period end
+  hosted_invoice_url?: string; // Stripe hosted invoice URL
   status: string;
   category: 'membership' | 'instruction' | 'service';
   created_by_cfi_id?: string; // FK to user_profiles
   due_date?: string;
   paid_date?: string;
-  line_items?: Record<string, any>;
+  line_items?: Record<string, any>; // JSONB - invoice line items
   stripe_checkout_session_id?: string;
   stripe_payment_intent_id?: string;
   created_at: string;
@@ -639,6 +645,149 @@ export interface ActivityLog {
   user_agent?: string;
   notes?: string;
   created_at: string;
+}
+
+// ============================================
+// ADDITIONAL TABLES
+// ============================================
+
+export interface ClientBillingProfile {
+  user_id: string; // PK, FK to user_profiles
+  stripe_customer_id?: string;
+  stripe_default_pm_id?: string; // Default payment method ID
+  display_brand?: string; // Card brand (Visa, Mastercard, etc.)
+  display_last4?: string; // Last 4 digits of card
+  display_exp?: string; // Expiration date
+  fbo_card_brand?: string; // FBO card brand
+  fbo_card_last4?: string; // FBO card last 4
+  fbo_card_exp?: string; // FBO card expiration
+  fbo_authorization_doc_url?: string; // FBO authorization document URL
+  updated_at: string;
+}
+
+export interface EmailNotification {
+  id: string;
+  type: string; // notification type (e.g., 'invoice', 'maintenance_due')
+  recipient_role: string; // Role to send to
+  data: Record<string, any>; // JSONB - notification data
+  status: string; // 'pending', 'sent', 'failed'
+  sent_at?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FlightLog {
+  id: string;
+  aircraft_id: string; // FK to aircraft
+  pilot_id: string; // FK to user_profiles
+  date: string; // DATE
+  departure_time?: string; // TIME
+  arrival_time?: string; // TIME
+  departure_airport?: string;
+  arrival_airport?: string;
+  flight_time_hours?: number;
+  hobbs_start?: number;
+  hobbs_end?: number;
+  tach_start?: number;
+  tach_end?: number;
+  landings?: number;
+  night_time?: number;
+  instrument_time?: number;
+  cross_country?: boolean;
+  remarks?: string;
+  verified_by?: string; // FK to user_profiles
+  verified_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InstructionRequest {
+  id: string;
+  student_id: string; // FK to user_profiles
+  aircraft_id: string; // FK to aircraft
+  cfi_id?: string; // FK to user_profiles
+  requested_date: string; // DATE
+  requested_time?: string; // TIME
+  instruction_type?: string; // e.g., 'Flight Instruction', 'Ground School'
+  duration_hours?: number;
+  notes?: string;
+  status?: string; // 'pending', 'confirmed', 'completed', 'cancelled'
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  owner_id: string; // FK to user_profiles
+  subject: string;
+  body?: string;
+  status?: string; // 'open', 'in_progress', 'closed'
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Settings {
+  id: number; // Always 1 - single row settings table
+  default_fuel_rate?: number; // Default fuel rate for calculations
+}
+
+// ============================================
+// DATABASE VIEWS
+// ============================================
+
+export interface VMembership {
+  id: string;
+  owner_id: string;
+  tier?: string; // tier column (text)
+  start_date: string;
+  end_date?: string;
+  active?: boolean; // is_active column
+  created_at: string;
+  updated_at: string;
+  tier_id?: string; // FK to membership_tiers
+  tier_name?: string; // from membership_tiers
+  base_price?: number; // from membership_tiers
+}
+
+export interface VOwnerAircraft {
+  id: string;
+  tail_number: string;
+  model: string;
+  owner_id?: string;
+  base_location?: string;
+  status?: string;
+  created_at: string;
+  updated_at: string;
+  hobbs_time?: number;
+  tach_time?: number;
+}
+
+export interface VServiceRequest {
+  id: string;
+  user_id: string;
+  aircraft_id: string;
+  service_type: string;
+  description: string;
+  priority: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  airport?: string;
+  service_id?: string;
+  is_extra_charge?: boolean;
+  credits_used?: number;
+  requested_departure?: string;
+  fuel_grade?: string;
+  fuel_quantity?: number;
+  cabin_provisioning?: Record<string, any>;
+  o2_topoff?: boolean;
+  tks_topoff?: boolean;
+  gpu_required?: boolean;
+  hangar_pullout?: boolean;
+  tail_number?: string; // joined from aircraft
+  base_location?: string; // joined from aircraft
+  requester_name?: string; // joined from user_profiles
 }
 
 // ============================================
