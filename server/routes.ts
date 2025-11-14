@@ -871,10 +871,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn("⚠️ Allowing invoice send without authentication (development mode)");
       }
 
-      // Only send email for finalized invoices
-      if (invoice.status !== "finalized") {
+      // Allow sending email for finalized or sent invoices (to enable resending)
+      if (invoice.status !== "finalized" && invoice.status !== "sent") {
         return res.status(400).json({ 
-          error: `Can only send email for finalized invoices. Current status: ${invoice.status}` 
+          error: `Can only send email for finalized or sent invoices. Current status: ${invoice.status}` 
         });
       }
 
