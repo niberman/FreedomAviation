@@ -1951,6 +1951,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post("/api/webhooks/email-notification", webhookProcessNotification);
 
+  /**
+   * SEO Routes
+   */
+
+  /**
+   * GET /sitemap.xml
+   * Dynamic sitemap generation for SEO
+   */
+  app.get("/sitemap.xml", async (_req: Request, res: Response) => {
+    try {
+      const { generateSitemap } = await import("./lib/sitemap.js");
+      const sitemap = generateSitemap();
+      
+      res.setHeader("Content-Type", "application/xml");
+      res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600"); // Cache for 1 hour
+      res.send(sitemap);
+    } catch (err: any) {
+      console.error("❌ Error generating sitemap:", err);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  /**
+   * GET /robots.txt
+   * Dynamic robots.txt generation
+   */
+  app.get("/robots.txt", (_req: Request, res: Response) => {
+    const baseUrl = process.env.SITE_URL || "https://www.freedomaviationco.com";
+    const robotsTxt = `# Freedom Aviation - robots.txt
+User-agent: *
+Allow: /
+
+# Disallow admin and internal pages
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /staff/
+Disallow: /api/
+Disallow: /onboarding
+
+# Allow important pages
+Allow: /pricing
+Allow: /about
+Allow: /contact
+Allow: /partners/
+
+# Sitemap location
+Sitemap: ${baseUrl}/sitemap.xml
+
+# Crawl delay (be gentle with our servers)
+Crawl-delay: 1
+
+# Specific bot instructions
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+`;
+    
+    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 24 hours
+    res.send(robotsTxt);
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

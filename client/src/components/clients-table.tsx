@@ -57,21 +57,26 @@ export function ClientsTable() {
   const { data: clients = [], isLoading, error: clientsError } = useQuery({
     queryKey: ['/api/clients', accessToken],
     queryFn: async () => {
-      console.log('[ClientsTable] Fetching clients directly from Supabase...');
+      console.log('[ClientsTable] Fetching clients from API...');
       
-      // Fetch directly from Supabase instead of API server
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, email, full_name, phone, role, created_at')
-        .eq('role', 'owner')
-        .order('full_name');
+      // IMPORTANT: Fetch from API endpoint, NOT directly from Supabase
+      // The API uses service role to bypass RLS
+      const response = await fetch('/api/clients', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
 
-      if (error) {
-        console.error('[ClientsTable] Error fetching clients:', error);
-        throw error;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[ClientsTable] Error fetching clients:', errorText);
+        throw new Error(`Failed to fetch clients: ${response.status}`);
       }
 
-      console.log('[ClientsTable] Clients from Supabase:', data);
+      const data = await response.json();
+      console.log('[ClientsTable] Clients from API:', data);
       return data || [];
     },
     enabled: !!accessToken,

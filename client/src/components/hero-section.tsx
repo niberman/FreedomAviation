@@ -15,12 +15,19 @@ export function HeroSection() {
       <div 
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${heroImage})` }}
+        role="img"
+        aria-label="Premium Cirrus SR22T aircraft at Centennial Airport ready for flight"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
       
       <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
         <div className="flex items-center justify-center gap-3 mb-6">
-          <img src={logoImage} alt="Freedom Aviation" className="h-12 w-auto" />
+          <img 
+            src={logoImage} 
+            alt="Freedom Aviation Logo - Premium Aircraft Management Colorado" 
+            className="h-12 w-auto"
+            loading="eager"
+          />
           <span className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
             Freedom Aviation
           </span>

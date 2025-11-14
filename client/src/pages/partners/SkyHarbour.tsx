@@ -4,6 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useLocations } from "@/features/pricing/hooks";
+import { Seo, getLocalBusinessJsonLd, getBreadcrumbJsonLd, getFAQJsonLd } from "@/components/Seo";
+import { locationKeywords } from "@/seo/keywords";
+import { Helmet } from "react-helmet-async";
 
 export default function SkyHarbour() {
   const { data: locations, isLoading } = useLocations();
@@ -25,8 +28,41 @@ export default function SkyHarbour() {
     );
   }
 
+  const faqData = [
+    {
+      question: "Is hangar cost included in pricing?",
+      answer: `Yes! Sky Harbour hangar costs are transparently included in our pricing calculator and reflected in your monthly management fee. The hangar cost is $${hangarCost.toLocaleString()}/month.`
+    },
+    {
+      question: "Do prices vary by hangar location?",
+      answer: "Yes. Both hangar locations offer the same premium amenities and benefits, but pricing varies based on location. Sky Harbour hangar costs are $2,000/month, while the Freedom Aviation Hangar is priced at $1,500/month. Both include all the same amenities."
+    },
+    {
+      question: "What makes Sky Harbour a preferred partner?",
+      answer: "Sky Harbour provides purpose-built, high-quality infrastructure at Centennial Airport with the same premium amenities as our Freedom Aviation Hangar. Both locations offer climate control, 24/7 access, secure facilities, concierge service, and all other premium benefits."
+    }
+  ];
+
   return (
     <div className="min-h-screen">
+      <Seo
+        title="Sky Harbour Hangar at KAPA - Premium Aircraft Management"
+        description="Premium aircraft hangar at Sky Harbour KAPA (Centennial Airport). Climate-controlled, 24/7 access, secure facility with full aircraft management services. Transparent pricing from $2,000/month."
+        keywords={locationKeywords("Sky Harbour")}
+        canonical="/partners/sky-harbour"
+      />
+      <Helmet>
+        <script type="application/ld+json">
+          {JSON.stringify(getBreadcrumbJsonLd([
+            { name: "Home", url: "/" },
+            { name: "Partners", url: "/partners" },
+            { name: "Sky Harbour", url: "/partners/sky-harbour" }
+          ]))}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(getFAQJsonLd(faqData))}
+        </script>
+      </Helmet>
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary to-primary/80 text-primary-foreground py-24">
         <div className="container mx-auto px-6">
@@ -177,34 +213,6 @@ export default function SkyHarbour() {
         </div>
       </section>
 
-      {/* JSON-LD Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: "Is hangar cost included in pricing?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: `Yes! Sky Harbour hangar costs are transparently included in our pricing calculator and reflected in your monthly management fee. The hangar cost is $${hangarCost.toLocaleString()}/month.`,
-                },
-              },
-              {
-                "@type": "Question",
-                name: "Do prices vary by hangar location?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Yes. Both hangar locations offer the same premium amenities and benefits, but pricing varies based on location. Sky Harbour hangar costs are $2,000/month, while the Freedom Aviation Hangar is priced at $1,500/month. Both include all the same amenities.",
-                },
-              },
-            ],
-          }),
-        }}
-      />
     </div>
   );
 }
