@@ -75,18 +75,40 @@ export default function StaffDashboard() {
 
 
   // Fetch owners
-  const { data: owners = [] } = useQuery({
+  const { data: owners = [], isLoading: isLoadingOwners, error: ownersError } = useQuery({
     queryKey: ['/api/owners'],
     queryFn: async () => {
+      console.log('🔍 Fetching owners for invoice creation...');
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, full_name, email')
+        .select('id, full_name, email, role')
         .eq('role', 'owner')
         .order('full_name');
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('❌ Error fetching owners:', error);
+        throw error;
+      }
+      console.log('✅ Fetched owners:', data?.length || 0);
+      return data || [];
     },
   });
+
+  // Log owners data and show error toast if needed
+  useEffect(() => {
+    if (owners && owners.length > 0) {
+      console.log('👥 Available owners for invoice:', owners.length);
+    } else if (!isLoadingOwners && owners.length === 0) {
+      console.warn('⚠️ No owners found in database');
+    }
+    
+    if (ownersError) {
+      toast({
+        title: 'Error loading clients',
+        description: ownersError instanceof Error ? ownersError.message : 'Failed to load clients. Please check your permissions.',
+        variant: 'destructive',
+      });
+    }
+  }, [owners, isLoadingOwners, ownersError, toast]);
 
   // Fetch aircraft for invoice dropdown
   const { data: aircraft = [] } = useQuery({
@@ -1230,20 +1252,46 @@ export default function StaffDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="owner">Client *</Label>
-                      <Select value={selectedOwnerId} onValueChange={setSelectedOwnerId}>
-                        <SelectTrigger id="owner" data-testid="select-owner">
-                          <SelectValue placeholder="Select client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {owners
-                            .filter((owner: any) => owner && owner.id)
-                            .map((owner: any) => (
-                              <SelectItem key={owner.id} value={owner.id}>
-                                {owner.full_name || owner.email}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                      {ownersError ? (
+                        <div className="p-3 border border-destructive/50 bg-destructive/10 rounded-md">
+                          <p className="text-sm text-destructive">
+                            Error loading clients: {ownersError instanceof Error ? ownersError.message : 'Unknown error'}
+                          </p>
+                        </div>
+                      ) : (
+                        <Select 
+                          value={selectedOwnerId} 
+                          onValueChange={setSelectedOwnerId}
+                          disabled={isLoadingOwners}
+                        >
+                          <SelectTrigger id="owner" data-testid="select-owner">
+                            <SelectValue placeholder={
+                              isLoadingOwners ? "Loading clients..." : 
+                              owners.length === 0 ? "No clients found" : 
+                              "Select client"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {isLoadingOwners ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                Loading clients...
+                              </div>
+                            ) : owners.length === 0 ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                No clients found. Create a client first.
+                              </div>
+                            ) : (
+                              owners
+                                .filter((owner: any) => owner && owner.id)
+                                .map((owner: any) => (
+                                  <SelectItem key={owner.id} value={owner.id}>
+                                    {owner.full_name || owner.email}
+                                  </SelectItem>
+                                ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
 
                     <div className="space-y-2">
