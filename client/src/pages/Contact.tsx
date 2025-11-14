@@ -197,11 +197,11 @@ export default function Contact() {
                       <div>
                         <div className="font-medium">Email</div>
                         <a
-                          href="mailto:noah@freedomaviationco.com"
+                          href="mailto:info@freedomaviationco.com"
                           className="text-muted-foreground hover:text-primary transition-colors"
                           data-testid="link-email"
                         >
-                          noah@freedomaviationco.com
+                          info@freedomaviationco.com
                         </a>
                       </div>
                     </div>
