@@ -1,7 +1,7 @@
 /**
  * Email notifications for service requests and flight instruction requests
  */
-import { escapeHtml } from './email';
+import { escapeHtml } from './email.js';
 
 interface ServiceRequestEmailData {
   requestId: string;
@@ -348,4 +348,4 @@ This is an automated notification from Freedom Aviation.
 }
 
 // Re-export escapeHtml from email.ts
-export { escapeHtml } from './email';
+export { escapeHtml } from './email.js';
