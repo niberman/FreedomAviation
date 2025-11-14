@@ -33,6 +33,10 @@ export function StaffProtectedRoute({ children }: { children: React.ReactNode })
       if (!data) {
         console.warn('User profile not found for user:', user.id);
       }
+      // Trim the role value to handle any whitespace issues
+      if (data && data.role) {
+        data.role = data.role.trim();
+      }
       return data;
     },
     enabled: !!user,
