@@ -37,6 +37,7 @@ import { ServiceRequestEditDialog } from "@/components/service-request-edit-dial
 import { FlightLogsList } from "@/components/flight-logs-list";
 import { CFISchedule } from "@/components/cfi-schedule";
 import UnifiedPricingConfigurator from "./admin/UnifiedPricingConfigurator";
+import { authenticatedFetch } from "@/lib/auth-utils";
 
 interface InstructionInvoice {
   id: string;
@@ -292,22 +293,9 @@ export default function StaffDashboard() {
     queryKey: ['/api/service-requests'],
     queryFn: async () => {
       try {
-        // Use backend REST endpoint for consistency and RLS bypass
-        const { data: { session } } = await supabase.auth.getSession();
-        const authToken = session?.access_token;
+        console.log('🔍 Fetching service requests...');
         
-        if (!authToken) {
-          console.warn('⚠️ No auth token available for service requests');
-          throw new Error('Not authenticated. Please log in to view service requests.');
-        }
-        
-        const res = await fetch(`/api/service-requests`, {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        });
+        const res = await authenticatedFetch('/api/service-requests');
         
         if (!res.ok) {
           const err = await res.json().catch(() => ({ 
@@ -318,8 +306,6 @@ export default function StaffDashboard() {
           // Provide more helpful error messages
           if (res.status === 503) {
             throw new Error(err.message || 'Server configuration error. Please contact support.');
-          } else if (res.status === 401) {
-            throw new Error('Session expired. Please log out and log back in.');
           } else if (res.status === 403) {
             throw new Error('You do not have permission to view service requests.');
           }
@@ -328,9 +314,11 @@ export default function StaffDashboard() {
         }
         
         const json = await res.json();
+        console.log('✅ Fetched service requests:', json.serviceRequests?.length || 0);
         return json.serviceRequests || [];
       } catch (error) {
         console.error('❌ Error fetching service requests:', error);
+        // The authenticatedFetch will handle 401 errors and session refresh
         throw error;
       }
     },
@@ -344,26 +332,29 @@ export default function StaffDashboard() {
   // Handle service request status change
   const handleStatusChange = async (requestId: string, status: "pending" | "in_progress" | "completed") => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token;
-      const res = await fetch(`/api/service-requests/${requestId}`, {
+      const res = await authenticatedFetch(`/api/service-requests/${requestId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken && { Authorization: `Bearer ${authToken}` }),
-        },
-        credentials: 'include',
         body: JSON.stringify({ status }),
       });
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
         throw new Error(err.message || 'Failed to update status');
       }
-      toast({ title: 'Status updated', description: `Service request status changed to ${status}` });
+      
+      toast({ 
+        title: 'Status updated', 
+        description: `Service request status changed to ${status}` 
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/service-requests'] });
     } catch (error) {
       console.error('Error updating service request status:', error);
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to update status', variant: 'destructive' });
+      toast({ 
+        title: 'Error', 
+        description: error instanceof Error ? error.message : 'Failed to update status', 
+        variant: 'destructive' 
+      });
       throw error;
     }
   };

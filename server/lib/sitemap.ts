@@ -95,3 +95,4 @@ export function generateSitemap(): string {
   return generateSitemapXML(staticRoutes);
 }
 
+
