@@ -287,6 +287,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all aircraft (staff/admin only) with owner details
+  app.get("/api/aircraft", async (req: Request, res: Response) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+
+    if (
+      origin &&
+      (allowedOrigins.includes(origin) ||
+        origin.startsWith("https://freedomaviationco.com") ||
+        origin.startsWith("http://localhost:"))
+    ) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ error: "Supabase not configured" });
+      }
+
+      // Authenticate user
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+
+      if (!token) {
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Missing authorization token",
+        });
+      }
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabaseAnon.auth.getUser(token);
+
+      if (authError || !user) {
+        console.error("❌ Error verifying auth token for /api/aircraft:", authError);
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Invalid or expired token",
+        });
+      }
+
+      // Check user role - only staff, admin, founder, cfi, ops can view all aircraft
+      const { data: profile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("id, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("❌ Error fetching user profile in /api/aircraft:", profileError);
+        return res.status(500).json({
+          error: "Failed to fetch user profile",
+          message: profileError.message,
+        });
+      }
+
+      if (!profile || !profile.role) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "User profile not found or role missing",
+        });
+      }
+
+      // Staff roles can view all aircraft
+      if (!["admin", "staff", "founder", "cfi", "ops"].includes(profile.role)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Insufficient permissions. Required role: admin, staff, founder, cfi, or ops.",
+        });
+      }
+
+      // Fetch all aircraft with owner details using service role
+      const { data: aircraft, error: aircraftError } = await supabase
+        .from("aircraft")
+        .select(`
+          id,
+          tail_number,
+          make,
+          model,
+          class,
+          base_location,
+          owner_id,
+          has_tks,
+          has_oxygen,
+          owner:owner_id(id, full_name, email)
+        `)
+        .order("tail_number");
+
+      if (aircraftError) {
+        console.error("❌ Error fetching aircraft in /api/aircraft:", aircraftError);
+        return res.status(500).json({
+          error: "Failed to load aircraft",
+          message: aircraftError.message,
+        });
+      }
+
+      res.json({
+        aircraft: aircraft || [],
+        total: aircraft?.length || 0,
+      });
+    } catch (error: any) {
+      console.error("❌ Unexpected error in /api/aircraft:", error);
+      res.status(500).json({
+        error: "Failed to load aircraft",
+        message: error?.message || "Unknown error occurred",
+      });
+    }
+  });
+
   // Test endpoint to verify routing works
   app.get("/api/test", (_req: Request, res: Response) => {
     res.json({ message: "API routes are working!", timestamp: new Date().toISOString() });
@@ -1387,36 +1504,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { email, password, full_name, phone } = req.body;
+      const { email, full_name, phone, sendInvite = true } = req.body;
 
-      if (!email || !password || !full_name) {
+      if (!email || !full_name) {
         return res.status(400).json({ 
           error: "Missing required fields",
-          message: "Email, password, and full name are required"
+          message: "Email and full name are required"
         });
       }
 
-      // Create auth user using admin API
-      const { data: authUser, error: createError } = await supabase.auth.admin.createUser({
+      // Invite user using admin API - they'll set their own password via email
+      const inviteOptions: any = {
         email,
-        password,
-        email_confirm: true, // Auto-confirm email
-        user_metadata: {
+        data: {
           full_name,
+          phone: phone || null,
         },
-      });
+      };
+
+      // Add redirect URL to take them to dashboard after password setup
+      if (sendInvite) {
+        const baseUrl = process.env.SITE_URL || process.env.FRONTEND_URL || "https://www.freedomaviationco.com";
+        inviteOptions.options = {
+          emailRedirectTo: `${baseUrl}/dashboard`,
+          data: {
+            full_name,
+            phone: phone || null,
+          }
+        };
+      }
+
+      const { data: authUser, error: createError } = await supabase.auth.admin.inviteUserByEmail(
+        email,
+        inviteOptions.options
+      );
 
       if (createError) {
-        console.error("Error creating auth user:", createError);
+        console.error("Error inviting user:", createError);
         return res.status(400).json({ 
-          error: "Failed to create user",
+          error: "Failed to invite user",
           message: createError.message 
         });
       }
 
       if (!authUser?.user) {
         return res.status(500).json({ 
-          error: "User creation failed",
+          error: "User invitation failed",
           message: "No user data returned"
         });
       }
@@ -1448,13 +1581,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         success: true,
-        message: "Client created successfully",
+        message: sendInvite 
+          ? "Invitation sent! The user will receive an email to set their password and access the dashboard."
+          : "Client created successfully",
         user: {
           id: authUser.user.id,
           email: authUser.user.email,
           full_name,
           phone: phone || null,
-        }
+        },
+        inviteSent: sendInvite
       });
     } catch (error: any) {
       console.error("Error in /api/clients/create endpoint:", error);

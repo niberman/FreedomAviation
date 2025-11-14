@@ -62,7 +62,7 @@ interface InstructionInvoice {
 
 export default function StaffDashboard() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const queryClient = useQueryClient();
   const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>("");
@@ -75,23 +75,39 @@ export default function StaffDashboard() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
 
-  // Fetch owners
+  // Fetch owners - use API endpoint to bypass RLS
   const { data: owners = [], isLoading: isLoadingOwners, error: ownersError } = useQuery({
-    queryKey: ['/api/owners'],
+    queryKey: ['/api/clients', session?.access_token],
     queryFn: async () => {
       console.log('🔍 Fetching owners for invoice creation...');
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, full_name, email, role')
-        .eq('role', 'owner')
-        .order('full_name');
-      if (error) {
-        console.error('❌ Error fetching owners:', error);
-        throw error;
+      
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error('Not authenticated. Please sign in again.');
       }
-      console.log('✅ Fetched owners:', data?.length || 0);
-      return data || [];
+      
+      // Use API endpoint which uses service role to bypass RLS
+      const response = await fetch('/api/clients', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Error fetching owners:', errorText);
+        throw new Error(`Failed to fetch clients: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Fetched owners:', data.clients?.length || 0);
+      
+      // API returns {clients: [...], total: 12}, extract the clients array
+      return data.clients || [];
     },
+    enabled: !!session?.access_token,
   });
 
   // Log owners data and show error toast if needed
@@ -111,142 +127,66 @@ export default function StaffDashboard() {
     }
   }, [owners, isLoadingOwners, ownersError, toast]);
 
-  // Fetch aircraft for invoice dropdown
+  // Fetch aircraft for invoice dropdown - use API endpoint to bypass RLS
   const { data: aircraft = [] } = useQuery({
-    queryKey: ['/api/aircraft'],
+    queryKey: ['/api/aircraft', 'dropdown', session?.access_token],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('aircraft')
-        .select('id, tail_number, owner_id')
-        .order('tail_number');
-      if (error) throw error;
-      return data;
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error('Not authenticated. Please sign in again.');
+      }
+
+      const response = await fetch('/api/aircraft', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Error fetching aircraft:', errorText);
+        throw new Error(`Failed to fetch aircraft: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // API returns {aircraft: [...], total: X}
+      return data.aircraft || [];
     },
+    enabled: !!session?.access_token,
   });
 
-  // Fetch aircraft with full details for the AircraftTable
+  // Fetch aircraft with full details for the AircraftTable - use API endpoint to bypass RLS
   const { data: aircraftFull = [], isLoading: isLoadingAircraft, error: aircraftError } = useQuery({
-    queryKey: ['/api/aircraft/full'],
+    queryKey: ['/api/aircraft', 'full', session?.access_token],
     queryFn: async () => {
-      try {
-        // First, try to fetch aircraft with nested owner relation
-        let query = supabase
-          .from('aircraft')
-          .select(`
-            id,
-            tail_number,
-            make,
-            model,
-            class,
-            base_location,
-            owner_id,
-            owner:owner_id(full_name, email)
-          `)
-          .order('tail_number');
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error('Not authenticated. Please sign in again.');
+      }
 
-        let { data, error } = await query;
-        
-        // If nested query fails, fetch separately
-        if (error) {
-          console.warn('⚠️ Nested query failed, trying separate queries:', error.message);
-          
-          // Check if error is about missing columns (make, model, etc.)
-          const isColumnError = error.message?.includes('column') || 
-                               error.message?.includes('does not exist') ||
-                               error.code === '42703';
-          
-          if (isColumnError) {
-            // Missing columns - fetch only basic columns that should always exist
-            const aircraftResult = await supabase
-              .from('aircraft')
-              .select('id, tail_number, base_location, owner_id')
-              .order('tail_number');
-            
-            if (aircraftResult.error) {
-              console.error('❌ Error fetching aircraft:', aircraftResult.error);
-              throw new Error(`Database schema issue: Missing columns in aircraft table. Please run the fix-aircraft-table.sql script. Original error: ${error.message}`);
-            }
-            
-            const aircraftData = aircraftResult.data || [];
-            
-            // Get unique owner IDs
-            const ownerIds = [...new Set(aircraftData.map((ac: any) => ac.owner_id).filter(Boolean))];
-            
-            // Fetch owners separately
-            let ownersMap: Record<string, { full_name?: string; email?: string }> = {};
-            if (ownerIds.length > 0) {
-              const ownersResult = await supabase
-                .from('user_profiles')
-                .select('id, full_name, email')
-                .in('id', ownerIds);
-              
-              if (ownersResult.error) {
-                console.warn('⚠️ Error fetching owners, continuing without owner data:', ownersResult.error);
-              } else if (ownersResult.data) {
-                ownersMap = ownersResult.data.reduce((acc: any, owner: any) => {
-                  acc[owner.id] = { full_name: owner.full_name, email: owner.email };
-                  return acc;
-                }, {});
-              }
-            }
-            
-            // Combine data - add defaults for missing columns
-            data = aircraftData.map((ac: any) => ({
-              ...ac,
-              make: ac.make || null,
-              model: ac.model || null,
-              class: ac.class || null,
-              owner: ownersMap[ac.owner_id] || null,
-            }));
-          } else {
-            // Other error - try fetching without nested relations
-            const aircraftResult = await supabase
-              .from('aircraft')
-              .select('id, tail_number, make, model, class, base_location, owner_id')
-              .order('tail_number');
-            
-            if (aircraftResult.error) {
-              console.error('❌ Error fetching aircraft:', aircraftResult.error);
-              throw aircraftResult.error;
-            }
-            
-            const aircraftData = aircraftResult.data || [];
-            
-            // Get unique owner IDs
-            const ownerIds = [...new Set(aircraftData.map((ac: any) => ac.owner_id).filter(Boolean))];
-            
-            // Fetch owners separately
-            let ownersMap: Record<string, { full_name?: string; email?: string }> = {};
-            if (ownerIds.length > 0) {
-              const ownersResult = await supabase
-                .from('user_profiles')
-                .select('id, full_name, email')
-                .in('id', ownerIds);
-              
-              if (ownersResult.error) {
-                console.warn('⚠️ Error fetching owners, continuing without owner data:', ownersResult.error);
-              } else if (ownersResult.data) {
-                ownersMap = ownersResult.data.reduce((acc: any, owner: any) => {
-                  acc[owner.id] = { full_name: owner.full_name, email: owner.email };
-                  return acc;
-                }, {});
-              }
-            }
-            
-            // Combine data
-            data = aircraftData.map((ac: any) => ({
-              ...ac,
-              owner: ownersMap[ac.owner_id] || null,
-            }));
-          }
+      try {
+        // Use API endpoint which bypasses RLS with service role
+        const response = await fetch('/api/aircraft', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ Error fetching aircraft:', errorText);
+          throw new Error(`Failed to fetch aircraft: ${response.status}`);
         }
-        
-        if (!data) {
-          throw new Error('No aircraft data returned');
-        }
+
+        const result = await response.json();
+        const data = result.aircraft || [];
         
         // Transform to match AircraftTable interface
-        return (data || []).map((ac: any) => {
+        return data.map((ac: any) => {
           const ownerRecord = ac.owner || null;
           const ownerName = ownerRecord?.full_name || ownerRecord?.email || null;
 
@@ -264,16 +204,10 @@ export default function StaffDashboard() {
         });
       } catch (err: any) {
         console.error('❌ Error in aircraft query:', err);
-        // Provide more helpful error message
-        if (err.message?.includes('permission') || err.code === 'PGRST301') {
-          throw new Error('Permission denied. Please check your authentication and try again.');
-        } else if (err.message?.includes('relation') || err.code === 'PGRST116') {
-          throw new Error('Aircraft table not found. Please ensure the database schema is set up correctly.');
-        } else {
-          throw err;
-        }
+        throw err;
       }
     },
+    enabled: !!session?.access_token,
   });
 
   // Handle aircraft loading errors
