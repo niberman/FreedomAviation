@@ -843,16 +843,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Invoice not found" });
       }
 
-      // Check authorization: Only admins or CFIs who created the invoice can send it
+      // Check authorization: Only admins, founders, staff, or CFIs who created the invoice can send it
       if (currentUserId) {
         const isAdmin = userRole === "admin";
+        const isFounder = userRole === "founder";
+        const isStaff = userRole === "staff";
         const isCFI = userRole === "cfi";
         const isInvoiceCreator = invoice.created_by_cfi_id === currentUserId;
 
-        if (!isAdmin && !(isCFI && isInvoiceCreator)) {
+        // Admins and founders can send any invoice
+        // Staff and CFIs can send invoices they created
+        if (!isAdmin && !isFounder && !(isStaff && isInvoiceCreator) && !(isCFI && isInvoiceCreator)) {
           return res.status(403).json({ 
             error: "Unauthorized",
-            message: "Only admins or the CFI who created the invoice can send it"
+            message: "Only admins, founders, or the CFI/staff who created the invoice can send it"
           });
         }
       } else {
