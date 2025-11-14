@@ -320,3 +320,4 @@ Once both SQL scripts are run:
 **Difficulty:** Copy & paste SQL scripts  
 **Impact:** Complete invoice creation workflow ✅
 
+

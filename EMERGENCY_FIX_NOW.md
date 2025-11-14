@@ -140,3 +140,4 @@ After running the fix, your browser console should stop showing the recursion er
 
 **This fix is safe and tested.** The SECURITY DEFINER approach is the standard solution for RLS recursion issues in PostgreSQL/Supabase.
 
+

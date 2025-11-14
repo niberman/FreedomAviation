@@ -174,3 +174,4 @@ This confirms aircraft_id is now optional!
 
 **Full script also available in:** `scripts/make-aircraft-optional-in-invoices.sql`
 
+

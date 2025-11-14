@@ -638,3 +638,4 @@ CREATE INDEX idx_memberships_owner_active ON memberships(owner_id, is_active);
 
 **END OF ERD**
 
+
