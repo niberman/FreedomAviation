@@ -77,7 +77,9 @@ export function ClientsTable() {
 
       const data = await response.json();
       console.log('[ClientsTable] Clients from API:', data);
-      return data || [];
+      
+      // API returns {clients: [...], total: 12}, extract the clients array
+      return data.clients || [];
     },
     enabled: !!accessToken,
     retry: false,
