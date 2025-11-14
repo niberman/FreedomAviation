@@ -3,8 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Plane, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { CreditsOverview } from "@/components/owner/CreditsOverview";
 import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
@@ -269,6 +270,20 @@ export default function OwnerMore() {
       actions={<ThemeToggle />}
     >
       {isDemo && <DemoBanner />}
+
+      {/* Minimal Navigation */}
+      <div className="flex items-center gap-2 mb-6">
+        <Link href="/dashboard">
+          <Button variant="outline" size="sm">
+            Overview
+          </Button>
+        </Link>
+        <Link href="/dashboard/more">
+          <Button variant="default" size="sm">
+            More
+          </Button>
+        </Link>
+      </div>
 
       <section className="space-y-4">
         <div className="flex items-center gap-2">

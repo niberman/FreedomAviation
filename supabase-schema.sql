@@ -8,7 +8,7 @@ ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
 CREATE TYPE membership_class AS ENUM ('I', 'II', 'III');
 CREATE TYPE service_status AS ENUM ('pending', 'in_progress', 'completed', 'cancelled');
 CREATE TYPE maintenance_status AS ENUM ('current', 'due_soon', 'overdue');
-CREATE TYPE user_role AS ENUM ('owner', 'staff', 'cfi', 'admin');
+CREATE TYPE user_role AS ENUM ('owner', 'staff', 'cfi', 'admin', 'ops', 'founder');
 
 -- Users table (extends Supabase auth.users)
 CREATE TABLE public.user_profiles (
@@ -179,15 +179,15 @@ CREATE POLICY "Users can update own profile" ON public.user_profiles
 
 CREATE POLICY "Admins and staff can view all profiles" ON public.user_profiles
   FOR SELECT USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   );
 
 CREATE POLICY "Admins can update all profiles" ON public.user_profiles
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 CREATE POLICY "System can insert profiles on signup" ON public.user_profiles
@@ -197,7 +197,7 @@ CREATE POLICY "System can insert profiles on signup" ON public.user_profiles
 CREATE POLICY "Owners can view own aircraft" ON public.aircraft
   FOR SELECT USING (
     owner_id = auth.uid() OR 
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   );
 
 CREATE POLICY "Owners can insert own aircraft" ON public.aircraft
@@ -209,84 +209,84 @@ CREATE POLICY "Owners can update own aircraft" ON public.aircraft
 
 CREATE POLICY "Admins can insert aircraft" ON public.aircraft
   FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 CREATE POLICY "Admins can update any aircraft" ON public.aircraft
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 CREATE POLICY "Admins can delete aircraft" ON public.aircraft
   FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 -- RLS Policies for memberships
 CREATE POLICY "Users can view own memberships" ON public.memberships
   FOR SELECT USING (
     owner_id = auth.uid() OR
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 -- RLS Policies for maintenance
 CREATE POLICY "Aircraft owners can view maintenance" ON public.maintenance
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.aircraft WHERE id = aircraft_id AND owner_id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   );
 
 CREATE POLICY "Admins can insert maintenance" ON public.maintenance
   FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   );
 
 CREATE POLICY "Admins can update maintenance" ON public.maintenance
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   );
 
 CREATE POLICY "Admins can delete maintenance" ON public.maintenance
   FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 -- RLS Policies for consumable_events
 CREATE POLICY "Aircraft owners can view consumable events" ON public.consumable_events
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.aircraft WHERE id = aircraft_id AND owner_id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   );
 
 CREATE POLICY "Admins can insert consumable events" ON public.consumable_events
   FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   );
 
 CREATE POLICY "Admins can update consumable events" ON public.consumable_events
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   );
 
 CREATE POLICY "Admins can delete consumable events" ON public.consumable_events
   FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 -- RLS Policies for service_requests
 CREATE POLICY "Users can view own service requests" ON public.service_requests
   FOR SELECT USING (
     user_id = auth.uid() OR
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder', 'ops', 'cfi'))
   );
 
 CREATE POLICY "Users can create service requests" ON public.service_requests
@@ -294,40 +294,40 @@ CREATE POLICY "Users can create service requests" ON public.service_requests
 
 CREATE POLICY "Admins can update service requests" ON public.service_requests
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder', 'ops', 'cfi'))
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder', 'ops', 'cfi'))
   );
 
 CREATE POLICY "Admins can delete service requests" ON public.service_requests
   FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 -- RLS Policies for service_tasks
 CREATE POLICY "Aircraft owners can view service tasks" ON public.service_tasks
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.aircraft WHERE id = aircraft_id AND owner_id = auth.uid()) OR
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder', 'ops', 'cfi'))
   );
 
 CREATE POLICY "Admins can insert service tasks" ON public.service_tasks
   FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder', 'ops', 'cfi'))
   );
 
 CREATE POLICY "Admins can update service tasks" ON public.service_tasks
   FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder', 'ops', 'cfi'))
   )
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder', 'ops', 'cfi'))
   );
 
 CREATE POLICY "Admins can delete service tasks" ON public.service_tasks
   FOR DELETE USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 -- RLS Policies for instructors
@@ -477,18 +477,18 @@ CREATE POLICY "Owners can view own invoices" ON public.invoices
   FOR SELECT USING (
     owner_id = auth.uid() OR
     created_by_cfi_id = auth.uid() OR
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
   );
 
 CREATE POLICY "CFIs can insert instruction invoices" ON public.invoices
   FOR INSERT WITH CHECK (
     category = 'instruction' AND
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'cfi', 'founder'))
   );
 
 CREATE POLICY "Admins can manage all invoices" ON public.invoices
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 CREATE POLICY "CFIs can update own instruction invoices" ON public.invoices
@@ -504,19 +504,19 @@ CREATE POLICY "Users can view invoice lines for accessible invoices" ON public.i
       WHERE id = invoice_id AND (
         owner_id = auth.uid() OR 
         created_by_cfi_id = auth.uid() OR
-        EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+        EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'founder'))
       )
     )
   );
 
 CREATE POLICY "CFIs and admins can insert invoice lines" ON public.invoice_lines
   FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff'))
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'staff', 'cfi', 'founder'))
   );
 
 CREATE POLICY "Admins can manage all invoice lines" ON public.invoice_lines
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role = 'admin')
+    EXISTS (SELECT 1 FROM public.user_profiles WHERE id = auth.uid() AND role IN ('admin', 'founder'))
   );
 
 -- Create indexes
@@ -552,25 +552,25 @@ BEGIN
     RAISE EXCEPTION 'Not authenticated';
   END IF;
   
-  -- Verify the CFI ID matches the authenticated user (or user is admin)
+  -- Verify the CFI ID matches the authenticated user (or user is admin/founder)
   IF p_cfi_id != auth.uid() THEN
-    -- Check if user is admin
+    -- Check if user is admin or founder
     SELECT role INTO v_user_role
     FROM public.user_profiles
     WHERE id = auth.uid();
     
-    IF v_user_role != 'admin' THEN
+    IF v_user_role NOT IN ('admin', 'founder') THEN
       RAISE EXCEPTION 'CFI ID must match authenticated user';
     END IF;
   END IF;
   
-  -- Verify user has CFI or admin role
+  -- Verify user has CFI, admin, or founder role
   SELECT role INTO v_user_role
   FROM public.user_profiles
   WHERE id = auth.uid();
   
-  IF v_user_role NOT IN ('cfi', 'admin') THEN
-    RAISE EXCEPTION 'Only CFIs and admins can create instruction invoices';
+  IF v_user_role NOT IN ('cfi', 'admin', 'founder') THEN
+    RAISE EXCEPTION 'Only CFIs, admins, and founders can create instruction invoices';
   END IF;
   
   -- Verify aircraft exists and belongs to owner
@@ -647,13 +647,13 @@ BEGIN
     RAISE EXCEPTION 'Invoice not found or not an instruction invoice';
   END IF;
   
-  -- Check if user is admin
+  -- Check if user is admin or founder
   SELECT EXISTS (
     SELECT 1 FROM public.user_profiles 
-    WHERE id = auth.uid() AND role = 'admin'
+    WHERE id = auth.uid() AND role IN ('admin', 'founder')
   ) INTO v_is_admin;
   
-  -- Verify authorization: CFI who created it or admin
+  -- Verify authorization: CFI who created it, admin, or founder
   IF v_cfi_id != auth.uid() AND NOT v_is_admin THEN
     RAISE EXCEPTION 'Not authorized to finalize this invoice';
   END IF;
