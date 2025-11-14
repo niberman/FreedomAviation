@@ -1326,9 +1326,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      if (!supabase) {
+      if (!supabase || !supabaseAnon) {
         return res.status(503).json({ 
-          error: "Supabase not configured" 
+          error: "Supabase not configured",
+          message: "Server is missing Supabase credentials"
+        });
+      }
+
+      // Verify authentication
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+
+      if (!token) {
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Missing authorization token"
+        });
+      }
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+
+      if (authError || !user) {
+        console.error("❌ Error verifying auth token for /api/clients/create:", authError);
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Invalid or expired token"
+        });
+      }
+
+      // Check user role - only admin, founder, or ops can create clients
+      const { data: profile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("id, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("❌ Error fetching staff profile in /api/clients/create:", profileError);
+        return res.status(500).json({
+          error: "Failed to fetch user profile",
+          message: profileError.message,
+        });
+      }
+
+      if (!profile || !profile.role) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "User profile not found or role missing",
+        });
+      }
+
+      if (!["admin", "founder", "ops"].includes(profile.role)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Insufficient permissions. Only admins can create clients.",
         });
       }
 
