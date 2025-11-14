@@ -148,3 +148,5 @@ Total: **22 production-ready tables**
 **Safe to run:** Yes - only removes confirmed unused tables  
 **Reversible:** Yes - can recreate from supabase-schema.sql if needed
 
+
+

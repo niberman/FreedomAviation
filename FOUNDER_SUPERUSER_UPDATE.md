@@ -225,3 +225,5 @@ To verify founder has full access, test:
 
 🔒 **Security Note:** Only assign the `founder` role to trusted individuals with full system access. This role bypasses most restrictions and has elevated privileges across the entire application.
 
+
+

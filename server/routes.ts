@@ -1649,16 +1649,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/google-calendar/status", async (req: Request, res: Response) => {
     try {
+      // Return graceful response if Supabase not configured
       if (!supabase || !supabaseAnon) {
-        return res.status(503).json({ error: "Supabase not configured" });
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Supabase not configured"
+        });
       }
 
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-      if (!token) return res.status(401).json({ error: "Unauthorized" });
+      
+      // Return graceful response if not authenticated
+      if (!token) {
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Not authenticated"
+        });
+      }
 
       const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
-      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
+      if (authError || !user) {
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Not authenticated"
+        });
+      }
 
       // Check if Google Calendar feature is configured
       if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {

@@ -62,3 +62,5 @@ UNION ALL
 SELECT 'user_roles', COUNT(*) FROM public.user_roles
 ORDER BY rows DESC, table_name;
 
+
+
