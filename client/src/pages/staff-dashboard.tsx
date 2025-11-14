@@ -677,11 +677,21 @@ export default function StaffDashboard() {
           // Don't throw - email failure shouldn't prevent invoice creation
           // But show a warning toast with the actual error message
           const errorMessage = error.message || error.error || "Unknown error";
-          toast({
-            title: "Invoice created",
-            description: `Invoice created successfully, but email could not be sent: ${errorMessage}`,
-            variant: "destructive",
-          });
+          
+          // If the error is about status being "sent", show a more helpful message
+          if (errorMessage.includes('sent')) {
+            toast({
+              title: "Invoice already sent",
+              description: "This invoice has already been sent to the client. The email was not resent.",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Invoice created",
+              description: `Invoice created successfully, but email could not be sent: ${errorMessage}`,
+              variant: "destructive",
+            });
+          }
         } else {
           const result = await emailResponse.json();
           console.log("✅ Email API response:", result);
@@ -1531,7 +1541,7 @@ export default function StaffDashboard() {
                                 <Badge 
                                   variant={
                                     invoice.status === 'paid' ? 'default' :
-                                    invoice.status === 'finalized' ? 'secondary' :
+                                    invoice.status === 'finalized' || invoice.status === 'sent' ? 'secondary' :
                                     'outline'
                                   }
                                   data-testid={`badge-status-${invoice.id}`}
@@ -1597,7 +1607,7 @@ export default function StaffDashboard() {
                               </div>
                               
                               <div className="text-right">
-                                {invoice.status === 'finalized' && (
+                                {(invoice.status === 'finalized' || invoice.status === 'sent') && (
                                   <p className="text-sm text-muted-foreground">
                                     Sent to client
                                   </p>
