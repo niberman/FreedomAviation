@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendInvoiceEmail } from "./lib/email.js";
+import { processEmailNotifications, webhookProcessNotification } from "./routes/email-notifications.js";
 
 // Initialize Stripe
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -228,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (!["admin", "cfi"].includes(profile.role)) {
+      if (!["admin", "cfi", "founder", "ops"].includes(profile.role)) {
         return res.status(403).json({
           error: "Forbidden",
           message: "Insufficient permissions",
@@ -842,16 +843,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Invoice not found" });
       }
 
-      // Check authorization: Only admins or CFIs who created the invoice can send it
+      // Check authorization: Only admins, founders, staff, or CFIs who created the invoice can send it
       if (currentUserId) {
         const isAdmin = userRole === "admin";
+        const isFounder = userRole === "founder";
+        const isStaff = userRole === "staff";
         const isCFI = userRole === "cfi";
         const isInvoiceCreator = invoice.created_by_cfi_id === currentUserId;
 
-        if (!isAdmin && !(isCFI && isInvoiceCreator)) {
+        // Admins and founders can send any invoice
+        // Staff and CFIs can send invoices they created
+        if (!isAdmin && !isFounder && !(isStaff && isInvoiceCreator) && !(isCFI && isInvoiceCreator)) {
           return res.status(403).json({ 
             error: "Unauthorized",
-            message: "Only admins or the CFI who created the invoice can send it"
+            message: "Only admins, founders, or the CFI/staff who created the invoice can send it"
           });
         }
       } else {
@@ -866,10 +871,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn("⚠️ Allowing invoice send without authentication (development mode)");
       }
 
-      // Only send email for finalized invoices
-      if (invoice.status !== "finalized") {
+      // Allow sending email for finalized or sent invoices (to enable resending)
+      if (invoice.status !== "finalized" && invoice.status !== "sent") {
         return res.status(400).json({ 
-          error: `Can only send email for finalized invoices. Current status: ${invoice.status}` 
+          error: `Can only send email for finalized or sent invoices. Current status: ${invoice.status}` 
         });
       }
 
@@ -1325,9 +1330,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      if (!supabase) {
+      if (!supabase || !supabaseAnon) {
         return res.status(503).json({ 
-          error: "Supabase not configured" 
+          error: "Supabase not configured",
+          message: "Server is missing Supabase credentials"
+        });
+      }
+
+      // Verify authentication
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+
+      if (!token) {
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Missing authorization token"
+        });
+      }
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+
+      if (authError || !user) {
+        console.error("❌ Error verifying auth token for /api/clients/create:", authError);
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Invalid or expired token"
+        });
+      }
+
+      // Check user role - only admin, founder, or ops can create clients
+      const { data: profile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("id, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("❌ Error fetching staff profile in /api/clients/create:", profileError);
+        return res.status(500).json({
+          error: "Failed to fetch user profile",
+          message: profileError.message,
+        });
+      }
+
+      if (!profile || !profile.role) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "User profile not found or role missing",
+        });
+      }
+
+      if (!["admin", "founder", "ops"].includes(profile.role)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Insufficient permissions. Only admins can create clients.",
         });
       }
 
@@ -1485,11 +1541,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      if (!profile || !["admin", "cfi", "staff"].includes(profile.role)) {
+      if (!profile || !["admin", "cfi", "staff", "founder", "ops"].includes(profile.role)) {
         console.warn("⚠️ User lacks required role. User role:", profile?.role);
         return res.status(403).json({ 
           error: "Forbidden",
-          message: "You don't have permission to access this resource. Required role: admin, cfi, or staff."
+          message: "You don't have permission to access this resource. Required role: admin, cfi, staff, founder, or ops."
         });
       }
       
@@ -1537,7 +1593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select("role")
         .eq("id", user.id)
         .single();
-      if (!profile || !["admin", "cfi", "staff"].includes(profile.role)) return res.status(403).json({ error: "Forbidden" });
+      if (!profile || !["admin", "cfi", "staff", "founder", "ops"].includes(profile.role)) return res.status(403).json({ error: "Forbidden" });
       const updatePayload: any = {};
       if (status) updatePayload.status = status;
       if (assigned_to !== undefined) updatePayload.assigned_to = assigned_to;
@@ -1585,7 +1641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .eq("id", user.id)
         .single();
       
-      if (!profile || !["admin", "cfi"].includes(profile.role)) {
+      if (!profile || !["admin", "cfi", "founder"].includes(profile.role)) {
         return res.status(403).json({ error: "Only CFIs can connect Google Calendar" });
       }
 
@@ -1656,36 +1712,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.get("/api/google-calendar/status", async (req: Request, res: Response) => {
     try {
+      // Return graceful response if Supabase not configured
       if (!supabase || !supabaseAnon) {
-        return res.status(503).json({ error: "Supabase not configured" });
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Supabase not configured"
+        });
       }
 
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-      if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
-      if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
-
-      const { hasGoogleCalendarConnected } = await import("./lib/google-calendar.js");
-      const connected = await hasGoogleCalendarConnected(user.id);
       
-      // Get sync status if connected
-      let syncEnabled = false;
-      if (connected) {
-        const { data: tokenData } = await supabase
-          .from("google_calendar_tokens")
-          .select("sync_enabled, last_sync_at")
-          .eq("user_id", user.id)
-          .single();
-        
-        syncEnabled = tokenData?.sync_enabled || false;
+      // Return graceful response if not authenticated
+      if (!token) {
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Not authenticated"
+        });
       }
 
-      res.json({ connected, syncEnabled });
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+      if (authError || !user) {
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Not authenticated"
+        });
+      }
+
+      // Check if Google Calendar feature is configured
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        // Feature not configured, return gracefully
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Google Calendar integration not configured"
+        });
+      }
+
+      // Try to check if calendar is connected
+      const { data: tokenData, error: tokenError } = await supabase
+        .from("google_calendar_tokens")
+        .select("sync_enabled, last_sync_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // If table doesn't exist or other error, return gracefully
+      if (tokenError) {
+        console.warn("⚠️ Google Calendar tokens table not accessible:", tokenError.message);
+        return res.json({ 
+          connected: false, 
+          syncEnabled: false,
+          featureAvailable: false,
+          message: "Google Calendar feature not set up. Run the SQL migration script."
+        });
+      }
+
+      const connected = !!tokenData;
+      const syncEnabled = tokenData?.sync_enabled || false;
+
+      res.json({ connected, syncEnabled, featureAvailable: true });
     } catch (err: any) {
       console.error("❌ Error checking calendar status:", err);
-      res.status(500).json({ error: "Failed to check calendar status", message: err.message });
+      // Return a graceful error instead of 500
+      res.json({ 
+        connected: false, 
+        syncEnabled: false,
+        featureAvailable: false,
+        message: "Google Calendar feature unavailable"
+      });
     }
   });
 
@@ -1917,6 +2018,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("❌ Error selecting calendar:", err);
       res.status(500).json({ error: "Failed to select calendar", message: err.message });
     }
+  });
+
+  /**
+   * Email Notification Routes
+   */
+  
+  /**
+   * POST /api/email-notifications/process
+   * Process pending email notifications from the queue
+   * Protected by API key
+   */
+  app.post("/api/email-notifications/process", processEmailNotifications);
+
+  /**
+   * POST /api/webhooks/email-notification
+   * Webhook endpoint for Supabase to call when a notification is created
+   * This allows immediate processing instead of waiting for cron
+   */
+  app.post("/api/webhooks/email-notification", webhookProcessNotification);
+
+  /**
+   * SEO Routes
+   */
+
+  /**
+   * GET /sitemap.xml
+   * Dynamic sitemap generation for SEO
+   */
+  app.get("/sitemap.xml", async (_req: Request, res: Response) => {
+    try {
+      const { generateSitemap } = await import("./lib/sitemap.js");
+      const sitemap = generateSitemap();
+      
+      res.setHeader("Content-Type", "application/xml");
+      res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600"); // Cache for 1 hour
+      res.send(sitemap);
+    } catch (err: any) {
+      console.error("❌ Error generating sitemap:", err);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  /**
+   * GET /robots.txt
+   * Dynamic robots.txt generation
+   */
+  app.get("/robots.txt", (_req: Request, res: Response) => {
+    const baseUrl = process.env.SITE_URL || "https://www.freedomaviationco.com";
+    const robotsTxt = `# Freedom Aviation - robots.txt
+User-agent: *
+Allow: /
+
+# Disallow admin and internal pages
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /staff/
+Disallow: /api/
+Disallow: /onboarding
+
+# Allow important pages
+Allow: /pricing
+Allow: /about
+Allow: /contact
+Allow: /partners/
+
+# Sitemap location
+Sitemap: ${baseUrl}/sitemap.xml
+
+# Crawl delay (be gentle with our servers)
+Crawl-delay: 1
+
+# Specific bot instructions
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+`;
+    
+    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 24 hours
+    res.send(robotsTxt);
   });
 
   const httpServer = createServer(app);

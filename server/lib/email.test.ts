@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { sendInvoiceEmail } from './email';
+import { sendInvoiceEmail } from './email.js';
 
 // Mock environment variables
 const originalEnv = process.env;

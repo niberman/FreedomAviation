@@ -197,11 +197,11 @@ export default function Contact() {
                       <div>
                         <div className="font-medium">Email</div>
                         <a
-                          href="mailto:noah@freedomaviationco.com"
+                          href="mailto:info@freedomaviationco.com"
                           className="text-muted-foreground hover:text-primary transition-colors"
                           data-testid="link-email"
                         >
-                          noah@freedomaviationco.com
+                          info@freedomaviationco.com
                         </a>
                       </div>
                     </div>
@@ -231,22 +231,6 @@ export default function Contact() {
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-muted/50">
-                  <CardContent className="p-6">
-                    <p className="text-sm text-muted-foreground">
-                      <strong className="text-foreground">
-                        Business Hours:
-                      </strong>
-                      <br />
-                      Monday - Friday: 8:00 AM - 6:00 PM MT
-                      <br />
-                      Saturday: 9:00 AM - 4:00 PM MT
-                      <br />
-                      Sunday: By appointment
-                    </p>
                   </CardContent>
                 </Card>
               </div>

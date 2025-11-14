@@ -4,6 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useLocations } from "@/features/pricing/hooks";
+import { Seo, getLocalBusinessJsonLd, getBreadcrumbJsonLd, getFAQJsonLd } from "@/components/Seo";
+import { locationKeywords } from "@/seo/keywords";
+import { Helmet } from "react-helmet-async";
 
 export default function FAHangar() {
   const { data: locations, isLoading } = useLocations();
@@ -25,8 +28,43 @@ export default function FAHangar() {
     );
   }
 
+  const faqData = [
+    {
+      question: "What is the Freedom Aviation Hangar?",
+      answer: "Our dedicated hangar facility at KAPA where we provide integrated aircraft management and storage services. It serves as our operational hub for maintenance and service coordination."
+    },
+    {
+      question: "How does hangar pricing work?",
+      answer: hangarCost 
+        ? `The Freedom Aviation Hangar has a cost of $${hangarCost.toLocaleString()}/month, which is transparently reflected in our pricing calculator. This is included in your total monthly management fee.`
+        : "Freedom Aviation Hangar pricing varies based on availability and specific requirements. Contact us for current rates. Pricing is transparently included in your total monthly management fee."
+    },
+    {
+      question: "Why choose FA Hangar over other options?",
+      answer: `Being housed at our home base facility means faster service response times and direct coordination with our team. Both our hangar and Sky Harbour offer the same premium amenities and benefits, with the main difference being pricing and location${hangarCost ? ` at a competitive rate of $${hangarCost.toLocaleString()}/month` : '. Contact us for current pricing'}.`
+    }
+  ];
+
   return (
     <div className="min-h-screen">
+      <Seo
+        title="Freedom Aviation Hangar at KAPA - Our Home Base Facility"
+        description="Freedom Aviation's dedicated hangar facility at Centennial Airport (KAPA). Climate-controlled, secure, 24/7 access with integrated aircraft management services. Fast service response times at our operational hub."
+        keywords={locationKeywords("Freedom Aviation Hangar")}
+        canonical="/partners/fa-hangar"
+      />
+      <Helmet>
+        <script type="application/ld+json">
+          {JSON.stringify(getBreadcrumbJsonLd([
+            { name: "Home", url: "/" },
+            { name: "Partners", url: "/partners" },
+            { name: "Freedom Aviation Hangar", url: "/partners/fa-hangar" }
+          ]))}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(getFAQJsonLd(faqData))}
+        </script>
+      </Helmet>
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary to-primary/80 text-primary-foreground py-24">
         <div className="container mx-auto px-6">
@@ -187,36 +225,6 @@ export default function FAHangar() {
         </div>
       </section>
 
-      {/* JSON-LD Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: "What is the Freedom Aviation Hangar?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Our dedicated hangar facility at KAPA where we provide integrated aircraft management and storage services. It serves as our operational hub for maintenance and service coordination.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "How does hangar pricing work?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: hangarCost 
-                    ? `The Freedom Aviation Hangar has a cost of $${hangarCost.toLocaleString()}/month, which is transparently reflected in our pricing calculator. This is included in your total monthly management fee.`
-                    : "Freedom Aviation Hangar pricing varies based on availability and specific requirements. Contact us for current rates. Pricing is transparently included in your total monthly management fee.",
-                },
-              },
-            ],
-          }),
-        }}
-      />
     </div>
   );
 }

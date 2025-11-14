@@ -96,7 +96,7 @@ export function FlightLogsList({ aircraftId }: FlightLogsListProps) {
   });
 
   // Fetch flight logs
-  const { data: flightLogs = [], isLoading } = useQuery({
+  const { data: flightLogs = [], isLoading, error: flightLogsError } = useQuery({
     queryKey: ["flight-logs", aircraftId],
     queryFn: async () => {
       let query = supabase
@@ -118,6 +118,7 @@ export function FlightLogsList({ aircraftId }: FlightLogsListProps) {
       if (error) throw error;
       return data || [];
     },
+    retry: false,
   });
 
   // Create flight log mutation
@@ -232,6 +233,24 @@ export function FlightLogsList({ aircraftId }: FlightLogsListProps) {
       <Card>
         <CardContent className="py-12 text-center">
           <p className="text-muted-foreground">Loading flight logs...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show helpful message if flight_logs table doesn't exist yet
+  if (flightLogsError && flightLogsError instanceof Error && flightLogsError.message.includes("does not exist")) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Flight Logs</CardTitle>
+        </CardHeader>
+        <CardContent className="py-8 text-center">
+          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground mb-2">Flight logs feature not set up yet.</p>
+          <p className="text-sm text-muted-foreground">
+            Ask your administrator to run the <code className="text-xs bg-muted px-1 py-0.5 rounded">create-flight-logs-table.sql</code> script.
+          </p>
         </CardContent>
       </Card>
     );

@@ -37,6 +37,7 @@ import { ServiceRequestEditDialog } from "@/components/service-request-edit-dial
 import { FlightLogsList } from "@/components/flight-logs-list";
 import { CFISchedule } from "@/components/cfi-schedule";
 import UnifiedPricingConfigurator from "./admin/UnifiedPricingConfigurator";
+import { authenticatedFetch } from "@/lib/auth-utils";
 
 interface InstructionInvoice {
   id: string;
@@ -75,18 +76,40 @@ export default function StaffDashboard() {
 
 
   // Fetch owners
-  const { data: owners = [] } = useQuery({
+  const { data: owners = [], isLoading: isLoadingOwners, error: ownersError } = useQuery({
     queryKey: ['/api/owners'],
     queryFn: async () => {
+      console.log('🔍 Fetching owners for invoice creation...');
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, full_name, email')
+        .select('id, full_name, email, role')
         .eq('role', 'owner')
         .order('full_name');
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('❌ Error fetching owners:', error);
+        throw error;
+      }
+      console.log('✅ Fetched owners:', data?.length || 0);
+      return data || [];
     },
   });
+
+  // Log owners data and show error toast if needed
+  useEffect(() => {
+    if (owners && owners.length > 0) {
+      console.log('👥 Available owners for invoice:', owners.length);
+    } else if (!isLoadingOwners && owners.length === 0) {
+      console.warn('⚠️ No owners found in database');
+    }
+    
+    if (ownersError) {
+      toast({
+        title: 'Error loading clients',
+        description: ownersError instanceof Error ? ownersError.message : 'Failed to load clients. Please check your permissions.',
+        variant: 'destructive',
+      });
+    }
+  }, [owners, isLoadingOwners, ownersError, toast]);
 
   // Fetch aircraft for invoice dropdown
   const { data: aircraft = [] } = useQuery({
@@ -270,22 +293,9 @@ export default function StaffDashboard() {
     queryKey: ['/api/service-requests'],
     queryFn: async () => {
       try {
-        // Use backend REST endpoint for consistency and RLS bypass
-        const { data: { session } } = await supabase.auth.getSession();
-        const authToken = session?.access_token;
+        console.log('🔍 Fetching service requests...');
         
-        if (!authToken) {
-          console.warn('⚠️ No auth token available for service requests');
-          throw new Error('Not authenticated. Please log in to view service requests.');
-        }
-        
-        const res = await fetch(`/api/service-requests`, {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        });
+        const res = await authenticatedFetch('/api/service-requests');
         
         if (!res.ok) {
           const err = await res.json().catch(() => ({ 
@@ -296,8 +306,6 @@ export default function StaffDashboard() {
           // Provide more helpful error messages
           if (res.status === 503) {
             throw new Error(err.message || 'Server configuration error. Please contact support.');
-          } else if (res.status === 401) {
-            throw new Error('Session expired. Please log out and log back in.');
           } else if (res.status === 403) {
             throw new Error('You do not have permission to view service requests.');
           }
@@ -306,9 +314,11 @@ export default function StaffDashboard() {
         }
         
         const json = await res.json();
+        console.log('✅ Fetched service requests:', json.serviceRequests?.length || 0);
         return json.serviceRequests || [];
       } catch (error) {
         console.error('❌ Error fetching service requests:', error);
+        // The authenticatedFetch will handle 401 errors and session refresh
         throw error;
       }
     },
@@ -322,26 +332,29 @@ export default function StaffDashboard() {
   // Handle service request status change
   const handleStatusChange = async (requestId: string, status: "pending" | "in_progress" | "completed") => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token;
-      const res = await fetch(`/api/service-requests/${requestId}`, {
+      const res = await authenticatedFetch(`/api/service-requests/${requestId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken && { Authorization: `Bearer ${authToken}` }),
-        },
-        credentials: 'include',
         body: JSON.stringify({ status }),
       });
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
         throw new Error(err.message || 'Failed to update status');
       }
-      toast({ title: 'Status updated', description: `Service request status changed to ${status}` });
+      
+      toast({ 
+        title: 'Status updated', 
+        description: `Service request status changed to ${status}` 
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/service-requests'] });
     } catch (error) {
       console.error('Error updating service request status:', error);
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to update status', variant: 'destructive' });
+      toast({ 
+        title: 'Error', 
+        description: error instanceof Error ? error.message : 'Failed to update status', 
+        variant: 'destructive' 
+      });
       throw error;
     }
   };
@@ -371,20 +384,19 @@ export default function StaffDashboard() {
   const { data: maintenanceItems = [] } = useQuery({
     queryKey: ['/api/maintenance'],
     queryFn: async () => {
+      // Use 'maintenance' table instead of 'maintenance_due'
       const { data, error } = await supabase
-        .from('maintenance_due')
+        .from('maintenance')
         .select(`
           id,
           aircraft_id,
-          item,
-          due_at_date,
-          due_at_hours,
-          severity,
-          remaining_hours,
-          remaining_days,
+          item_name,
+          due_date,
+          due_hobbs,
+          status,
           aircraft:aircraft_id(tail_number)
         `)
-        .order('due_at_date', { ascending: true });
+        .order('due_date', { ascending: true });
       if (error) throw error;
       
       // Fetch hobbs_hours separately for each aircraft
@@ -400,9 +412,14 @@ export default function StaffDashboard() {
           return acc;
         }, {});
         
-        // Add hobbs_hours to each maintenance item
+        // Add hobbs_hours to each maintenance item and map old field names to new
         return data.map((m: any) => ({
           ...m,
+          // Map new column names to old names for compatibility
+          item: m.item_name,
+          due_at_date: m.due_date,
+          due_at_hours: m.due_hobbs,
+          severity: m.status === 'overdue' ? 'critical' : m.status === 'due_soon' ? 'warning' : 'info',
           aircraft: m.aircraft ? {
             ...m.aircraft,
             hobbs_hours: hobbsMap[m.aircraft_id] || null
@@ -660,11 +677,21 @@ export default function StaffDashboard() {
           // Don't throw - email failure shouldn't prevent invoice creation
           // But show a warning toast with the actual error message
           const errorMessage = error.message || error.error || "Unknown error";
-          toast({
-            title: "Invoice created",
-            description: `Invoice created successfully, but email could not be sent: ${errorMessage}`,
-            variant: "destructive",
-          });
+          
+          // If the error is about status being "sent", show a more helpful message
+          if (errorMessage.includes('sent')) {
+            toast({
+              title: "Invoice already sent",
+              description: "This invoice has already been sent to the client. The email was not resent.",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Invoice created",
+              description: `Invoice created successfully, but email could not be sent: ${errorMessage}`,
+              variant: "destructive",
+            });
+          }
         } else {
           const result = await emailResponse.json();
           console.log("✅ Email API response:", result);
@@ -1226,20 +1253,46 @@ export default function StaffDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="owner">Client *</Label>
-                      <Select value={selectedOwnerId} onValueChange={setSelectedOwnerId}>
-                        <SelectTrigger id="owner" data-testid="select-owner">
-                          <SelectValue placeholder="Select client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {owners
-                            .filter((owner: any) => owner && owner.id)
-                            .map((owner: any) => (
-                              <SelectItem key={owner.id} value={owner.id}>
-                                {owner.full_name || owner.email}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                      {ownersError ? (
+                        <div className="p-3 border border-destructive/50 bg-destructive/10 rounded-md">
+                          <p className="text-sm text-destructive">
+                            Error loading clients: {ownersError instanceof Error ? ownersError.message : 'Unknown error'}
+                          </p>
+                        </div>
+                      ) : (
+                        <Select 
+                          value={selectedOwnerId} 
+                          onValueChange={setSelectedOwnerId}
+                          disabled={isLoadingOwners}
+                        >
+                          <SelectTrigger id="owner" data-testid="select-owner">
+                            <SelectValue placeholder={
+                              isLoadingOwners ? "Loading clients..." : 
+                              owners.length === 0 ? "No clients found" : 
+                              "Select client"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {isLoadingOwners ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                Loading clients...
+                              </div>
+                            ) : owners.length === 0 ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                No clients found. Create a client first.
+                              </div>
+                            ) : (
+                              owners
+                                .filter((owner: any) => owner && owner.id)
+                                .map((owner: any) => (
+                                  <SelectItem key={owner.id} value={owner.id}>
+                                    {owner.full_name || owner.email}
+                                  </SelectItem>
+                                ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -1488,7 +1541,7 @@ export default function StaffDashboard() {
                                 <Badge 
                                   variant={
                                     invoice.status === 'paid' ? 'default' :
-                                    invoice.status === 'finalized' ? 'secondary' :
+                                    invoice.status === 'finalized' || invoice.status === 'sent' ? 'secondary' :
                                     'outline'
                                   }
                                   data-testid={`badge-status-${invoice.id}`}
@@ -1554,7 +1607,7 @@ export default function StaffDashboard() {
                               </div>
                               
                               <div className="text-right">
-                                {invoice.status === 'finalized' && (
+                                {(invoice.status === 'finalized' || invoice.status === 'sent') && (
                                   <p className="text-sm text-muted-foreground">
                                     Sent to client
                                   </p>

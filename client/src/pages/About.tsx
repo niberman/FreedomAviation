@@ -165,6 +165,14 @@ export default function About() {
                   <Plane className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0 mt-0.5 sm:mt-1" />
                   <span><strong>Part 135 partnerships and charter solutions</strong> for owners who want more options for how their aircraft is flown and by whom</span>
                 </li>
+                <li className="flex items-start gap-2 sm:gap-3">
+                  <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0 mt-0.5 sm:mt-1" />
+                  <span><strong>In-house aircraft maintenance services</strong> with trusted A&P mechanics who know your aircraft and integrate seamlessly with our management operations</span>
+                </li>
+                <li className="flex items-start gap-2 sm:gap-3">
+                  <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0 mt-0.5 sm:mt-1" />
+                  <span><strong>Comprehensive flight school and primary instruction programs</strong> to train the next generation of pilots using professionally managed aircraft and experienced CFIs</span>
+                </li>
               </ul>
               <p className="text-xs sm:text-sm italic">
                 These services are not active yet, but they shape how we design our systems, processes, and software today—so that when we launch them, they plug directly into the same high standard of care our members already know.

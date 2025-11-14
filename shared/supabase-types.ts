@@ -1,7 +1,7 @@
 export type MembershipClass = 'I' | 'II' | 'III';
 export type ServiceStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 export type MaintenanceStatus = 'current' | 'due_soon' | 'overdue';
-export type UserRole = 'owner' | 'cfi' | 'staff' | 'admin';
+export type UserRole = 'owner' | 'cfi' | 'staff' | 'admin' | 'ops' | 'founder';
 
 export interface UserProfile {
   id: string;
