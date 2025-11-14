@@ -316,7 +316,7 @@ export function ClientsTable() {
               No clients found. Clients must sign up through the authentication system first.
             </p>
           ) : (
-            <div className="w-full overflow-x-auto">
+            <div className="w-full overflow-x-auto scroll-smooth-touch scrollbar-hide">
               <Table className="min-w-[720px]">
                 <TableHeader>
                   <TableRow>

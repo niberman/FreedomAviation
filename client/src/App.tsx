@@ -34,8 +34,7 @@ import StaffSettings from "./pages/staff/settings";
 import UnifiedPricingConfigurator from "./pages/admin/UnifiedPricingConfigurator";
 import PricingConfiguratorPage from "./pages/pricing-configurator";
 import NotFound from "./pages/not-found";
-import SkyHarbour from "./pages/partners/SkyHarbour";
-import FAHangar from "./pages/partners/FAHangar";
+import Hangars from "./pages/Hangars";
 
 // Redirect to www domain in production to avoid CORS issues
 function DomainRedirect() {
@@ -82,7 +81,8 @@ function Router() {
       <Route path="/pricing-configurator" component={PricingConfiguratorPage} />
       <Route path="/contact" component={Contact} />
       <Route path="/about" component={About} />
-      <Redirect path="/hangar-locations" to="/pricing" />
+      <Route path="/hangars" component={Hangars} />
+      <Redirect path="/hangar-locations" to="/hangars" />
       <Route path="/demo" component={OwnerDashboard} />
       <Route path="/dashboard">
         <ProtectedRoute>
@@ -149,8 +149,9 @@ function Router() {
           <UnifiedPricingConfigurator />
         </StaffProtectedRoute>
       </Route>
-      <Route path="/partners/sky-harbour" component={SkyHarbour} />
-      <Route path="/partners/fa-hangar" component={FAHangar} />
+      {/* Individual hangar pages removed - use /hangars instead */}
+      <Redirect path="/partners/sky-harbour" to="/hangars" />
+      <Redirect path="/partners/fa-hangar" to="/hangars" />
       <Route component={NotFound} />
     </Switch>
   );

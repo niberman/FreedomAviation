@@ -396,7 +396,7 @@ export function AircraftTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto border rounded-md">
+      <div className="overflow-x-auto border rounded-md scroll-smooth-touch scrollbar-hide">
         <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow>

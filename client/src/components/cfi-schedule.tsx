@@ -436,7 +436,7 @@ export function CFISchedule() {
             {isLoading ? (
               <p className="text-center py-8 text-muted-foreground">Loading schedule...</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto scroll-smooth-touch scrollbar-hide">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr>

@@ -11,7 +11,7 @@ export function HeroSection() {
   };
 
   return (
-    <div className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+    <div className="relative min-h-[70vh] sm:min-h-[80vh] flex items-center justify-center overflow-hidden">
       <div 
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${heroImage})` }}
@@ -20,33 +20,33 @@ export function HeroSection() {
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
       
-      <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
-        <div className="flex items-center justify-center gap-3 mb-6">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 text-center">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <img 
             src={logoImage} 
             alt="Freedom Aviation Logo - Premium Aircraft Management Colorado" 
-            className="h-12 w-auto"
+            className="h-8 sm:h-10 md:h-12 w-auto"
             loading="eager"
           />
-          <span className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+          <span className="text-xs sm:text-sm font-semibold tracking-wide text-muted-foreground uppercase">
             Freedom Aviation
           </span>
         </div>
         
-        <h1 className="text-6xl md:text-7xl font-bold tracking-tight mb-6 text-foreground">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 sm:mb-6 text-foreground">
           Just fly.<br />We do the rest.
         </h1>
         
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+        <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-8 px-2">
           Premium aircraft management, detailing, and pilot development for owner-operators across the Front Range.
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link href="/pricing">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
+          <Link href="/pricing" className="w-full sm:w-auto">
             <Button 
               size="lg" 
               data-testid="button-see-plans"
-              className="text-lg px-8"
+              className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 h-12 sm:h-auto"
             >
               See Plans & Start
             </Button>
@@ -56,13 +56,13 @@ export function HeroSection() {
             variant="outline" 
             onClick={handleOpenPortal}
             data-testid="button-owner-portal"
-            className="text-lg px-8 backdrop-blur-sm bg-background/30"
+            className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 h-12 sm:h-auto backdrop-blur-sm bg-background/30"
           >
             Owner Portal
           </Button>
         </div>
         
-        <div className="mt-8 text-sm text-muted-foreground">
+        <div className="mt-6 sm:mt-8 text-xs sm:text-sm text-muted-foreground px-2">
           KAPA-Based • 1000+ Flights Managed • Available 24/7
         </div>
       </div>

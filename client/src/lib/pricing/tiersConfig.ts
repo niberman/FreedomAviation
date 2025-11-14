@@ -52,7 +52,7 @@ export const TIER_CONFIG: Record<TierId, {
       'Comprehensive maintenance tracking',
       'Pre/post-flight inspections',
       'Interior & exterior detailing',
-      'Fuel management & discounts',
+      'Fuel management & coordination',
       'Scheduling optimization',
     ],
     fromPriceAnchor: 1850,

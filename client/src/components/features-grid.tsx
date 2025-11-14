@@ -36,22 +36,22 @@ const features = [
 
 export function FeaturesGrid() {
   return (
-    <div className="py-20 bg-background">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-semibold mb-4">Always Included Services</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+    <div className="py-12 sm:py-16 md:py-20 bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="text-center mb-8 sm:mb-10 md:mb-12">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold mb-3 sm:mb-4">Always Included Services</h2>
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
             Every membership includes comprehensive aircraft care so you can focus on flying.
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
           {features.map((feature, idx) => (
             <Card key={idx} className="hover-elevate active-elevate-2">
-              <CardContent className="p-6">
-                <feature.icon className="h-10 w-10 text-primary mb-4" />
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground">{feature.description}</p>
+              <CardContent className="p-5 sm:p-6">
+                <feature.icon className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 text-primary mb-3 sm:mb-4" />
+                <h3 className="text-lg sm:text-xl font-semibold mb-1.5 sm:mb-2">{feature.title}</h3>
+                <p className="text-sm sm:text-base text-muted-foreground">{feature.description}</p>
               </CardContent>
             </Card>
           ))}
