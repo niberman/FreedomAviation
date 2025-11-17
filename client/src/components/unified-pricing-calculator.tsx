@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Check, Plus, Info, ArrowRight, Sparkles } from 'lucide-react';
+import { Check, Plus, Info, ArrowRight, Sparkles, Building2, MapPin } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useLocations } from '@/features/pricing/hooks';
 import {
   PRICING_TIERS,
   HOURS_BANDS,
@@ -64,16 +65,25 @@ export function UnifiedPricingCalculator({
 }: UnifiedPricingCalculatorProps) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const { data: locations = [] } = useLocations();
   const [selectedTier, setSelectedTier] = useState<PricingTier>(defaultTier);
   const [selectedHours, setSelectedHours] = useState<HoursRange>(defaultHours);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string>(locations[0]?.id || '');
   const [saving, setSaving] = useState(false);
+
+  // Auto-select first location when loaded
+  if (locations.length > 0 && !selectedLocationId) {
+    setSelectedLocationId(locations[0].id);
+  }
 
   const selectedTierData = PRICING_TIERS.find(t => t.id === selectedTier)!;
   const selectedHoursData = HOURS_BANDS.find(h => h.range === selectedHours)!;
+  const selectedLocation = locations.find(l => l.id === selectedLocationId);
+  const hangarCost = selectedLocation?.hangar_cost_monthly || 0;
   const basePrice = calculateMonthlyPrice(selectedTier, selectedHours);
   const applicableAddons = getApplicableAddons(selectedTier);
-  const totalPrice = calculateTotalWithAddons(selectedTier, selectedHours, selectedAddons, 0);
+  const totalPrice = calculateTotalWithAddons(selectedTier, selectedHours, selectedAddons, hangarCost);
 
   const toggleAddon = (addonId: string) => {
     setSelectedAddons(prev => 
@@ -99,6 +109,8 @@ export function UnifiedPricingCalculator({
             tier: selectedTierData.name,
             tier_id: selectedTier,
             hours_range: selectedHours,
+            hangar_location: selectedLocation?.name || 'Not selected',
+            hangar_cost: hangarCost,
             base_price: basePrice,
             addons: selectedAddons,
             total_price: totalPrice,
@@ -120,6 +132,8 @@ export function UnifiedPricingCalculator({
           tier: selectedTierData.name,
           tier_id: selectedTier,
           hours_range: selectedHours,
+          hangar_location: selectedLocation?.name || 'Not selected',
+          hangar_cost: hangarCost,
           base_price: basePrice,
           addons: selectedAddons,
           total_price: totalPrice,
@@ -179,6 +193,35 @@ export function UnifiedPricingCalculator({
           </div>
 
           <div className="p-8 md:p-10">
+            {/* Hangar Location Selector - Top of Calculator */}
+            <div className="mb-8 pb-8 border-b">
+              <Label className="text-lg font-bold mb-4 block">Select Your Hangar Location</Label>
+              <div className="flex flex-wrap gap-3">
+                {locations.map((location) => (
+                  <button
+                    key={location.id}
+                    onClick={() => setSelectedLocationId(location.id)}
+                    className={`px-4 py-2 border-2 rounded-lg transition-all flex items-center gap-2 ${
+                      selectedLocationId === location.id
+                        ? 'border-primary bg-primary/10 shadow-md'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <Building2 className={`h-4 w-4 ${selectedLocationId === location.id ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">{location.name}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        +${location.hangar_cost_monthly.toLocaleString()}/mo
+                      </Badge>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Hangar cost is included in the prices below
+              </p>
+            </div>
+
             {/* Aircraft Tier Selection */}
             <div className="mb-10">
               <Label className="text-xl font-bold mb-6 block flex items-center gap-2">
@@ -186,37 +229,45 @@ export function UnifiedPricingCalculator({
                 Choose Your Aircraft Type
               </Label>
               <div className="grid md:grid-cols-3 gap-4">
-                {PRICING_TIERS.map((tier) => (
-                  <button
-                    key={tier.id}
-                    onClick={() => {
-                      setSelectedTier(tier.id);
-                      // Reset addons when tier changes as some may not be applicable
-                      setSelectedAddons(prev => 
-                        prev.filter(addonId => {
-                          const addon = AVAILABLE_ADDONS.find(a => a.id === addonId);
-                          return !addon?.applicableTiers || addon.applicableTiers.includes(tier.id);
-                        })
-                      );
-                    }}
-                    className={`group p-5 border-2 rounded-xl text-left transition-all hover:scale-105 ${
-                      selectedTier === tier.id
-                        ? 'border-primary bg-primary/10 shadow-lg scale-105'
-                        : 'border-border hover:border-primary/50 hover:shadow-md'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-2 h-2 rounded-full ${selectedTier === tier.id ? 'bg-primary' : 'bg-muted-foreground'}`} />
-                      <div className="font-bold text-lg">{tier.name}</div>
-                    </div>
-                    <div className="text-xs text-muted-foreground mb-3 line-clamp-2">
-                      {tier.examples.join(', ')}
-                    </div>
-                    <div className="text-sm font-semibold text-primary">
-                      From ${tier.baseMonthly.toLocaleString()}/mo
-                    </div>
-                  </button>
-                ))}
+                {PRICING_TIERS.map((tier) => {
+                  const priceWithHangar = tier.baseMonthly + hangarCost;
+                  return (
+                    <button
+                      key={tier.id}
+                      onClick={() => {
+                        setSelectedTier(tier.id);
+                        // Reset addons when tier changes as some may not be applicable
+                        setSelectedAddons(prev => 
+                          prev.filter(addonId => {
+                            const addon = AVAILABLE_ADDONS.find(a => a.id === addonId);
+                            return !addon?.applicableTiers || addon.applicableTiers.includes(tier.id);
+                          })
+                        );
+                      }}
+                      className={`group p-5 border-2 rounded-xl text-left transition-all hover:scale-105 ${
+                        selectedTier === tier.id
+                          ? 'border-primary bg-primary/10 shadow-lg scale-105'
+                          : 'border-border hover:border-primary/50 hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-2 h-2 rounded-full ${selectedTier === tier.id ? 'bg-primary' : 'bg-muted-foreground'}`} />
+                        <div className="font-bold text-lg">{tier.name}</div>
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                        {tier.examples.join(', ')}
+                      </div>
+                      <div className="text-sm font-semibold text-primary">
+                        From ${priceWithHangar.toLocaleString()}/mo
+                      </div>
+                      {hangarCost > 0 && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Includes hangar
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -228,7 +279,7 @@ export function UnifiedPricingCalculator({
               </Label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {HOURS_BANDS.map((band) => {
-                  const price = calculateMonthlyPrice(selectedTier, band.range);
+                  const price = calculateMonthlyPrice(selectedTier, band.range) + hangarCost;
                   return (
                     <button
                       key={band.range}
@@ -250,6 +301,11 @@ export function UnifiedPricingCalculator({
                         ${price.toLocaleString()}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">/month</div>
+                      {hangarCost > 0 && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Includes hangar
+                        </div>
+                      )}
                     </button>
                   );
                 })}
@@ -329,7 +385,7 @@ export function UnifiedPricingCalculator({
               <div className="relative bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-2xl p-8 md:p-10 shadow-2xl">
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
                   <div className="flex-1">
-                    <Badge className="mb-3 bg-white/20 text-white hover:bg-white/30 border-white/20">
+                      <Badge className="mb-3 bg-white/20 text-white hover:bg-white/30 border-white/20">
                       <Sparkles className="h-3 w-3 mr-1" />
                       Your Custom Quote
                     </Badge>
@@ -349,6 +405,12 @@ export function UnifiedPricingCalculator({
                       <Badge variant="secondary" className="bg-white/20 text-white border-0">
                         {selectedHoursData.label}
                       </Badge>
+                      {selectedLocation && (
+                        <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                          <Building2 className="h-3 w-3 mr-1" />
+                          {selectedLocation.name}
+                        </Badge>
+                      )}
                       {selectedAddons.length > 0 && (
                         <Badge variant="secondary" className="bg-white/20 text-white border-0">
                           +{selectedAddons.length} Enhancement{selectedAddons.length !== 1 ? 's' : ''}
@@ -361,9 +423,14 @@ export function UnifiedPricingCalculator({
                       <div className="text-xs font-semibold opacity-90 mb-2">Price Breakdown</div>
                       <div className="space-y-1.5 text-sm">
                         <div className="flex justify-between items-center">
-                          <span className="opacity-90">Base service</span>
-                          <span className="font-semibold">${basePrice.toLocaleString()}</span>
+                          <span className="opacity-90">{selectedTierData.name} + {selectedHoursData.label}</span>
+                          <span className="font-semibold">${(basePrice + hangarCost).toLocaleString()}</span>
                         </div>
+                        {hangarCost > 0 && (
+                          <div className="text-xs opacity-75 pl-2">
+                            ↳ Includes hangar at {selectedLocation?.name}
+                          </div>
+                        )}
                         {selectedAddons.map(addonId => {
                           const addon = AVAILABLE_ADDONS.find(a => a.id === addonId);
                           return addon ? (

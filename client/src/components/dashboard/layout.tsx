@@ -41,26 +41,26 @@ export function DashboardLayout({
     <div className="min-h-screen bg-muted/20 text-foreground">
       {showHeader ? (
         <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:gap-4 px-3 sm:px-4 py-3 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <Link href="/" className="hover:opacity-80 transition-opacity">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground cursor-pointer hover:text-foreground">
                   Freedom Aviation
                 </p>
               </Link>
-              <h1 className="text-2xl font-bold tracking-tight" data-testid={titleTestId}>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid={titleTestId}>
                 {title}
               </h1>
               {description ? (
-                <p className="text-sm text-muted-foreground">{description}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{description}</p>
               ) : null}
             </div>
             {actions ? <div className="flex-shrink-0">{actions}</div> : null}
           </div>
           {navItems.length > 0 ? (
             <div className="border-t border-border/80 bg-background/95">
-              <div className="mx-auto flex w-full max-w-6xl overflow-x-auto px-1">
-                <nav className="flex w-full gap-1 px-3 py-2">
+              <div className="mx-auto flex w-full max-w-6xl overflow-x-auto px-1 scrollbar-hide scroll-smooth-touch">
+                <nav className="flex w-full gap-1 px-2 sm:px-3 py-2">
                   {navItems.map((item) => {
                     const isActive = item.exact
                       ? location === item.href
@@ -71,7 +71,7 @@ export function DashboardLayout({
                         key={item.href}
                         href={item.href}
                         className={cn(
-                          "relative inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                          "relative inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap min-h-[44px]",
                           "text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                           isActive
                             ? "bg-muted text-foreground shadow-sm"
@@ -90,8 +90,8 @@ export function DashboardLayout({
         </div>
       ) : null}
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="space-y-6">{children}</div>
+      <main className="mx-auto w-full max-w-6xl px-3 sm:px-4 py-4 sm:py-6 md:px-6 lg:px-8">
+        <div className="space-y-4 sm:space-y-6">{children}</div>
       </main>
     </div>
   );

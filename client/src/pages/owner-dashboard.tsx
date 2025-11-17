@@ -213,37 +213,37 @@ export default function OwnerDashboard() {
       {isDemo && <DemoBanner />}
       
       {/* Minimal Navigation */}
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex items-center gap-2 mb-4 sm:mb-6">
         <Link href="/dashboard">
-          <Button variant="default" size="sm">
+          <Button variant="default" size="sm" className="h-10 px-4">
             Overview
           </Button>
         </Link>
         <Link href="/dashboard/more">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="h-10 px-4">
             More
           </Button>
         </Link>
       </div>
 
       <Card>
-        <CardHeader className="flex flex-col items-start gap-2 pb-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base font-medium">My Aircraft</CardTitle>
+        <CardHeader className="flex flex-col items-start gap-2 pb-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg font-medium">My Aircraft</CardTitle>
           <Link href="/" data-testid="link-home-from-logo">
             <img
               src={logoImage}
               alt="Freedom Aviation"
-              className="h-6 w-auto opacity-50 transition-opacity hover:opacity-80"
+              className="h-5 sm:h-6 w-auto opacity-50 transition-opacity hover:opacity-80"
             />
           </Link>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           {aircraft ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="text-sm text-muted-foreground">Tail Number</div>
-                  <div className="text-xl sm:text-2xl font-bold truncate" data-testid="text-tail-number">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <div className="text-xs sm:text-sm text-muted-foreground">Tail Number</div>
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" data-testid="text-tail-number">
                     {aircraft.tail_number}
                   </div>
                   {!isDemo && (
