@@ -16,8 +16,8 @@ import { RequestServiceSheet } from "@/components/request-service-sheet";
  */
 
 const PARTNER_ROUTES: Record<string, string> = {
-  "sky-harbour": "/partners/sky-harbour",
-  "fa-hangar": "/partners/fa-hangar",
+  "sky-harbour": "/hangars",
+  "fa-hangar": "/hangars",
 };
 
 const IMG_BY_SLUG: Record<string, string> = {

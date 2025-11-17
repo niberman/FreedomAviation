@@ -24,6 +24,10 @@ export interface Aircraft {
   tach_hours?: number;
   image_url?: string;
   owner_id?: string;
+  base_location?: string;
+  status?: string;
+  usable_fuel_gal?: number;
+  tabs_fuel_gal?: number;
   has_tks?: boolean;
   has_oxygen?: boolean;
   created_at: string;
@@ -69,6 +73,8 @@ export interface ServiceRequest {
   assigned_to?: string;
   airport?: string | null;
   requested_departure?: string | null;
+  requested_date?: string | null;
+  requested_time?: string | null;
   fuel_grade?: string | null;
   fuel_quantity?: number | null;
   cabin_provisioning?: Record<string, any> | string | null;
@@ -76,8 +82,10 @@ export interface ServiceRequest {
   tks_topoff?: boolean | null;
   gpu_required?: boolean | null;
   hangar_pullout?: boolean | null;
+  service_id?: string | null;
   is_extra_charge?: boolean | null;
   credits_used?: number | null;
+  notes?: string | null;
   created_at: string;
   updated_at: string;
 }

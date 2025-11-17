@@ -373,15 +373,15 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Quick Actions</CardTitle>
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-3">
+      <CardContent className="grid gap-2 sm:gap-3 px-4 sm:px-6">
         <Dialog open={openPrep} onOpenChange={setOpenPrep}>
           <DialogTrigger asChild>
             <Button 
               variant="default" 
-              className="w-full justify-start" 
+              className="w-full justify-start h-11 sm:h-10" 
               data-testid="button-prepare-aircraft"
               aria-label="Prepare my aircraft"
               onClick={() => setOpenPrep(true)}
@@ -565,7 +565,7 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
           <DialogTrigger asChild>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start h-11 sm:h-10" 
               data-testid="button-request-service"
               aria-label="Request service"
               onClick={() => setOpenService(true)}
@@ -638,7 +638,7 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
           <DialogTrigger asChild>
             <Button 
               variant="outline" 
-              className="w-full justify-start" 
+              className="w-full justify-start h-11 sm:h-10" 
               data-testid="button-request-instruction"
               aria-label="Request flight instruction"
               onClick={() => setOpenInstruction(true)}

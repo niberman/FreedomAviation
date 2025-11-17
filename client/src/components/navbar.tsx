@@ -58,6 +58,7 @@ export function NavBar() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/about", label: "About" },
+    { href: "/hangars", label: "Hangars" },
     { href: "/pricing", label: "Pricing" },
     { href: "/contact", label: "Contact" },
   ];
@@ -152,17 +153,17 @@ export function NavBar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="flex h-14 sm:h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/">
-            <div className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
+            <div className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity cursor-pointer">
               <img
                 src={logoImage}
                 alt="Freedom Aviation"
-                className="h-8 w-auto"
+                className="h-7 sm:h-8 w-auto"
               />
-              <span className="font-semibold text-lg hidden sm:inline-block">
+              <span className="font-semibold text-base sm:text-lg hidden sm:inline-block">
                 Freedom Aviation
               </span>
             </div>
@@ -183,7 +184,7 @@ export function NavBar() {
           </div>
 
           {/* Right side: Auth & Theme */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Desktop Auth Section */}
             <div className="hidden md:flex items-center gap-2">
               <AuthButtons />
@@ -195,7 +196,7 @@ export function NavBar() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="md:hidden h-10 w-10"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -210,19 +211,19 @@ export function NavBar() {
 
         {/* Mobile Navigation Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t py-4 space-y-2">
+          <div className="md:hidden border-t py-3 space-y-1">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href}>
                 <Button
                   variant={isActive(link.href) ? "default" : "ghost"}
-                  className="w-full justify-start"
+                  className="w-full justify-start h-11 text-base"
                   onClick={closeMobileMenu}
                 >
                   {link.label}
                 </Button>
               </Link>
             ))}
-            <div className="pt-2 border-t space-y-2">
+            <div className="pt-2 border-t space-y-1">
               <AuthButtons isMobile />
             </div>
           </div>
