@@ -734,14 +734,25 @@ export default function StaffDashboard() {
               </Link>
               <div className="flex items-center gap-2">
                 <Plane className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-semibold">Freedom Aviation - Staff</h1>
+                <h1 className="text-xl font-semibold">Staff Management Console</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <NotificationCenter />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  const isAdminPath = window.location.pathname.startsWith('/admin');
+                  window.location.href = isAdminPath ? '/admin' : '/staff';
+                }}
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Dashboard Home
+              </Button>
               <Link href="/">
                 <Button variant="outline" size="sm" data-testid="button-return-home">
-                  Back to Home
+                  Back to Site
                 </Button>
               </Link>
               <ThemeToggle />
@@ -753,8 +764,8 @@ export default function StaffDashboard() {
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           <div className="space-y-1">
-            <h2 className="text-3xl font-bold tracking-tight">Staff Dashboard</h2>
-            <p className="text-muted-foreground">Manage service requests, aircraft, maintenance, and invoices</p>
+            <h2 className="text-3xl font-bold tracking-tight">Management Console</h2>
+            <p className="text-muted-foreground">Complete tools for managing all aspects of aviation operations</p>
           </div>
 
           <Tabs defaultValue="invoices" className="space-y-6">
