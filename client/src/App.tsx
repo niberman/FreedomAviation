@@ -24,6 +24,7 @@ import Onboarding from "./pages/onboarding";
 import OwnerDashboard from "./pages/owner-dashboard";
 import OwnerMore from "./pages/owner-more";
 import StaffDashboard from "./pages/staff-dashboard";
+import StaffHome from "./pages/staff-home";
 import DashboardMembers from "./pages/dashboard/members";
 import DashboardAircraft from "./pages/dashboard/aircraft";
 import DashboardSettings from "./pages/dashboard/settings";
@@ -111,6 +112,11 @@ function Router() {
       </Route>
       <Route path="/admin">
         <StaffProtectedRoute>
+          <StaffHome />
+        </StaffProtectedRoute>
+      </Route>
+      <Route path="/admin/manage">
+        <StaffProtectedRoute>
           <StaffDashboard />
         </StaffProtectedRoute>
       </Route>
@@ -120,6 +126,11 @@ function Router() {
         </StaffProtectedRoute>
       </Route>
       <Route path="/staff">
+        <StaffProtectedRoute>
+          <StaffHome />
+        </StaffProtectedRoute>
+      </Route>
+      <Route path="/staff/manage">
         <StaffProtectedRoute>
           <StaffDashboard />
         </StaffProtectedRoute>

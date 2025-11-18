@@ -196,3 +196,5 @@ END $$;
 -- Then verify:
 -- SELECT email, role FROM user_profiles WHERE role = 'owner';
 
+
+
