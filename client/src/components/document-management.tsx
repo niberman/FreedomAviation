@@ -99,95 +99,44 @@ export function DocumentManagement() {
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
-  // Create documents table if needed
-  const ensureTableExists = async () => {
-    const { error: checkError } = await supabase
-      .from("aircraft_documents")
-      .select("id")
-      .limit(0);
-    
-    if (checkError?.code === "42P01") {
-      console.log("Creating aircraft_documents table...");
+  // Check if documents table exists
+  const [tableExists, setTableExists] = useState<boolean | null>(null);
+  
+  useEffect(() => {
+    const checkTableExists = async () => {
+      if (!user) return;
       
-      const { error } = await supabase.rpc("exec_sql", {
-        sql: `
-          CREATE TABLE IF NOT EXISTS aircraft_documents (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            aircraft_id UUID NOT NULL REFERENCES aircraft(id) ON DELETE CASCADE,
-            type TEXT NOT NULL CHECK (type IN ('registration', 'insurance', 'weight_balance', 'airworthiness', 'logbook', 'manual', 'other')),
-            name TEXT NOT NULL,
-            file_url TEXT,
-            file_size INTEGER,
-            mime_type TEXT,
-            expires_at DATE,
-            uploaded_by UUID NOT NULL REFERENCES auth.users(id),
-            uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-            notes TEXT,
-            CONSTRAINT unique_aircraft_document UNIQUE (aircraft_id, type, name)
-          );
-          
-          CREATE INDEX idx_aircraft_documents_aircraft_id ON aircraft_documents(aircraft_id);
-          CREATE INDEX idx_aircraft_documents_type ON aircraft_documents(type);
-          CREATE INDEX idx_aircraft_documents_expires_at ON aircraft_documents(expires_at);
-          
-          ALTER TABLE aircraft_documents ENABLE ROW LEVEL SECURITY;
-          
-          -- Staff can view all documents
-          CREATE POLICY "Staff can view all documents" ON aircraft_documents
-            FOR SELECT TO authenticated
-            USING (
-              EXISTS (
-                SELECT 1 FROM user_profiles
-                WHERE user_profiles.id = auth.uid()
-                AND user_profiles.role IN ('admin', 'staff', 'founder', 'cfi', 'ops')
-              )
-            );
-          
-          -- Staff can upload documents
-          CREATE POLICY "Staff can upload documents" ON aircraft_documents
-            FOR INSERT TO authenticated
-            WITH CHECK (
-              EXISTS (
-                SELECT 1 FROM user_profiles
-                WHERE user_profiles.id = auth.uid()
-                AND user_profiles.role IN ('admin', 'staff', 'founder', 'ops')
-              )
-              AND uploaded_by = auth.uid()
-            );
-          
-          -- Staff can delete documents
-          CREATE POLICY "Staff can delete documents" ON aircraft_documents
-            FOR DELETE TO authenticated
-            USING (
-              EXISTS (
-                SELECT 1 FROM user_profiles
-                WHERE user_profiles.id = auth.uid()
-                AND user_profiles.role IN ('admin', 'staff', 'founder', 'ops')
-              )
-            );
-          
-          -- Create storage bucket for documents
-          INSERT INTO storage.buckets (id, name, public)
-          VALUES ('aircraft-documents', 'aircraft-documents', false)
-          ON CONFLICT (id) DO NOTHING;
-        `
-      }).catch(() => {
-        console.warn("Could not create aircraft_documents table automatically");
-        return { error: "Table creation failed" };
-      });
+      const { error } = await supabase
+        .from("aircraft_documents")
+        .select("id", { count: "exact", head: true })
+        .limit(0);
       
-      if (!error) {
-        console.log("✓ Created aircraft_documents table");
+      if (error?.code === "42P01") {
+        console.log("⚠️ Aircraft documents table not found - feature disabled");
+        setTableExists(false);
+      } else {
+        setTableExists(true);
       }
-    }
-  };
+    };
+    
+    checkTableExists();
+  }, [user]);
+
+  // Return null if table doesn't exist
+  if (tableExists === false) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p>Document management feature is not yet enabled.</p>
+        <p className="text-sm mt-2">Please contact your administrator to enable this feature.</p>
+      </div>
+    );
+  }
 
   // Fetch aircraft for dropdown
   const { data: aircraft = [] } = useQuery({
     queryKey: ["aircraft-for-documents"],
     queryFn: async () => {
-      await ensureTableExists();
-      
       const { data, error } = await supabase
         .from("aircraft")
         .select("id, tail_number")
@@ -195,6 +144,7 @@ export function DocumentManagement() {
       if (error) throw error;
       return data || [];
     },
+    enabled: !!user && tableExists === true,
   });
 
   // Fetch documents
@@ -221,11 +171,13 @@ export function DocumentManagement() {
           // Table doesn't exist yet
           return [];
         }
-        throw error;
+        console.warn("Error fetching documents:", error);
+        return [];
       }
       
       return data as Document[];
     },
+    enabled: !!user && tableExists === true,
   });
 
   // Filter documents based on search and status
@@ -270,30 +222,8 @@ export function DocumentManagement() {
         .upload(fileName, file);
 
       if (uploadError) {
-        // If bucket doesn't exist, try to create it
-        if (uploadError.message.includes('Bucket not found')) {
-          const { error: createBucketError } = await supabase.rpc("exec_sql", {
-            sql: `
-              INSERT INTO storage.buckets (id, name, public)
-              VALUES ('aircraft-documents', 'aircraft-documents', false);
-            `
-          });
-          
-          if (!createBucketError) {
-            // Retry upload
-            const { error: retryError, data: retryData } = await supabase.storage
-              .from('aircraft-documents')
-              .upload(fileName, file);
-            
-            if (retryError) throw retryError;
-            // Continue with retryData as uploadData
-            Object.assign(uploadData || {}, retryData);
-          } else {
-            throw uploadError;
-          }
-        } else {
-          throw uploadError;
-        }
+        console.error("File upload error:", uploadError);
+        throw new Error(`Failed to upload file: ${uploadError.message}`);
       }
 
       // Create document record
