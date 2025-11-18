@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Calendar, FileText, DollarSign, Wrench, Plane, Settings2 } from "lucide-react";
+import { Calendar, FileText, DollarSign, Wrench, Plane, Settings2, Users, Fuel, BarChart3, Coins, Home, Files } from "lucide-react";
 import logoImage from "@assets/falogo.png";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -38,6 +38,14 @@ import { FlightLogsList } from "@/components/flight-logs-list";
 import { CFISchedule } from "@/components/cfi-schedule";
 import UnifiedPricingConfigurator from "./admin/UnifiedPricingConfigurator";
 import { authenticatedFetch } from "@/lib/auth-utils";
+import { StaffManagement } from "@/components/staff-management";
+import { MaintenanceCRUD } from "@/components/maintenance-crud";
+import { FuelTracking } from "@/components/fuel-tracking";
+import { NotificationCenter } from "@/components/notification-center";
+import { ServiceCreditManagement } from "@/components/service-credit-management";
+import { ReportsDashboard } from "@/components/reports-dashboard";
+import { DocumentManagement } from "@/components/document-management";
+import { HangarManagement } from "@/components/hangar-management";
 
 interface InstructionInvoice {
   id: string;
@@ -726,13 +734,25 @@ export default function StaffDashboard() {
               </Link>
               <div className="flex items-center gap-2">
                 <Plane className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-semibold">Freedom Aviation - Staff</h1>
+                <h1 className="text-xl font-semibold">Staff Management Console</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <NotificationCenter />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  const isAdminPath = window.location.pathname.startsWith('/admin');
+                  window.location.href = isAdminPath ? '/admin' : '/staff';
+                }}
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Dashboard Home
+              </Button>
               <Link href="/">
                 <Button variant="outline" size="sm" data-testid="button-return-home">
-                  Back to Home
+                  Back to Site
                 </Button>
               </Link>
               <ThemeToggle />
@@ -744,19 +764,25 @@ export default function StaffDashboard() {
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           <div className="space-y-1">
-            <h2 className="text-3xl font-bold tracking-tight">Staff Dashboard</h2>
-            <p className="text-muted-foreground">Manage service requests, aircraft, maintenance, and invoices</p>
+            <h2 className="text-3xl font-bold tracking-tight">Management Console</h2>
+            <p className="text-muted-foreground">Complete tools for managing all aspects of aviation operations</p>
           </div>
 
           <Tabs defaultValue="invoices" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 h-auto">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-14 h-auto gap-1">
               <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
               <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>
               <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
               <TabsTrigger value="clients" data-testid="tab-clients" className="text-xs sm:text-sm">Clients</TabsTrigger>
+              <TabsTrigger value="hangars" data-testid="tab-hangars" className="text-xs sm:text-sm">Hangars</TabsTrigger>
+              <TabsTrigger value="documents" data-testid="tab-documents" className="text-xs sm:text-sm">Documents</TabsTrigger>
+              <TabsTrigger value="credits" data-testid="tab-credits" className="text-xs sm:text-sm">Credits</TabsTrigger>
+              <TabsTrigger value="fuel" data-testid="tab-fuel" className="text-xs sm:text-sm">Fuel</TabsTrigger>
               <TabsTrigger value="schedule" data-testid="tab-schedule" className="text-xs sm:text-sm">Schedule</TabsTrigger>
               <TabsTrigger value="logs" data-testid="tab-logs" className="text-xs sm:text-sm">Flight Logs</TabsTrigger>
               <TabsTrigger value="invoices" data-testid="tab-invoices" className="text-xs sm:text-sm">Invoices</TabsTrigger>
+              <TabsTrigger value="reports" data-testid="tab-reports" className="text-xs sm:text-sm">Reports</TabsTrigger>
+              <TabsTrigger value="staff" data-testid="tab-staff" className="text-xs sm:text-sm">Staff</TabsTrigger>
               <TabsTrigger value="pricing" data-testid="tab-pricing" className="text-xs sm:text-sm">Pricing</TabsTrigger>
             </TabsList>
 
@@ -938,67 +964,7 @@ export default function StaffDashboard() {
 
           {/* Maintenance (Admin) */}
           <TabsContent value="maintenance" className="space-y-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-2xl font-semibold">Maintenance</h2>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Track maintenance schedules and due dates
-              </p>
-            </div>
-            <MaintenanceList items={maintenanceItems.map((m: any) => {
-              // Calculate status based on due dates and hobbs
-              // Use severity from database, or calculate from remaining_days/hours
-              let status: "ok" | "due_soon" | "overdue" = "ok";
-              
-              if (m.severity === 'high' || m.severity === 'critical') {
-                status = "overdue";
-              } else if (m.severity === 'medium') {
-                status = "due_soon";
-              } else if (m.remaining_days !== null && m.remaining_days !== undefined) {
-                // Use remaining_days if available
-                if (m.remaining_days < 0) {
-                  status = "overdue";
-                } else if (m.remaining_days <= 30) {
-                  status = "due_soon";
-                }
-              } else if (m.due_at_date) {
-                const dueDate = new Date(m.due_at_date);
-                const today = new Date();
-                const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                
-                if (daysUntilDue < 0) {
-                  status = "overdue";
-                } else if (daysUntilDue <= 30) {
-                  status = "due_soon";
-                }
-              } else if (m.remaining_hours !== null && m.remaining_hours !== undefined) {
-                // Use remaining_hours if available
-                if (m.remaining_hours < 0) {
-                  status = "overdue";
-                } else if (m.remaining_hours <= 10) {
-                  status = "due_soon";
-                }
-              } else if (m.due_at_hours && m.aircraft?.hobbs_hours) {
-                const hobbsRemaining = m.due_at_hours - m.aircraft.hobbs_hours;
-                if (hobbsRemaining < 0) {
-                  status = "overdue";
-                } else if (hobbsRemaining <= 10) {
-                  status = "due_soon";
-                }
-              }
-
-              return {
-                id: m.id,
-                tailNumber: m.aircraft?.tail_number || 'N/A',
-                title: m.item,
-                hobbsDue: m.due_at_hours,
-                hobbsCurrent: m.aircraft?.hobbs_hours,
-                calendarDue: m.due_at_date,
-                status,
-              };
-            })} />
+            <MaintenanceCRUD />
           </TabsContent>
 
           {/* Clients */}
@@ -1013,6 +979,21 @@ export default function StaffDashboard() {
               </p>
             </div>
             <ClientsTable />
+          </TabsContent>
+
+          {/* Hangars */}
+          <TabsContent value="hangars" className="space-y-6">
+            <HangarManagement />
+          </TabsContent>
+
+          {/* Documents */}
+          <TabsContent value="documents" className="space-y-6">
+            <DocumentManagement />
+          </TabsContent>
+
+          {/* Service Credits */}
+          <TabsContent value="credits" className="space-y-6">
+            <ServiceCreditManagement />
           </TabsContent>
 
           {/* CFI Schedule */}
@@ -1217,7 +1198,7 @@ export default function StaffDashboard() {
                               </div>
                             ) : (
                               owners
-                                .filter((owner: any) => owner && owner.id)
+                                .filter((owner: any) => owner && owner.id && owner.id.trim() !== '')
                                 .map((owner: any) => (
                                   <SelectItem key={owner.id} value={owner.id}>
                                     {owner.full_name || owner.email}
@@ -1242,7 +1223,7 @@ export default function StaffDashboard() {
                         <SelectContent>
                           <SelectItem value="__none__">None</SelectItem>
                           {filteredAircraft
-                            .filter((ac: any) => ac && ac.id)
+                            .filter((ac: any) => ac && ac.id && ac.id.trim() !== '')
                             .map((ac: any) => (
                               <SelectItem key={ac.id} value={ac.id}>
                                 {ac.tail_number}
@@ -1567,6 +1548,21 @@ export default function StaffDashboard() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          {/* Fuel Tracking */}
+          <TabsContent value="fuel" className="space-y-6">
+            <FuelTracking />
+          </TabsContent>
+
+          {/* Reports Dashboard */}
+          <TabsContent value="reports" className="space-y-6">
+            <ReportsDashboard />
+          </TabsContent>
+
+          {/* Staff Management */}
+          <TabsContent value="staff" className="space-y-6">
+            <StaffManagement />
           </TabsContent>
 
           {/* Pricing Configurator */}

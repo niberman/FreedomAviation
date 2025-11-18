@@ -175,10 +175,10 @@ export function ClientsTable() {
 
   const handleAddClient = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClientEmail || !newClientPassword || !newClientName) {
+    if (!newClientEmail || !newClientName) {
       toast({
         title: "Missing required fields",
-        description: "Email, password, and name are required.",
+        description: "Email and name are required.",
         variant: "destructive",
       });
       return;
