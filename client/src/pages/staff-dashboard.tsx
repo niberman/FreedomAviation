@@ -1187,7 +1187,7 @@ export default function StaffDashboard() {
                               </div>
                             ) : (
                               owners
-                                .filter((owner: any) => owner && owner.id)
+                                .filter((owner: any) => owner && owner.id && owner.id.trim() !== '')
                                 .map((owner: any) => (
                                   <SelectItem key={owner.id} value={owner.id}>
                                     {owner.full_name || owner.email}
@@ -1212,7 +1212,7 @@ export default function StaffDashboard() {
                         <SelectContent>
                           <SelectItem value="__none__">None</SelectItem>
                           {filteredAircraft
-                            .filter((ac: any) => ac && ac.id)
+                            .filter((ac: any) => ac && ac.id && ac.id.trim() !== '')
                             .map((ac: any) => (
                               <SelectItem key={ac.id} value={ac.id}>
                                 {ac.tail_number}

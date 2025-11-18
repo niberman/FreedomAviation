@@ -62,74 +62,35 @@ export function NotificationCenter() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Create notifications table if it doesn't exist
+  // Check if notifications table exists
+  const [tableExists, setTableExists] = useState<boolean | null>(null);
+  
   useEffect(() => {
-    const createNotificationsTable = async () => {
+    const checkTableExists = async () => {
       if (!user) return;
       
-      // Check if table exists
-      const { error: checkError } = await supabase
+      // Check if table exists by attempting a count query
+      const { error } = await supabase
         .from("notifications")
-        .select("id")
+        .select("id", { count: "exact", head: true })
         .limit(0);
       
-      if (checkError?.code === "42P01") {
-        console.log("Creating notifications table...");
-        
-        const { error } = await supabase.rpc("exec_sql", {
-          sql: `
-            CREATE TABLE IF NOT EXISTS notifications (
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-              type TEXT NOT NULL CHECK (type IN ('service_request', 'maintenance_due', 'invoice', 'client_joined', 'flight_log', 'general')),
-              title TEXT NOT NULL,
-              message TEXT NOT NULL,
-              is_read BOOLEAN DEFAULT FALSE,
-              created_at TIMESTAMPTZ DEFAULT NOW(),
-              read_at TIMESTAMPTZ,
-              metadata JSONB,
-              CONSTRAINT unique_user_notification UNIQUE (user_id, title, message, created_at)
-            );
-            
-            CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-            CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
-            CREATE INDEX idx_notifications_is_read ON notifications(is_read);
-            
-            ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-            
-            -- Users can view their own notifications
-            CREATE POLICY "Users can view own notifications" ON notifications
-              FOR SELECT TO authenticated
-              USING (user_id = auth.uid());
-            
-            -- Users can update their own notifications
-            CREATE POLICY "Users can update own notifications" ON notifications
-              FOR UPDATE TO authenticated
-              USING (user_id = auth.uid())
-              WITH CHECK (user_id = auth.uid());
-            
-            -- Users can delete their own notifications
-            CREATE POLICY "Users can delete own notifications" ON notifications
-              FOR DELETE TO authenticated
-              USING (user_id = auth.uid());
-            
-            -- System can insert notifications (through service role or triggers)
-            CREATE POLICY "System can insert notifications" ON notifications
-              FOR INSERT TO authenticated
-              WITH CHECK (true);
-          `
-        }).catch((err) => {
-          console.warn("Could not create notifications table:", err.message);
-        });
-        
-        if (!error) {
-          console.log("✓ Created notifications table");
-        }
+      if (error?.code === "42P01") {
+        // Table doesn't exist - disable component
+        console.log("⚠️ Notifications table not found - feature disabled");
+        setTableExists(false);
+      } else {
+        setTableExists(true);
       }
     };
     
-    createNotificationsTable();
+    checkTableExists();
   }, [user]);
+  
+  // Return null if table doesn't exist (feature not yet enabled)
+  if (tableExists === false) {
+    return null;
+  }
 
   // Fetch notifications
   const { data: notifications = [], isLoading } = useQuery({
@@ -149,13 +110,14 @@ export function NotificationCenter() {
           // Table doesn't exist yet
           return [];
         }
-        throw error;
+        console.warn("Error fetching notifications:", error);
+        return [];
       }
       
       return data as Notification[];
     },
-    enabled: !!user,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: !!user && tableExists === true,
+    refetchInterval: tableExists === true ? 30000 : false, // Only refetch if table exists
   });
 
   // Count unread notifications
