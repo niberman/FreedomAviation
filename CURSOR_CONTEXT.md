@@ -4,26 +4,32 @@
 **Purpose**: Master reference document for AI assistants working on this codebase  
 **Status**: ✅ Production - Actively Maintained
 
-## 🤖 AI Direct Database Access
+## 🤖 AI Direct Database Access - ACTIVE ✅
 
-**The AI can execute SQL directly in Supabase!**
+**The AI has direct SQL execution access via Supabase Management API!**
 
-### One-Time Setup:
-Run `/scripts/setup-sql-execution.sql` in Supabase SQL Editor (see `SETUP_SQL_EXECUTION.md`)
+### No Setup Required! 
+Uses personal access token - works immediately.
 
 ### Usage:
 ```bash
-node scripts/execute-sql.js "ALTER TABLE users..."
-node scripts/execute-sql.js -f migrations/fix-something.sql
+node scripts/execute-sql-mgmt-api.js "ALTER TABLE users..."
+node scripts/execute-sql-mgmt-api.js -f migrations/fix-something.sql
 ```
 
-### When AI Should Use This:
-- ✅ Running database migrations automatically
-- ✅ Fixing foreign key constraints
-- ✅ Creating missing tables
-- ✅ Applying schema changes
+### Capabilities:
+- ✅ Execute any SQL migration instantly
+- ✅ Fix foreign key constraints
+- ✅ Create missing tables
+- ✅ Add indexes and policies
+- ✅ Query and verify changes
+- ✅ All operations logged and tracked in git
 
-**After setup complete, AI can fix database issues without waiting for user!**
+### Recent Auto-Fixes Applied:
+- ✅ User deletion cascade (service_requests, onboarding_data)
+- ✅ Multiple foreign key constraints updated
+
+**AI can now fix database issues in real-time without human intervention!**
 
 ---
 
