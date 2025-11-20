@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -20,27 +20,29 @@ export default function ResetPassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { updatePassword, session, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const hasProcessedToken = useRef(false);
 
   // Check for password recovery tokens in URL hash and process them
   useEffect(() => {
-    // Supabase tokens come in the URL hash (e.g., #access_token=...&type=recovery)
+    // Only process once
+    if (hasProcessedToken.current) {
+      return;
+    }
+
     const hash = window.location.hash;
-    console.log('[ResetPassword] Current hash:', hash ? 'Has recovery token' : 'No hash');
-    console.log('[ResetPassword] Auth loading:', authLoading, 'Session:', session ? 'Present' : 'None');
     
     if (hash && hash.includes('access_token') && hash.includes('type=recovery')) {
-      console.log('[ResetPassword] Recovery token found, waiting for Supabase to process...');
+      hasProcessedToken.current = true;
       
-      // Force Supabase to process the hash by calling exchangeCodeForSession
+      // Process the recovery token
       const processToken = async () => {
         try {
-          // Extract the access token from the hash
+          // Extract the tokens from the hash
           const hashParams = new URLSearchParams(hash.substring(1));
           const accessToken = hashParams.get('access_token');
           const refreshToken = hashParams.get('refresh_token');
           
           if (accessToken && refreshToken) {
-            console.log('[ResetPassword] Attempting to set session with tokens...');
             const { data, error } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
@@ -54,50 +56,34 @@ export default function ResetPassword() {
                 description: error.message || "This password reset link is invalid or has expired.",
               });
               setTimeout(() => setLocation("/forgot-password"), 2000);
-            } else if (data.session) {
-              console.log('[ResetPassword] Session set successfully');
             }
+            // Session is now set, the form will render
           }
         } catch (err) {
           console.error('[ResetPassword] Error processing token:', err);
-        }
-      };
-      
-      // Try to process the token after a short delay
-      setTimeout(processToken, 500);
-      
-      // Also set a timeout to check if session was established
-      const timeout = setTimeout(() => {
-        if (!session && !authLoading) {
-          console.log('[ResetPassword] No session after 5 seconds - token likely invalid');
           toast({
             variant: "destructive",
             title: "Invalid or expired link",
             description: "This password reset link is invalid or has expired. Please request a new one.",
           });
-          setTimeout(() => {
-            setLocation("/forgot-password");
-          }, 2000);
+          setTimeout(() => setLocation("/forgot-password"), 2000);
         }
-      }, 5000);
+      };
       
-      return () => clearTimeout(timeout);
-    }
-
-    // If no hash and no session after loading, the link is invalid
-    if (!authLoading && !hash && !session) {
-      console.log('[ResetPassword] No hash or session - invalid link');
+      // Process the token immediately
+      processToken();
+    } else if (!authLoading && !hash && !session) {
+      // No hash and no session - invalid access
       toast({
         variant: "destructive",
         title: "Invalid or expired link",
         description: "This password reset link is invalid or has expired. Please request a new one.",
       });
-      // Redirect to forgot password page after a delay
       setTimeout(() => {
         setLocation("/forgot-password");
       }, 3000);
     }
-  }, [session, authLoading, toast, setLocation]);
+  }, []); // Empty dependency array - only run once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +152,8 @@ export default function ResetPassword() {
     }
   };
 
-  if (authLoading) {
+  // Show loading state while auth is initializing or processing token
+  if (authLoading || (!session && hasProcessedToken.current)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
@@ -329,4 +316,3 @@ export default function ResetPassword() {
     </div>
   );
 }
-
