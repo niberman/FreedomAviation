@@ -3,12 +3,3 @@ import App from "./App";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
-
-// Only register service worker in production to avoid 404s in dev
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((err) => {
-      console.error("Service worker registration failed:", err);
-    });
-  });
-}
