@@ -88,7 +88,7 @@ export function DocumentManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [selectedAircraft, setSelectedAircraft] = useState<string>("");
+  const [selectedAircraft, setSelectedAircraft] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   
   // Form state
@@ -389,7 +389,7 @@ export function DocumentManagement() {
                   <SelectValue placeholder="All Aircraft" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Aircraft</SelectItem>
+                  <SelectItem value="all">All Aircraft</SelectItem>
                   {aircraft.map((ac) => (
                     <SelectItem key={ac.id} value={ac.id}>
                       {ac.tail_number}
