@@ -23,17 +23,52 @@ export default function ResetPassword() {
   // Check for password recovery tokens in URL hash and process them
   useEffect(() => {
     // Supabase tokens come in the URL hash (e.g., #access_token=...&type=recovery)
-    // The auth state change listener should handle this, but we need to ensure
-    // the hash is processed before checking for session
     const hash = window.location.hash;
+    console.log('[ResetPassword] Current hash:', hash ? 'Has recovery token' : 'No hash');
+    console.log('[ResetPassword] Auth loading:', authLoading, 'Session:', session ? 'Present' : 'None');
     
     if (hash && hash.includes('access_token') && hash.includes('type=recovery')) {
-      // The PASSWORD_RECOVERY event should be triggered by Supabase automatically
-      // Wait a bit for Supabase to process the hash and set the session
-      // Give it up to 3 seconds to process
+      console.log('[ResetPassword] Recovery token found, waiting for Supabase to process...');
+      
+      // Force Supabase to process the hash by calling exchangeCodeForSession
+      const processToken = async () => {
+        try {
+          // Extract the access token from the hash
+          const hashParams = new URLSearchParams(hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+          
+          if (accessToken && refreshToken) {
+            console.log('[ResetPassword] Attempting to set session with tokens...');
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            
+            if (error) {
+              console.error('[ResetPassword] Error setting session:', error);
+              toast({
+                variant: "destructive",
+                title: "Invalid or expired link",
+                description: error.message || "This password reset link is invalid or has expired.",
+              });
+              setTimeout(() => setLocation("/forgot-password"), 2000);
+            } else if (data.session) {
+              console.log('[ResetPassword] Session set successfully');
+            }
+          }
+        } catch (err) {
+          console.error('[ResetPassword] Error processing token:', err);
+        }
+      };
+      
+      // Try to process the token after a short delay
+      setTimeout(processToken, 500);
+      
+      // Also set a timeout to check if session was established
       const timeout = setTimeout(() => {
         if (!session && !authLoading) {
-          // Hash is present but session wasn't set - token might be invalid
+          console.log('[ResetPassword] No session after 5 seconds - token likely invalid');
           toast({
             variant: "destructive",
             title: "Invalid or expired link",
@@ -43,13 +78,14 @@ export default function ResetPassword() {
             setLocation("/forgot-password");
           }, 2000);
         }
-      }, 3000);
+      }, 5000);
       
       return () => clearTimeout(timeout);
     }
 
     // If no hash and no session after loading, the link is invalid
     if (!authLoading && !hash && !session) {
+      console.log('[ResetPassword] No hash or session - invalid link');
       toast({
         variant: "destructive",
         title: "Invalid or expired link",
