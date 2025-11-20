@@ -95,12 +95,20 @@ export default function Login() {
     }
   };
 
-  // Redirect if already logged in
+  // Redirect if already logged in (but NOT during auth flows)
   useEffect(() => {
     if (user) {
-      getRedirectPath(user.id).then((path) => {
-        setLocation(path);
-      });
+      // Check if we're in an auth flow (recovery, invite, magiclink)
+      const url = new URL(window.location.href);
+      const type = url.searchParams.get("type") || url.hash.match(/type=([^&]+)/)?.[1];
+      const isAuthFlow = type === "recovery" || type === "invite" || type === "magiclink";
+      
+      // Only redirect if NOT in an auth flow
+      if (!isAuthFlow) {
+        getRedirectPath(user.id).then((path) => {
+          setLocation(path);
+        });
+      }
     }
   }, [user, setLocation]);
 
