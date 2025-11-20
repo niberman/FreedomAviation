@@ -1767,6 +1767,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
 
+      if (!supabaseAnon || !supabase) {
+        return res.status(503).json({ error: "Service temporarily unavailable" });
+      }
+
       const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
       if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
 
@@ -1813,6 +1817,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { getTokensFromCode } = await import("./lib/google-calendar.js");
       const tokens = await getTokensFromCode(code);
+
+      if (!supabase) {
+        return res.status(503).json({ error: "Service temporarily unavailable" });
+      }
 
       // Store tokens in database
       const { error } = await supabase
@@ -1928,6 +1936,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post("/api/google-calendar/disconnect", async (req: Request, res: Response) => {
     try {
+      if (!supabaseAnon || !supabase) {
+        return res.status(503).json({ error: "Service temporarily unavailable" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -1955,6 +1967,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post("/api/google-calendar/toggle-sync", async (req: Request, res: Response) => {
     try {
+      if (!supabaseAnon || !supabase) {
+        return res.status(503).json({ error: "Service temporarily unavailable" });
+      }
+
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       if (!token) return res.status(401).json({ error: "Unauthorized" });
