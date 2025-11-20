@@ -1,6 +1,6 @@
 # Freedom Aviation - Complete Context for Cursor AI
 
-**Last Updated**: November 14, 2025  
+**Last Updated**: November 20, 2025  
 **Purpose**: Master reference document for AI assistants working on this codebase  
 **Status**: ✅ Production - Actively Maintained
 
@@ -22,23 +22,197 @@
 ## System Architecture
 
 ### Tech Stack
-- **Frontend**: React + TypeScript + Vite
-- **Backend**: Express + TypeScript
-- **Database**: Supabase (PostgreSQL)
-- **Auth**: Supabase Auth
-- **Payments**: Stripe
-- **Email**: Resend (via SMTP)
-- **Hosting**: Vercel 
+- **Frontend**: React 18 + TypeScript + Vite
+- **Routing**: Wouter (lightweight React router)
+- **Backend**: Express.js + TypeScript (Node.js 20+)
+- **Database**: Supabase (PostgreSQL 15+)
+- **Auth**: Supabase Auth (with Google OAuth support)
+- **State Management**: TanStack Query (React Query)
+- **Payments**: Stripe + Stripe Checkout
+- **Email**: Resend (via SMTP through Supabase)
+- **UI Components**: shadcn/ui + Radix UI + Tailwind CSS
+- **Hosting**: Vercel (serverless functions)
+- **Testing**: Vitest + Testing Library
 
 ### Project Structure
 ```
 /client/           - React frontend application
+  /src/
+    /pages/        - Route pages (home, dashboard, staff, admin)
+    /components/   - Reusable UI components + shadcn/ui
+    /features/     - Feature-specific components
+    /lib/          - Utilities, hooks, and configurations
+    /seo/          - SEO utilities and keywords
 /server/           - Express backend server
+  /routes/         - API route handlers
+  /lib/            - Server utilities (email, calendar, etc.)
 /shared/           - Shared TypeScript types/schemas
-/migrations/       - Database migration scripts
-/scripts/          - Utility SQL scripts
-/docs/            - Documentation
+  schema.ts        - Legacy Drizzle schema (incomplete)
+  database-types.ts - Complete TypeScript types for all tables
+  supabase-types.ts - Supabase-specific types
+/migrations/       - Database migration scripts (43 files)
+/scripts/          - Utility SQL scripts (21 files)
+/docs/             - Complete documentation
+  /architecture/   - Database schema documentation
+  /features/       - Feature-specific docs
+  /development/    - Development guides
+  /setup/          - Setup and configuration guides
+/public/           - Static assets (images, videos, PWA files)
+/attached_assets/  - Project assets and attachments
 ```
+
+---
+
+## Implemented Features
+
+### Core Features (Production)
+1. **Aircraft Management**
+   - Aircraft registration and tracking
+   - Hobbs/Tach hour tracking
+   - Aircraft features (TKS, Oxygen) for class determination
+   - Aircraft images and documentation
+   - Fuel tracking (usable and tabs fuel capacity)
+   - Status management (active, maintenance, inactive)
+
+2. **Service Request System**
+   - Pre-flight concierge requests
+   - Maintenance coordination
+   - Fuel orders
+   - Hangar pullout scheduling
+   - O2/TKS top-off requests
+   - GPU and cabin provisioning
+   - Priority-based workflow (low, medium, high)
+   - Status tracking (pending, in_progress, completed, cancelled)
+
+3. **Maintenance Tracking**
+   - Calendar-based maintenance items
+   - Hobbs-based maintenance tracking
+   - Tach-based maintenance tracking
+   - Status monitoring (current, due_soon, overdue)
+   - Maintenance notes and completion tracking
+
+4. **Flight Logs**
+   - Flight hour logging
+   - Pilot tracking
+   - Aircraft usage history
+   - Date/time tracking
+
+5. **Membership Management**
+   - Three-tier membership system (Class I, II, III)
+   - Monthly credit allocation
+   - Credit usage tracking
+   - Membership status (active/inactive)
+   - Start/end date management
+
+6. **Invoicing & Billing**
+   - Invoice generation (draft, finalized, paid, void)
+   - Line item tracking
+   - Stripe Checkout integration
+   - Payment processing
+   - Invoice history
+   - Category-based invoicing (service, instruction, etc.)
+
+7. **User Roles & Access Control**
+   - Owner role (default) - access own data
+   - CFI role - instructor capabilities
+   - Staff role - operations access
+   - Ops role - operations manager
+   - Admin role - system administrator
+   - Founder role - super admin with config access
+   - Row Level Security (RLS) policies for all tables
+
+8. **Staff/Admin Features**
+   - Kanban board for service request management
+   - Client management dashboard
+   - Aircraft oversight
+   - Pricing configurator
+   - Staff management
+   - Operations dashboard
+
+9. **CFI (Flight Instructor) Features**
+   - Schedule management
+   - Google Calendar integration
+   - Student/client tracking
+   - Instruction request handling
+   - Invoice creation for instruction
+
+10. **Pricing System**
+    - Multi-tier pricing structure
+    - Hangar location-based pricing
+    - Class-based pricing (I, II, III)
+    - Hour band calculations
+    - Assumptions management (labor rates, overhead, etc.)
+    - Real-time pricing calculator
+    - Margin calculation
+
+11. **Email Notifications**
+    - Service request notifications
+    - Invoice notifications
+    - Maintenance due alerts
+    - Flight instruction notifications
+    - Email queue system with retry logic
+    - HTML and text email templates
+    - Resend integration via Supabase SMTP
+
+12. **Authentication & Security**
+    - Supabase Auth integration
+    - Email/password authentication
+    - Google OAuth sign-in
+    - Password reset flow
+    - Protected routes
+    - Role-based access control
+    - Session management with cookies
+    - Token refresh handling
+
+13. **SEO & Marketing**
+    - Local SEO optimization for Colorado market
+    - Structured data (JSON-LD)
+    - Sitemap generation
+    - Meta tags and Open Graph
+    - Keyword optimization
+    - Performance optimization (Lighthouse 90+)
+
+14. **Progressive Web App (PWA)**
+    - Service worker
+    - Web manifest
+    - Offline capabilities
+    - iOS install banner
+    - App-like experience
+
+### Routes
+
+#### Public Routes
+- `/` - Homepage with hero, features, testimonials
+- `/pricing` - Pricing tiers and calculator
+- `/hangars` - Hangar locations map
+- `/contact` - Contact form
+- `/about` - About page
+- `/login` - Authentication (sign in/sign up)
+- `/forgot-password` - Password reset request
+- `/reset-password` - Password reset confirmation
+
+#### Protected Routes (Owner)
+- `/dashboard` - Owner dashboard (aircraft overview)
+- `/dashboard/aircraft` - Aircraft management
+- `/dashboard/members` - Membership details
+- `/dashboard/settings` - Account settings
+- `/dashboard/more` - Additional settings and billing
+- `/onboarding` - New user onboarding flow
+
+#### Staff/Admin Routes
+- `/staff` or `/admin` - Staff home dashboard
+- `/staff/manage` or `/admin/manage` - Kanban board
+- `/staff/members` - Client management
+- `/staff/aircraft` - Aircraft oversight
+- `/staff/operations` - Operations dashboard
+- `/staff/settings` - Staff settings
+- `/staff/pricing` or `/admin/pricing` - Pricing configurator
+
+#### API Routes
+- `/api/stripe/*` - Stripe payment webhooks and checkout
+- `/api/google-calendar/*` - Google Calendar integration
+- `/api/email-notifications/*` - Email notification processing
+- `/api/invoice/*` - Invoice management
 
 ---
 
@@ -287,6 +461,19 @@ ALTER TABLE user_profiles ADD COLUMN deleted_by UUID REFERENCES user_profiles(id
 
 ## Recent Changes & Migrations
 
+### Completed (Nov 20, 2025)
+
+1. ✅ **Authentication Fixes** (Not yet committed)
+   - Fixed Supabase client configuration with proper auth options
+   - Added cookie configuration for custom domain (www.freedomaviationco.com)
+   - Removed automatic sign-out that caused 403 errors
+   - Fixed SIGNED_OUT event handling
+   - Fixed logout to use global scope with error handling
+   - Added session refresh error handling
+   - Removed hero image preload warning
+   - Files changed: `client/src/lib/supabase.ts`, `client/src/lib/auth-context.tsx`, `client/src/lib/auth-utils.ts`, `client/index.html`
+   - See: `DEPLOY_AUTH_FIXES.md` and `SUPABASE_AUTH_PRODUCTION_GUIDE.md`
+
 ### Completed (Nov 14, 2025)
 
 1. ✅ **Schema Analysis**
@@ -356,28 +543,148 @@ Sender email: info@freedomaviationco.com
 Sender name: Freedom Aviation
 ```
 
-### Email Behavior
+### Email Notification System
+
+**Architecture**:
+- Email notifications stored in `email_notifications` table
+- Queue-based processing system
+- Retry logic for failed sends
+- Status tracking (pending, sent, failed)
+- HTML and plain text templates
+
+**Email Types Sent**:
+1. **Auth Emails** (via Supabase Auth):
+   - User invitation emails ✅
+   - Password reset emails ✅
+   - Email verification ✅
+
+2. **Service Notifications** (via custom system):
+   - Service request confirmations ✅
+   - Service request status updates ✅
+   - Flight instruction requests ✅
+
+3. **Billing Notifications**:
+   - Invoice created ✅
+   - Invoice paid ✅
+   - Payment reminders ✅
+
+4. **Maintenance Alerts**:
+   - Maintenance due soon ✅
+   - Maintenance overdue ✅
+
+**Email Templates**:
+- `server/lib/service-request-email.ts` - Service request templates
+- `server/lib/email.ts` - Invoice templates
+- HTML and plain text versions for all emails
+
+**Processing**:
+```bash
+# Email queue processor endpoint (protected by API key)
+POST /api/email-notifications/process
+
+# Email webhook for Supabase triggers
+POST /api/email-notifications/webhook
+
+# Manual processing via API
+curl -X POST https://your-domain.com/api/email-notifications/process \
+  -H "x-api-key: your-api-key"
+```
 
 **Envelope Sender**: `0100019a83ce3ede-...@send.freedomaviationco.com`
 - This is **normal** - Resend uses SES-style message IDs
 - Recipients see: `Freedom Aviation <info@freedomaviationco.com>`
 
-**Email Types Sent**:
-1. User invitation emails (working ✅)
-2. Password reset emails
-3. Email verification
-4. Invoice notifications
-5. Maintenance due notifications
-
-**Logging**: All emails logged in Resend dashboard
+**Logging**: All emails logged in:
+1. Resend dashboard: https://resend.com/emails
+2. Database `email_notifications` table
+3. Server logs (console)
 
 **Testing**:
 ```bash
 # Check if emails are sending
 # 1. Add user in Supabase dashboard
 # 2. Check Resend logs: https://resend.com/emails
-# 3. Verify email received
+# 3. Check database: SELECT * FROM email_notifications WHERE status = 'pending';
+# 4. Verify email received in inbox
 ```
+
+---
+
+## Integrations & External Services
+
+### Google Calendar Integration
+
+**Status**: ✅ Implemented for CFI scheduling
+
+**Features**:
+- Two-way calendar sync for CFI availability
+- OAuth 2.0 authentication flow
+- Event creation and updates
+- Calendar reading for availability
+- Token storage and refresh
+
+**Configuration**:
+```env
+GOOGLE_CLIENT_ID=your_client_id_here.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_client_secret_here
+GOOGLE_REDIRECT_URI=https://yourdomain.com/api/google-calendar/callback
+```
+
+**Implementation**:
+- `server/lib/google-calendar.ts` - Core calendar integration
+- OAuth flow handled through `/api/google-calendar/*` endpoints
+- Token stored in `user_profiles` or separate oauth table
+
+**Usage**:
+```typescript
+// CFI connects their Google Calendar
+// 1. User initiates OAuth flow
+// 2. Redirects to Google consent screen
+// 3. Callback stores refresh token
+// 4. System syncs CFI availability to calendar
+```
+
+### Stripe Integration
+
+**Status**: ✅ Production ready
+
+**Features**:
+- Stripe Checkout for invoice payments
+- Webhook handling for payment events
+- Customer creation and management
+- Subscription tracking (stored in user_profiles)
+- Payment status updates
+
+**Configuration**:
+```env
+STRIPE_SECRET_KEY=sk_live_...
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+**Implementation**:
+- `server/routes.ts` - Stripe routes and webhook handlers
+- `client/src/features/owner/components/BillingCard.tsx` - Payment UI
+- Invoice payment flow via Stripe Checkout
+- Automatic invoice status updates on payment
+
+**Webhook Events Handled**:
+- `checkout.session.completed` - Mark invoice as paid
+- `invoice.payment_succeeded` - Update payment status
+- `customer.subscription.updated` - Update subscription status
+
+### Resend Email Integration
+
+**Status**: ✅ Production (via Supabase SMTP)
+
+**Method**: Supabase Auth uses Resend for transactional emails
+
+**Configuration** (in Supabase Dashboard):
+- SMTP relay through Resend
+- Custom domain: info@freedomaviationco.com
+- Templates for auth emails in Supabase
+
+**Custom Emails**: Application-triggered emails use direct Resend API or queue system
 
 ---
 
@@ -617,6 +924,82 @@ AND tc.table_name IN (
 
 ## For AI Assistants (Cursor, etc.)
 
+### Document Organization Policy
+
+**⚠️ CRITICAL: Do NOT create new documentation files in the project root unless absolutely necessary!**
+
+#### Allowed Root-Level Files
+Only these files should exist in the project root:
+- `README.md` - Project overview (keep updated)
+- `CONTRIBUTING.md` - Contribution guidelines
+- `CURSOR_CONTEXT.md` - AI assistant reference (this file)
+- `LICENSE` - License file (if exists)
+
+#### Where to Create New Documentation
+
+**Authentication & Security**:
+- Location: `docs/development/auth/`
+- Examples: Auth guides, security fixes, OAuth configuration
+
+**Development Guides**:
+- Location: `docs/development/`
+- Examples: Setup guides, deployment procedures, troubleshooting
+
+**Features**:
+- Location: `docs/features/`
+- Examples: Feature documentation, integration guides, API references
+
+**Database & Architecture**:
+- Location: `docs/architecture/`
+- Examples: Schema documentation, database migrations, system design
+
+**Setup & Configuration**:
+- Location: `docs/setup/`
+- Examples: Email configuration, Stripe setup, environment variables
+
+**Design Guidelines**:
+- Location: `docs/design/`
+- Examples: UI/UX guidelines, component patterns, branding
+
+#### Before Creating a New Document
+
+**Ask yourself**:
+1. ❓ Does this information belong in an existing document?
+2. ❓ Is this documentation absolutely necessary, or is it redundant?
+3. ❓ Should this be a code comment instead?
+4. ❓ Does the existing `docs/` structure already have a place for this?
+
+**If you must create a new document**:
+1. ✅ Choose the appropriate `docs/` subdirectory
+2. ✅ Create a descriptive filename (kebab-case)
+3. ✅ Add an entry to the parent directory's README
+4. ✅ Update `docs/README.md` with a link
+5. ✅ Cross-reference from `CURSOR_CONTEXT.md` if relevant
+
+#### Cleanup Protocol
+
+**If you find scattered documentation**:
+1. Move it to the appropriate `docs/` subdirectory
+2. Update all cross-references
+3. Add a README in the target directory if missing
+4. Verify no broken links
+
+**Example of proper organization**:
+```
+✅ Good:
+docs/development/auth/supabase-auth-guide.md
+docs/features/google-calendar-integration.md
+docs/setup/email-configuration.md
+
+❌ Bad (don't do this):
+SUPABASE_AUTH_GUIDE.md (root)
+GOOGLE_CALENDAR_SETUP.md (root)
+EMAIL_CONFIG.md (root)
+NEW_FEATURE_DOCS.md (root)
+```
+
+---
+
 ### When Working With This Codebase
 
 **Always**:
@@ -626,6 +1009,9 @@ AND tc.table_name IN (
 - ✅ Run migrations on staging first
 - ✅ Update TypeScript types when changing schema
 - ✅ Check for RLS policy impacts
+- ✅ **Place new documentation in `docs/` subdirectories, NOT in root**
+- ✅ **Check if documentation already exists before creating new files**
+- ✅ **Update cross-references when moving/creating docs**
 
 **Never**:
 - ❌ Drop columns without checking view dependencies
@@ -634,36 +1020,136 @@ AND tc.table_name IN (
 - ❌ Skip staging when testing migrations
 - ❌ Use CASCADE without understanding impact
 - ❌ Reference `user_roles` table (being deprecated)
+- ❌ **Create documentation files in the project root**
+- ❌ **Create duplicate documentation**
+- ❌ **Leave documentation scattered/disorganized**
 
 ### Key Files to Reference
 
-- `shared/database-types.ts` - Complete TypeScript schema
-- `SCHEMA_SYNC_ISSUES.md` - Known schema problems
-- `SCHEMA_SYNC_ACTION_PLAN.md` - Migration guide
-- `migrations/` - All migration scripts
-- `supabase-schema.sql` - Base schema
+**Core Configuration**:
+- `shared/database-types.ts` - Complete TypeScript types for all tables
+- `shared/supabase-types.ts` - Supabase-specific types
+- `shared/schema.ts` - Legacy Drizzle schema (incomplete, for reference only)
+- `supabase-schema.sql` - Base database schema
+- `package.json` - Dependencies and scripts
+
+**Documentation**:
+- `docs/README.md` - Documentation index
+- `docs/architecture/database-schema.md` - Database schema documentation
+- `docs/development/getting-started.md` - Setup guide
+- `docs/development/deployment.md` - Deployment procedures
+- `docs/development/auth/` - Authentication documentation
+- `docs/features/` - Feature-specific guides
+- `CONTRIBUTING.md` - Development workflow and guidelines
+
+**Migrations & Scripts**:
+- `migrations/` - 19 database migration SQL files
+- `migrations/README.md` - Migration guide
+- `scripts/` - 21 utility SQL scripts
+- `scripts/README.md` - Script documentation
 
 ### Recent Context (Nov 2025)
 
-1. Completed full schema synchronization
-2. Identified duplicate aircraft columns (pending migration)
-3. Identified dual user role system (pending migration)
-4. Email system working via Resend
-5. User deletion blocked by FK constraints (needs soft delete)
+1. **Completed** ✅:
+   - Full schema synchronization and type generation
+   - Auth fixes for production (awaiting commit)
+   - Comprehensive email notification system
+   - Google Calendar integration for CFIs
+   - Stripe payment processing
+   - Complete PWA implementation
+   - SEO optimization for Colorado market
+
+2. **Pending** 🔧:
+   - Duplicate aircraft columns migration (ready for testing)
+   - Dual user role system migration (ready for testing)
+   - Soft delete implementation for user_profiles
+
+3. **Working** ✅:
+   - Email system via Resend + Supabase SMTP
+   - Stripe Checkout and webhooks
+   - Google OAuth and Calendar sync
+   - All authentication flows
+   - Service request workflow
+   - Invoice generation and payment
+
+4. **Known Constraints** ⚠️:
+   - User deletion blocked by FK constraints (needs soft delete)
+   - VITE_ environment variables not available in Vercel serverless functions
+   - Must use SUPABASE_URL, SUPABASE_ANON_KEY without VITE_ prefix in production
+
+### Environment Variables Important Notes
+
+**Development** (`.env.local`):
+```env
+# These work in development
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+**Production** (Vercel):
+```env
+# MUST use without VITE_ prefix for serverless functions
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+
+# Also set VITE_ versions for client-side build
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+```
+
+**Why**: Vite only includes `VITE_` variables in client bundle during build time. Serverless functions run server-side and need non-prefixed versions at runtime.
 
 ---
 
 ## 📞 Getting Help
 
-**Database Issues**: Check `SCHEMA_SYNC_ISSUES.md`  
-**Migration Issues**: Check `SCHEMA_SYNC_ACTION_PLAN.md`  
-**Type Errors**: Check `shared/database-types.ts`  
-**Email Issues**: Check Resend dashboard  
-**User Issues**: This document (User System section)  
+**Topic** | **Resource**
+----------|-------------
+Database Issues | `docs/architecture/database-schema.md`
+Migration Issues | `migrations/README.md`
+Type Errors | `shared/database-types.ts`
+Authentication | `docs/development/auth/SUPABASE_AUTH_PRODUCTION_GUIDE.md`
+Email Configuration | `docs/setup/email-configuration.md`
+Stripe Setup | `docs/setup/stripe-configuration.md`
+Deployment | `docs/development/deployment.md`
+Troubleshooting | `docs/development/troubleshooting.md`
+Google Integration | `docs/features/google-integration.md`
+Getting Started | `docs/development/getting-started.md`
+User Roles | This document (User System & Authentication section)
+Feature Documentation | `docs/features/`
+General Questions | `docs/README.md`
 
-**Last Verified**: November 14, 2025  
-**Verified By**: AI Assistant + User Collaboration  
+**Last Updated**: November 20, 2025  
+**Updated By**: AI Assistant + User Collaboration  
 **Next Review**: After pending migrations complete  
+
+---
+
+## 📋 Document Structure Summary
+
+```
+FreedomAviation-1/
+├── README.md                      # Project overview (you are here)
+├── CONTRIBUTING.md                # Contribution guidelines
+├── CURSOR_CONTEXT.md              # AI assistant reference
+├── docs/
+│   ├── README.md                  # Documentation index
+│   ├── architecture/              # System architecture & database
+│   ├── development/               # Development guides
+│   │   ├── auth/                  # Authentication documentation
+│   │   ├── getting-started.md
+│   │   ├── deployment.md
+│   │   ├── troubleshooting.md
+│   │   └── database-migrations.md
+│   ├── features/                  # Feature documentation
+│   ├── setup/                     # Configuration guides
+│   └── design/                    # Design guidelines
+├── migrations/                    # Database migrations (19 files)
+├── scripts/                       # Utility scripts (21 files)
+└── [source code directories...]
+```
 
 ---
 

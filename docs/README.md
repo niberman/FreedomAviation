@@ -25,6 +25,8 @@ Welcome to the Freedom Aviation documentation. This directory contains comprehen
 ### 👨‍💻 Development
 - **[Contributing Guide](../CONTRIBUTING.md)** - How to contribute to the project
 - **[Getting Started](development/getting-started.md)** - Development setup
+- **[Authentication Guide](development/auth/SUPABASE_AUTH_PRODUCTION_GUIDE.md)** - Complete auth configuration
+- **[Auth Deployment](development/auth/DEPLOY_AUTH_FIXES.md)** - Quick auth deployment guide
 - **[Database Migrations](development/database-migrations.md)** - Migration guide
 - **[Deployment](development/deployment.md)** - Production deployment guide
 - **[Troubleshooting](development/troubleshooting.md)** - Common issues and solutions
@@ -71,6 +73,13 @@ docs/
 ├── design/
 │   └── guidelines.md
 └── development/
+    ├── auth/                                    # Authentication documentation
+    │   ├── README.md
+    │   ├── SUPABASE_AUTH_PRODUCTION_GUIDE.md
+    │   ├── DEPLOY_AUTH_FIXES.md
+    │   ├── AUTH_FIXES_SUMMARY.md
+    │   ├── AUTH_FLOW_DIAGRAM.md
+    │   └── SUPABASE_AUTH_FIX.md
     ├── getting-started.md
     ├── database-migrations.md
     ├── deployment.md
@@ -104,6 +113,12 @@ docs/
 
 **Deploy to production**
 → [Deployment Guide](development/deployment.md)
+
+**Configure authentication**
+→ [Authentication Guide](development/auth/SUPABASE_AUTH_PRODUCTION_GUIDE.md)
+
+**Fix auth issues**
+→ [Auth Fixes](development/auth/) or [Troubleshooting](development/troubleshooting.md)
 
 **Troubleshoot issues**
 → [Troubleshooting](development/troubleshooting.md)

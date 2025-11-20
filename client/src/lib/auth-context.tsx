@@ -23,9 +23,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting initial session:', error);
+      }
       setSession(session);
       setUser(session?.user ?? null);
+      setLoading(false);
+    }).catch((err) => {
+      console.error('Failed to get initial session:', err);
       setLoading(false);
     });
 
@@ -33,16 +39,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      // Handle password recovery - Supabase automatically processes tokens from URL hash
-      if (event === 'PASSWORD_RECOVERY') {
-        // Session is automatically set when password recovery tokens are processed
+      console.log('Auth state change:', event, session ? 'session present' : 'no session');
+      
+      // Handle different auth events
+      if (event === 'SIGNED_OUT') {
+        // User signed out - clear state
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      } else if (event === 'PASSWORD_RECOVERY') {
+        // Handle password recovery - Supabase automatically processes tokens from URL hash
         setSession(session);
         setUser(session?.user ?? null);
+        setLoading(false);
+      } else if (event === 'SIGNED_IN') {
+        // User signed in
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Session refreshed successfully
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      } else if (event === 'USER_UPDATED') {
+        // User data updated
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
       } else {
+        // Any other event - update state
         setSession(session);
         setUser(session?.user ?? null);
+        setLoading(false);
       }
-      setLoading(false); // Ensure loading is cleared on any auth state change
     });
 
     return () => subscription.unsubscribe();
@@ -96,8 +126,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      // Use 'global' scope to sign out from all sessions
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      
+      if (error) {
+        // If we get a 403 or other error, still clear local state
+        // This prevents logout loops when the server session is already invalid
+        console.warn('Sign out error (clearing local state anyway):', error);
+        
+        // Manually clear local state
+        setSession(null);
+        setUser(null);
+        
+        // Only throw if it's not a 403/session error
+        if (!error.message?.includes('403') && !error.message?.includes('session')) {
+          throw error;
+        }
+      }
+    } catch (err) {
+      console.error('Sign out exception:', err);
+      // Always clear local state even on error
+      setSession(null);
+      setUser(null);
+      throw err;
+    }
   };
 
   const updatePassword = async (newPassword: string) => {
