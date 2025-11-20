@@ -1,178 +1,172 @@
 # Database Migrations
 
-This folder contains SQL migrations for the Freedom Aviation database.
+This directory contains SQL migration scripts for the Freedom Aviation database. These migrations handle schema changes, data updates, and fixes that have been applied to the production database.
 
-## 🚨 Critical: User Roles Migration
+## Overview
 
-If you're experiencing **400 errors** and **can't access the staff dashboard**, you need to run the user roles migration.
+Migrations are SQL scripts that modify the database schema or data. They are organized in this directory and should be applied carefully to avoid data loss or corruption.
 
-### Quick Start
+## Migration Types
 
-**Run these files in order in your Supabase SQL Editor:**
+### Schema Migrations
+Scripts that modify database structure:
+- `CREATE_FLIGHT_LOGS_TABLE.sql` - Flight logging system
+- `CREATE_MAINTENANCE_TABLE.sql` - Maintenance tracking
+- `create_notifications_table.sql` - Notification system
+- `cleanup_aircraft_duplicate_columns.sql` - Remove duplicate columns
+- `cleanup_unused_tables.sql` - Remove obsolete tables
 
-1. **`add_user_roles.sql`** ← **START HERE!**
-   - Adds the missing `role` column to `user_profiles`
-   - Creates the `user_role` enum type
-   - Sets your user to `founder` role
-   - **Required** - fixes the 400 errors
+### Role & Permission Migrations
+Scripts that manage user roles and access control:
+- `add_user_roles.sql` - Add role system to user profiles
+- `add_founder_to_all_policies_SAFE.sql` - Grant founder access
+- `add_staff_view_permissions.sql` - Staff viewing permissions
+- `fix_client_roles.sql` - Fix client role assignments
+- `resolve_user_roles_duplication.sql` - Remove duplicate roles
+- `fix_role_whitespace.sql` - Clean role data
 
-2. **`verify_roles.sql`** ← Run this to check it worked
-   - Verification script
-   - Shows all users and their roles
-   - Confirms migration was successful
+### RLS (Row Level Security) Migrations
+Scripts that update database security policies:
+- `fix_rls_policies_EMERGENCY.sql` - Emergency RLS fixes
+- `FIX_SERVICE_REQUESTS_RLS.sql` - Service request access policies
+- `safe_schema_setup.sql` - Safe schema initialization with RLS
 
-3. **`fix_rls_policies.sql`** ← Only if still having issues
-   - Optional - only run if you still have access issues
-   - Updates Row Level Security policies for role support
+### Feature Migrations
+Scripts that add or modify features:
+- `deploy_invoice_functions.sql` - Invoice management functions
+- `fix_invoice_aircraft_optional.sql` - Make aircraft optional in invoices
+- `update_hangar_pricing.sql` - Update hangar pricing structure
 
-### Files in This Folder
+### Diagnostic Scripts
+Scripts for troubleshooting:
+- `diagnose_client_visibility.sql` - Debug client access issues
+- `EMERGENCY_FIX_RECURSION_V2.sql` - Fix recursive policy issues
 
-| File | Purpose | When to Use |
-|------|---------|-------------|
-| `add_user_roles.sql` | **Main migration** - adds role column | ✅ Run first |
-| `verify_roles.sql` | Verification & diagnostics | ✅ Run after migration |
-| `fix_rls_policies.sql` | Fix RLS policies | ⚠️ Only if needed |
-| `README_USER_ROLES.md` | Detailed documentation | 📖 Reference |
+### Trigger Migrations
+Scripts that manage database triggers:
+- `fix_user_creation_trigger.sql` - Fix user profile creation
 
-### Step-by-Step Instructions
+## How to Use Migrations
 
-#### 1. Open Supabase SQL Editor
+### Running a Migration
 
-Navigate to: `https://app.supabase.com/project/wsepwuxkwjnsgmkddkjw/sql`
+1. **Open Supabase SQL Editor**
+   - Navigate to: https://supabase.com/dashboard/project/[your-project-id]/sql
 
-#### 2. Run the Main Migration
+2. **Open the Migration File**
+   - Open the desired `.sql` file from this directory
 
-- Open `add_user_roles.sql`
-- Copy all contents
-- Paste into SQL Editor
-- Click **Run**
-- Wait for "Success" message
+3. **Review the Script**
+   - Read through the SQL to understand what it does
+   - Check for any placeholder values that need updating
 
-#### 3. Verify It Worked
+4. **Execute the Migration**
+   - Copy the entire contents
+   - Paste into the SQL Editor
+   - Click "Run"
+   - Wait for "Success" message
 
-- Open `verify_roles.sql`  
-- Copy all contents
-- Paste into SQL Editor
-- Click **Run**
-- Check the output - you should see:
-  - ✅ user_role enum exists
-  - ✅ role column exists
-  - ✅ Your user has founder role
-  - ✅ No NULL roles
+5. **Verify the Changes**
+   - Test the affected functionality in the application
+   - Check that data is correct
+   - Verify RLS policies are working as expected
 
-#### 4. Test in Application
+### Best Practices
 
-- Log out
-- Clear browser cache (or use incognito)
-- Log back in
-- Navigate to `/staff/dashboard`
-- 🎉 Success!
-
-## What This Migration Does
-
-### Before Migration
-
-```sql
-CREATE TABLE public.user_profiles (
-  id uuid NOT NULL,
-  email text NOT NULL,
-  full_name text,
-  phone text,
-  -- ❌ No role column!
-  created_at timestamp with time zone,
-  updated_at timestamp with time zone
-);
-```
-
-**Result:** 400 errors when querying `user_profiles?select=role`
-
-### After Migration
-
-```sql
-CREATE TYPE user_role AS ENUM ('owner', 'staff', 'cfi', 'admin', 'ops', 'founder');
-
-CREATE TABLE public.user_profiles (
-  id uuid NOT NULL,
-  email text NOT NULL,
-  full_name text,
-  phone text,
-  role user_role DEFAULT 'owner', -- ✅ Role column added!
-  created_at timestamp with time zone,
-  updated_at timestamp with time zone
-);
-```
-
-**Result:** ✅ Role queries work, staff dashboard accessible
-
-## Available Roles
-
-| Role | Access |
-|------|--------|
-| `owner` | Regular client - owner dashboard only |
-| `cfi` | Flight instructor - can create instruction invoices |
-| `staff` | Staff member - staff dashboard access |
-| `ops` | Operations team - operations management |
-| `admin` | Administrator - full admin access |
-| `founder` | Founder - highest level access |
-
-## Troubleshooting
-
-### Still Getting 400 Errors?
-
-1. Check if migration ran successfully:
-   ```sql
-   SELECT column_name FROM information_schema.columns 
-   WHERE table_name = 'user_profiles' AND column_name = 'role';
-   ```
-   Should return: `role`
-
-2. If nothing returned, the migration didn't run - try again
-
-### Can't Access Staff Dashboard?
-
-1. Check your role:
-   ```sql
-   SELECT email, role FROM user_profiles 
-   WHERE email = 'noah@freedomaviationco.com';
-   ```
-   Should return: `founder`
-
-2. If not `founder`, update it:
-   ```sql
-   UPDATE user_profiles SET role = 'founder' 
-   WHERE email = 'noah@freedomaviationco.com';
-   ```
-
-3. Log out and back in
-
-### RLS Policies Blocking Access?
-
-Run `fix_rls_policies.sql` to update the policies
-
-## Documentation
-
-For more detailed information, see:
-- **Quick reference:** `../QUICK_FIX_ROLES.md`
-- **Complete guide:** `../ROLES_FIX_SUMMARY.md`  
-- **Technical details:** `README_USER_ROLES.md`
+1. **Backup First** - Always backup your database before running migrations
+2. **Test in Development** - Run migrations in a test environment first
+3. **Read Carefully** - Understand what the migration does before running it
+4. **One at a Time** - Run migrations one at a time, not all at once
+5. **Verify Results** - Check that the migration succeeded and didn't break anything
+6. **Document** - Update this README if you create new migrations
 
 ## Creating New Migrations
 
-When creating new migrations:
+When you need to create a new migration:
 
-1. Name files with date prefix: `YYYYMMDD_description.sql`
-2. Include rollback instructions in comments
-3. Test on development database first
-4. Document in this README
+1. **Name the File Descriptively**
+   ```
+   verb_target_description.sql
+   Examples:
+   - add_subscription_status.sql
+   - fix_user_profiles_rls.sql
+   - update_aircraft_pricing.sql
+   ```
+
+2. **Include Comments**
+   ```sql
+   -- Migration: Add subscription status tracking
+   -- Date: 2024-01-15
+   -- Purpose: Track active/inactive subscription status
+   -- Dependencies: Requires user_profiles table
+   
+   -- Your SQL here...
+   ```
+
+3. **Use Safe Patterns**
+   ```sql
+   -- Check if column exists before adding
+   DO $$
+   BEGIN
+     IF NOT EXISTS (
+       SELECT FROM information_schema.columns 
+       WHERE table_name = 'users' AND column_name = 'new_column'
+     ) THEN
+       ALTER TABLE users ADD COLUMN new_column TEXT;
+     END IF;
+   END $$;
+   ```
+
+4. **Test Thoroughly**
+   - Test on development database
+   - Verify no data loss
+   - Check RLS policies still work
+   - Test application functionality
+
+5. **Document in this README**
+   - Add to the appropriate section above
+   - Note any dependencies
+   - Document expected outcome
+
+## Troubleshooting
+
+### Migration Failed
+
+If a migration fails:
+1. Check the error message carefully
+2. Look for syntax errors or typos
+3. Verify all referenced tables/columns exist
+4. Check if the migration was already applied
+5. Try running in smaller chunks
+
+### RLS Policy Issues
+
+If you're having access issues after a migration:
+1. Check RLS policies are enabled: `SELECT * FROM pg_tables WHERE tablename = 'your_table'`
+2. Verify your user's role: `SELECT role FROM user_profiles WHERE email = 'your@email.com'`
+3. Test policies with: `SET ROLE authenticated;` in SQL Editor
+
+### Data Corruption
+
+If a migration corrupts data:
+1. Restore from backup immediately
+2. Review the migration script
+3. Fix the issue
+4. Test thoroughly before re-running
 
 ## Migration History
 
-| Date | File | Description | Status |
-|------|------|-------------|--------|
-| 2024 | `add_user_roles.sql` | Add role column to user_profiles | ✅ Ready |
-| 2024 | `fix_rls_policies.sql` | Update RLS policies for roles | ✅ Ready |
+For a complete history of schema changes, see:
+- Main schema: `../supabase-schema.sql`
+- Utility scripts: `../scripts/`
+- Documentation: `../docs/architecture/database-schema.md`
+
+## Related Documentation
+
+- [Database Schema](../docs/architecture/database-schema.md) - Complete schema documentation
+- [Setup Scripts](../scripts/README.md) - Utility scripts for setup and maintenance
+- [Getting Started](../docs/development/getting-started.md) - Development setup guide
 
 ---
 
-**Need help?** See the main documentation in `ROLES_FIX_SUMMARY.md`
-
+**Important**: These migrations represent historical changes. For a fresh database setup, use `../supabase-schema.sql` instead of running all migrations.

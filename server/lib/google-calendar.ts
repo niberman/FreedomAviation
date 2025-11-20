@@ -76,6 +76,10 @@ export async function getTokensFromCode(code: string) {
  * Get authenticated calendar client for a user
  */
 export async function getCalendarClient(userId: string) {
+  if (!supabase) {
+    throw new Error('Supabase client not initialized');
+  }
+
   // Fetch tokens from database
   const { data: tokenData, error } = await supabase
     .from('google_calendar_tokens')
@@ -96,7 +100,7 @@ export async function getCalendarClient(userId: string) {
 
   // Handle token refresh automatically
   oauth2Client.on('tokens', async (tokens) => {
-    if (tokens.refresh_token) {
+    if (tokens.refresh_token && supabase) {
       // Update tokens in database
       await supabase
         .from('google_calendar_tokens')
@@ -267,6 +271,10 @@ export async function syncSlotToCalendar(
   slot: ScheduleSlot
 ): Promise<string | null> {
   try {
+    if (!supabase) {
+      throw new Error('Supabase client not initialized');
+    }
+
     // Get user's calendar tokens
     const { data: tokenData } = await supabase
       .from('google_calendar_tokens')
@@ -289,10 +297,12 @@ export async function syncSlotToCalendar(
       const eventId = await createCalendarEvent(slot.cfi_id, slot, calendarId);
       
       // Update slot with event ID
-      await supabase
-        .from('cfi_schedule')
-        .update({ google_calendar_event_id: eventId })
-        .eq('id', slot.id);
+      if (supabase) {
+        await supabase
+          .from('cfi_schedule')
+          .update({ google_calendar_event_id: eventId })
+          .eq('id', slot.id);
+      }
 
       return eventId;
     }
@@ -307,7 +317,7 @@ export async function syncSlotToCalendar(
  */
 export async function removeCalendarEvent(slot: ScheduleSlot): Promise<void> {
   try {
-    if (!slot.google_calendar_event_id) {
+    if (!slot.google_calendar_event_id || !supabase) {
       return;
     }
 
@@ -343,6 +353,10 @@ export async function getUserCalendars(userId: string) {
  * Check if user has Google Calendar connected
  */
 export async function hasGoogleCalendarConnected(userId: string): Promise<boolean> {
+  if (!supabase) {
+    return false;
+  }
+
   const { data, error } = await supabase
     .from('google_calendar_tokens')
     .select('id')

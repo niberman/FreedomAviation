@@ -236,8 +236,12 @@
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
     </noscript>
     
-    <!-- Preload hero image for LCP optimization -->
-    <link rel="preload" as="image" href="/attached_assets/stock_images/premium_cirrus_sr22t_b2f4f8b8.jpg" fetchpriority="high">
+    <!-- 
+      Preload hero image for LCP optimization on home page
+      Note: This may cause warnings if user navigates directly to other pages
+      Only preload images that are critical for above-the-fold content
+    -->
+    <link rel="preload" as="image" href="/attached_assets/stock_images/premium_cirrus_sr22t_b2f4f8b8.jpg" fetchpriority="high" imagesrcset="/attached_assets/stock_images/premium_cirrus_sr22t_b2f4f8b8.jpg 1x">
   </head>
   <body>
     <div id="root"></div>

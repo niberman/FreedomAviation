@@ -28,7 +28,7 @@
 - **Auth**: Supabase Auth
 - **Payments**: Stripe
 - **Email**: Resend (via SMTP)
-- **Hosting**: Vercel (likely)
+- **Hosting**: Vercel 
 
 ### Project Structure
 ```

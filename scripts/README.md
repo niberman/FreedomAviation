@@ -1,6 +1,10 @@
 # Database Scripts
 
-Utility scripts for database setup, migrations, and maintenance.
+Utility scripts for database setup, feature additions, and maintenance. These scripts are designed to be run manually when setting up new features or making specific database updates.
+
+## Overview
+
+This directory contains SQL and shell scripts for managing the Freedom Aviation database. Unlike migrations, which are historical changes, these scripts are reusable utilities for common database operations.
 
 ## Essential Setup Scripts
 
@@ -10,7 +14,7 @@ Utility scripts for database setup, migrations, and maintenance.
 **Usage**:
 1. Replace `YOUR_EMAIL@example.com` with your email
 2. Run in Supabase SQL Editor
-3. Verify with `check-setup.sql`
+3. Log out and back in to see changes
 
 **Example**:
 ```sql
@@ -19,19 +23,13 @@ SET role = 'admin'
 WHERE email = 'your@email.com';
 ```
 
-### check-setup.sql
-**Purpose**: Verify database configuration
+**When to use**: After creating a new user account that needs admin access
 
-**Usage**:
-Run in Supabase SQL Editor to check:
-- All tables exist
-- RLS policies are configured
-- Triggers are active
-- User roles are set correctly
+## Feature Addition Scripts
 
-## Feature Migration Scripts
+### Google Integration
 
-### add-google-oauth-support.sql
+#### add-google-oauth-support.sql
 **Purpose**: Enable Google OAuth sign-in
 
 **What it does**:
@@ -41,7 +39,7 @@ Run in Supabase SQL Editor to check:
 
 **When to use**: When adding Google OAuth to existing database
 
-### add-google-calendar-integration.sql
+#### add-google-calendar-integration.sql
 **Purpose**: Enable CFI Google Calendar sync
 
 **What it does**:
@@ -50,90 +48,216 @@ Run in Supabase SQL Editor to check:
 - Sets up RLS policies
 - Adds necessary indexes
 
-**When to use**: When adding Google Calendar integration
+**When to use**: When adding Google Calendar integration for flight instructors
 
-## Column/Table Addition Scripts
+### Payment Integration
 
-### add-aircraft-features.sql
-**Purpose**: Add aircraft-specific features
+#### add-stripe-fields.sql
+**Purpose**: Add Stripe payment fields to user profiles
 
-**What it does**: Adds columns for aircraft management features
+**What it does**: 
+- Adds `stripe_customer_id` column
+- Adds `stripe_subscription_id` column
+- Enables payment tracking
 
-### add-flight-hours-column.sql
+**When to use**: When integrating Stripe payments
+
+### Email System
+
+#### add-email-triggers.sql
+**Purpose**: Set up automated email notifications
+
+**What it does**:
+- Creates triggers for email notifications
+- Configures email templates
+- Sets up notification rules
+
+**When to use**: When implementing automated email system
+
+### Aircraft Management
+
+#### add-aircraft-features.sql
+**Purpose**: Add advanced aircraft management features
+
+**What it does**: Adds columns and tables for enhanced aircraft tracking
+
+**When to use**: When expanding aircraft management capabilities
+
+#### add-flight-hours-column.sql
 **Purpose**: Add flight hours tracking
 
-**What it does**: Adds columns for tracking flight hours
+**What it does**: Adds columns for tracking total flight hours
 
-### add-stripe-fields.sql
-**Purpose**: Add Stripe payment fields
+**When to use**: When implementing flight hour logging
 
-**What it does**: Adds columns for Stripe customer IDs and subscription data
+### CFI & Scheduling
 
-### create-cfi-schedule-table.sql
+#### create-cfi-schedule-table.sql
 **Purpose**: Create CFI schedule table
 
-**Alternative**: Use `add-google-calendar-integration.sql` instead (more complete)
+**What it does**: Creates basic CFI availability table
 
-### create-flight-logs-table.sql
+**Note**: Consider using `add-google-calendar-integration.sql` for more complete solution
+
+### Flight Operations
+
+#### create-flight-logs-table.sql
 **Purpose**: Create flight logs table
 
-**What it does**: Creates table for tracking flight logs
+**What it does**: Creates table for tracking individual flights
 
-### create-payable-invoice.sql / create-payable-invoice-simple.sql
-**Purpose**: Create invoice tables
+**When to use**: When implementing flight logging feature
 
-**What it does**: Creates tables for invoice management
+### Invoice Management
 
-## Update Scripts
+#### create-payable-invoice-simple.sql
+**Purpose**: Create invoice management tables
 
-### make-aircraft-optional-in-invoices.sql
+**What it does**: Creates tables and functions for invoice system
+
+**When to use**: Initial invoice system setup
+
+#### make-aircraft-optional-in-invoices.sql
 **Purpose**: Allow invoices without aircraft
 
-**What it does**: Modifies invoice table to make aircraft_id optional
+**What it does**: Modifies invoice table to make `aircraft_id` optional
+
+**When to use**: When you need to create non-aircraft invoices (memberships, services, etc.)
+
+## Data Update Scripts
 
 ### update-hangar-amenities.sql
-**Purpose**: Update hangar amenities data
+**Purpose**: Update hangar locations with amenities
 
-**What it does**: Updates hangar locations with amenities information
+**What it does**: Adds/updates amenities data for hangar locations
+
+**When to use**: When updating hangar information
 
 ### update-membership-pricing.sql
-**Purpose**: Update membership pricing
+**Purpose**: Update membership tier pricing
 
-**What it does**: Updates pricing for membership tiers
+**What it does**: Updates pricing for different membership levels
+
+**When to use**: When adjusting membership prices
 
 ### update-pricing-classes-by-features.sql
-**Purpose**: Update pricing based on features
+**Purpose**: Update pricing based on aircraft features
 
-**What it does**: Adjusts pricing classes based on aircraft features
+**What it does**: Adjusts pricing tiers based on aircraft capabilities
 
-## Utility Scripts
+**When to use**: When rebalancing aircraft pricing
+
+## Role Management Scripts
+
+### add-ops-role-manual.sql
+**Purpose**: Add operations role to user
+
+**What it does**: Grants ops role permissions
+
+**When to use**: Creating operations team members
+
+### add-role-column.sql
+**Purpose**: Add role column to user profiles
+
+**What it does**: Adds role support to existing database
+
+**When to use**: Initial role system setup
+
+### consolidate-role-enums.sql
+**Purpose**: Consolidate duplicate role enums
+
+**What it does**: Fixes issues with multiple role enum definitions
+
+**When to use**: Fixing role enum conflicts
+
+## Fix Scripts
+
+### fix_user_profiles_rls_simple.sql
+**Purpose**: Fix user profiles Row Level Security
+
+**What it does**: Updates RLS policies for user profiles
+
+**When to use**: When users can't access their own profiles
+
+### fix-dual-enum-problem.sql
+**Purpose**: Fix duplicate enum types
+
+**What it does**: Resolves conflicts from multiple enum definitions
+
+**When to use**: When seeing enum-related errors
+
+### fix-enum-values.sql
+**Purpose**: Fix enum value mismatches
+
+**What it does**: Ensures enum values are consistent
+
+**When to use**: When role values don't match enum definition
+
+### remove-unused-enum.sql
+**Purpose**: Remove obsolete enum types
+
+**What it does**: Cleans up unused enum definitions
+
+**When to use**: Database cleanup
+
+### migrate-to-user-role-cascade.sql
+**Purpose**: Add cascade rules to role foreign keys
+
+**What it does**: Ensures proper cascading on role changes
+
+**When to use**: Updating role referential integrity
+
+## Utility Shell Scripts
 
 ### get-webhook-secret.sh
 **Purpose**: Retrieve Stripe webhook secret
 
 **Usage**:
 ```bash
+chmod +x scripts/get-webhook-secret.sh
 ./scripts/get-webhook-secret.sh
 ```
 
+**When to use**: Setting up Stripe webhook integration
+
 ### set-env-vars.sh
-**Purpose**: Set environment variables
+**Purpose**: Configure environment variables
 
 **Usage**:
 ```bash
+chmod +x scripts/set-env-vars.sh
 ./scripts/set-env-vars.sh
 ```
 
-## Usage Guidelines
+**When to use**: Initial environment setup
+
+## How to Use Scripts
 
 ### Running SQL Scripts
 
 1. **Open Supabase Dashboard**
-2. **Navigate to SQL Editor**
-3. **Copy script contents**
-4. **Paste and review**
-5. **Click "Run"**
-6. **Verify results**
+   - Go to https://supabase.com/dashboard
+   - Navigate to your project
+   - Click "SQL Editor"
+
+2. **Load Script**
+   - Open the `.sql` file in a text editor
+   - Copy all contents
+
+3. **Review Before Running**
+   - Read through the SQL
+   - Check for any placeholders (YOUR_EMAIL, etc.)
+   - Replace placeholders with actual values
+
+4. **Execute**
+   - Paste into SQL Editor
+   - Click "Run"
+   - Wait for success confirmation
+
+5. **Verify**
+   - Check that expected changes occurred
+   - Test in the application
+   - Verify no errors in console
 
 ### Running Shell Scripts
 
@@ -143,75 +267,80 @@ chmod +x scripts/script-name.sh
 
 # Run script
 ./scripts/script-name.sh
+
+# Or run from project root
+./scripts/script-name.sh
 ```
-
-### Testing Scripts
-
-Always test scripts in development environment first:
-
-1. Create test Supabase project
-2. Run script
-3. Verify expected changes
-4. Test application functionality
-5. Apply to production if successful
-
-## Script Development
-
-When creating new scripts:
-
-1. **Use IF NOT EXISTS** for tables and indexes
-2. **Include comments** explaining purpose
-3. **Document in this README**
-4. **Test thoroughly** before committing
-5. **Follow naming convention**: `action-target.sql`
-
-### Naming Convention
-
-- `add-*`: Adding new features/columns
-- `create-*`: Creating new tables
-- `update-*`: Updating existing data
-- `fix-*`: Fixing issues (avoid - fix in main schema instead)
-- `setup-*`: Initial setup scripts
-- `check-*`: Verification scripts
 
 ## Best Practices
 
-1. **Backup first** - Always backup before running scripts in production
-2. **Test in dev** - Run in development environment first
-3. **Read carefully** - Review script before running
-4. **Check results** - Verify changes after running
-5. **Update docs** - Update this README when adding scripts
+### Before Running Scripts
+
+1. **Backup Your Database** - Always backup before making changes
+2. **Test in Development** - Run in dev environment first
+3. **Read the Script** - Understand what it does
+4. **Check Dependencies** - Ensure required tables/columns exist
+5. **Update Placeholders** - Replace any template values
+
+### After Running Scripts
+
+1. **Verify Changes** - Check database for expected changes
+2. **Test Application** - Ensure features work correctly
+3. **Check Logs** - Look for any errors
+4. **Document** - Note what you ran and when
+
+### Script Development
+
+When creating new scripts:
+
+1. **Use Descriptive Names**: `action-target.sql` format
+2. **Add Comments**: Explain what the script does
+3. **Include Safety Checks**: Use `IF NOT EXISTS`, etc.
+4. **Test Thoroughly**: Test on dev database first
+5. **Document Here**: Add entry to this README
+
+### Naming Convention
+
+- `add-*` - Adding new features/columns
+- `create-*` - Creating new tables
+- `update-*` - Updating existing data
+- `fix-*` - Fixing specific issues
+- `setup-*` - Initial setup scripts
 
 ## Troubleshooting
 
-### Script fails with "table already exists"
-- Normal if table was created previously
-- Script should use `IF NOT EXISTS`
-- Check if table has correct structure
+### "Table already exists" error
+- Normal if feature was already added
+- Check if table structure is correct
+- Script should use `IF NOT EXISTS` clause
 
-### Permission denied errors
-- Ensure you're using service role key for admin operations
-- Check RLS policies allow the operation
+### "Column already exists" error
+- Feature was already added
+- Verify column has correct type and constraints
+- Safe to ignore if script uses `IF NOT EXISTS`
+
+### Permission denied
+- Ensure using correct database credentials
+- Check RLS policies allow operation
+- May need service role key for admin operations
 
 ### Foreign key violations
-- Ensure referenced tables exist first
-- Verify referenced records exist
+- Verify referenced tables exist
+- Check that referenced records exist
+- Ensure referential integrity
 
-## Maintenance
+## Related Documentation
 
-Periodically review scripts and:
-- Remove obsolete scripts
-- Update documentation
-- Consolidate similar scripts
-- Archive old migration scripts
+- [Database Migrations](../migrations/README.md) - Historical database changes
+- [Database Schema](../docs/architecture/database-schema.md) - Complete schema reference
+- [Getting Started](../docs/development/getting-started.md) - Development setup
 
 ## See Also
 
-- [Database Schema Documentation](../docs/architecture/database-schema.md)
-- [Database Migrations Guide](../docs/development/database-migrations.md)
-- [Main Schema](../supabase-schema.sql)
+- **Main Schema**: `../supabase-schema.sql` - Complete database schema
+- **Migrations**: `../migrations/` - Historical changes
+- **Documentation**: `../docs/` - Full documentation
 
 ---
 
-**Note**: The main database schema is in `supabase-schema.sql` at the project root. Use these scripts for incremental updates or specific features.
-
+**Note**: These are utility scripts for specific operations. For a complete database setup, use the main schema file `supabase-schema.sql` at the project root.

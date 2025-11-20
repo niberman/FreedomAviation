@@ -111,6 +111,10 @@ async function processNotification(notification: any) {
   // Get recipients based on role
   let recipients: { email: string; full_name: string }[] = [];
 
+  if (!supabase) {
+    throw new Error('Supabase client not initialized');
+  }
+
   if (recipient_role === 'ops') {
     const { data: opsUsers } = await supabase
       .rpc('get_ops_emails');
@@ -137,14 +141,16 @@ async function processNotification(notification: any) {
   }
 
   // Mark as sent
-  await supabase
-    .from('email_notifications')
-    .update({
-      status: 'sent',
-      sent_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', notification.id);
+  if (supabase) {
+    await supabase
+      .from('email_notifications')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', notification.id);
+  }
 }
 
 /**
