@@ -91,8 +91,9 @@ export async function authenticatedFetch(
       }
     }
     
-    // If refresh failed or retry failed, clear the session
-    await supabase.auth.signOut({ scope: 'local' });
+    // DON'T automatically sign out - let the app handle it via auth context
+    // This prevents 403 errors and logout loops
+    console.error('❌ Session refresh failed. User needs to re-authenticate.');
     throw new Error('Session expired. Please log in again.');
   }
   

@@ -10,34 +10,96 @@ Freedom Aviation is a comprehensive web application for managing aircraft, membe
 
 ## Features
 
-### For Aircraft Owners
-- 📊 **Dashboard** - Real-time aircraft status and metrics
-- ✈️ **Aircraft Management** - Track multiple aircraft with detailed information
-- 🔧 **Maintenance Tracking** - Monitor upcoming maintenance and inspections
-- 📝 **Service Requests** - Submit and track service requests
-- 💳 **Membership Billing** - Transparent pricing with Stripe integration
-- 📱 **Mobile Responsive** - Access from any device
+### ✈️ For Aircraft Owners
 
-### For Flight Instructors (CFIs)
-- 📅 **Schedule Management** - Create and manage availability
-- 🗓️ **Google Calendar Sync** - Automatic two-way calendar integration
-- 👥 **Client Management** - Track student progress and bookings
-- 📊 **Staff Dashboard** - Overview of operations and schedule
+**Dashboard & Management**
+- 📊 Real-time aircraft status and metrics
+- 🛩️ Multi-aircraft tracking with detailed profiles
+- 📸 Aircraft images and documentation
+- ⏱️ Hobbs and Tach hour tracking
+- ⛽ Fuel capacity monitoring (usable and tabs)
+- 📱 Fully responsive mobile interface
 
-### For Administrators
-- 🎯 **Admin Dashboard** - Kanban-style workflow management
-- 👤 **User Management** - Manage owners, CFIs, and staff
-- ⚙️ **Pricing Configuration** - Configure service packages and tiers
-- 📈 **Analytics** - Track operations and revenue
-- 🔐 **Role-Based Access** - Secure role management (Owner, CFI, Admin)
+**Maintenance & Service**
+- 🔧 Automated maintenance tracking (calendar, hobbs, and tach-based)
+- 🚨 Maintenance status alerts (current, due soon, overdue)
+- 📝 Service request submission with priority levels
+- ✈️ Pre-flight concierge scheduling
+- 🔔 Email notifications for service updates
+- 📋 Complete service history
 
-### Technical Features
-- 🔒 **Secure Authentication** - Supabase Auth with OAuth support (Google)
-- 🛡️ **Row Level Security** - Database-level access control
-- 🎨 **Modern UI** - Tailwind CSS with shadcn/ui components
-- ⚡ **Fast Performance** - Vite build system with optimized loading
-- 📱 **PWA Ready** - Progressive Web App capabilities
-- 🔍 **SEO Optimized** - Local SEO for Colorado market
+**Billing & Payments**
+- 💳 Stripe-powered invoice payment
+- 📄 Invoice history and tracking
+- 💰 Transparent pricing with online calculator
+- 🎫 Membership credit management
+- 📧 Automated billing notifications
+
+### 👨‍✈️ For Flight Instructors (CFIs)
+
+- 📅 Schedule management dashboard
+- 🗓️ Google Calendar two-way sync
+- 👥 Student/client tracking
+- 📊 Instruction request handling
+- 💵 Invoice creation for flight instruction
+- ✉️ Automated email notifications
+- 🎯 Staff-level access to operations
+
+### 🎯 For Administrators & Staff
+
+**Operations Management**
+- 📋 Kanban board for service request workflow
+- 🏃 Drag-and-drop task management
+- 👥 Client and aircraft oversight
+- 📈 Operations dashboard
+- 🔍 Advanced filtering and search
+
+**Configuration & Setup**
+- ⚙️ Unified pricing configurator
+- 💰 Multi-tier pricing management (Class I, II, III)
+- 📍 Location-based hangar pricing
+- 👤 User role management
+- 🎛️ System settings and configuration
+
+**Reporting & Analytics**
+- 📊 Service metrics
+- 💵 Revenue tracking
+- ⏰ Hour band analysis
+- 📈 Margin calculations
+
+### 🔐 Technical Features
+
+**Security & Authentication**
+- 🔒 Supabase Auth with email/password
+- 🌐 Google OAuth integration
+- 🔑 JWT-based authentication
+- 🛡️ Row Level Security (RLS) on all tables
+- 🎭 Six-tier role system (owner, cfi, staff, ops, admin, founder)
+- 🍪 Secure cookie management
+
+**Performance & Reliability**
+- ⚡ Vite build system for fast HMR
+- 📦 Code splitting and lazy loading
+- 💾 TanStack Query for efficient data fetching
+- 🔄 Automatic session refresh
+- ⚡ Lighthouse score 90+ across metrics
+- 📱 Progressive Web App (PWA) ready
+
+**Developer Experience**
+- 📘 TypeScript throughout
+- 🎨 Tailwind CSS + shadcn/ui components
+- 🧪 Vitest + Testing Library
+- 🔍 Type-safe database queries
+- 📝 Comprehensive documentation
+- 🔧 Hot module replacement
+
+**SEO & Marketing**
+- 🔍 Optimized for Colorado market
+- 🌐 Structured data (JSON-LD)
+- 🗺️ Sitemap generation
+- 📱 Mobile-first responsive design
+- 🚀 Fast page loads
+- 📊 Analytics ready
 
 ## Quick Start
 
@@ -83,28 +145,38 @@ Freedom Aviation is a comprehensive web application for managing aircraft, membe
 
 For complete documentation, see the **[docs/](docs/)** directory.
 
-### Quick Start
+### 🚀 Quick Start
 - **[Getting Started Guide](docs/development/getting-started.md)** - Development environment setup
 - **[Deployment Guide](docs/development/deployment.md)** - Production deployment
 - **[Troubleshooting](docs/development/troubleshooting.md)** - Common issues and solutions
 
-### Architecture & Database
+### 🏗️ Architecture & Database
 - **[Database Schema](docs/architecture/database-schema.md)** - Complete database reference
 - **[Schema Reference](docs/architecture/schema-reference.md)** - Detailed schema documentation
-- **[Database Migrations](migrations/)** - Migration scripts and guide
+- **[Database Migrations](migrations/README.md)** - 19 migration scripts with guide
 
-### Features
+### 🔐 Authentication & Security
+- **[Supabase Auth Production Guide](docs/development/auth/SUPABASE_AUTH_PRODUCTION_GUIDE.md)** - Complete auth setup
+- **[Auth Deployment Guide](docs/development/auth/DEPLOY_AUTH_FIXES.md)** - Quick deployment steps
+- **[Auth Fixes Summary](docs/development/auth/AUTH_FIXES_SUMMARY.md)** - Recent fixes overview
+
+### ⚙️ Setup & Configuration
+- **[Email Configuration](docs/setup/email-configuration.md)** - Resend email setup
+- **[Stripe Configuration](docs/setup/stripe-configuration.md)** - Payment processing setup
+
+### ✨ Features
 - **[Google Integration](docs/features/google-integration.md)** - OAuth and Calendar sync
 - **[SEO Strategy](docs/features/seo-strategy.md)** - Search engine optimization
 - **[Pricing System](docs/features/pricing.md)** - Pricing tiers and calculator
 
-### Design & Development
+### 🎨 Design & Development
 - **[Design Guidelines](docs/design/guidelines.md)** - Design system and UI principles
-- **[Contributing Guide](CONTRIBUTING.md)** - Development workflow
-- **[Utility Scripts](scripts/)** - Database and deployment scripts
+- **[Contributing Guide](CONTRIBUTING.md)** - Development workflow and standards
+- **[Utility Scripts](scripts/README.md)** - 21 database and deployment scripts
 
-### AI Assistant Reference
+### 🤖 AI Assistant Reference
 - **[Cursor Context](CURSOR_CONTEXT.md)** - Complete context for AI coding assistants
+- Includes document organization policy and development guidelines
 
 ## Tech Stack
 
@@ -161,15 +233,28 @@ FreedomAviation-1/
 ## Available Scripts
 
 ```bash
-npm run dev       # Start development server with hot reload
-npm run build     # Build for production
-npm start         # Start production server
-npm run check     # Type check TypeScript
+# Development
+npm run dev          # Start development server with hot reload (port 5000)
+
+# Building
+npm run build        # Build for production (outputs to dist/)
+npm run check        # Type check TypeScript without building
+
+# Testing
+npm run test         # Run test suite once
+npm run test:watch   # Run tests in watch mode
+npm run test:ui      # Open Vitest UI
+npm run test:coverage # Generate coverage report
+
+# Production
+npm start            # Start production server
 ```
 
 ## Environment Variables
 
-Required variables in `.env.local`:
+### Development (`.env.local`)
+
+Required variables for local development:
 
 ```env
 # Supabase (Required)
@@ -184,28 +269,68 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 # Google (Optional - for OAuth & Calendar)
 GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:5000/api/google-calendar/callback
 ```
 
-See `env.local.example` for complete list.
+### Production (Vercel)
+
+⚠️ **Important**: In Vercel serverless functions, `VITE_` prefixed variables are NOT available at runtime (only during build).
+
+Set BOTH versions in Vercel:
+
+```env
+# For client-side (build time)
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
+
+# For server-side (runtime - required for API routes)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+STRIPE_SECRET_KEY=sk_live_...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+```
+
+See `env.local.example` for complete list with descriptions.
 
 ## Routes
 
 ### Public Routes
-- `/` - Homepage
-- `/pricing` - Pricing packages
-- `/hangar-locations` - Hangar locations map
+- `/` - Homepage with hero, features, and testimonials
+- `/pricing` - Pricing tiers and calculator
+- `/hangars` - Hangar locations map (formerly `/hangar-locations`)
 - `/contact` - Contact form
 - `/about` - About page
-- `/login` - Sign in / Sign up
+- `/login` - Sign in / Sign up with Google OAuth
+- `/forgot-password` - Password reset request
+- `/reset-password` - Password reset confirmation
 
-### Protected Routes (Requires Auth)
-- `/dashboard` - Owner dashboard
-- `/dashboard/more` - Settings and billing
+### Protected Routes (Owner)
+*Requires authentication*
+- `/dashboard` - Owner dashboard with aircraft overview
+- `/dashboard/aircraft` - Aircraft management
+- `/dashboard/members` - Membership details and credits
+- `/dashboard/settings` - Account settings and profile
+- `/dashboard/more` - Additional settings and billing
+- `/onboarding` - New user onboarding flow
 
-### Staff Routes (Requires CFI or Admin role)
-- `/staff` - Staff dashboard
-- `/admin` - Admin kanban board
-- `/admin/pricing` - Pricing configurator
+### Staff/Admin Routes
+*Requires staff, admin, or founder role*
+- `/staff` or `/admin` - Staff home dashboard
+- `/staff/manage` or `/admin/manage` - Kanban board for service requests
+- `/staff/members` - Client management
+- `/staff/aircraft` - Aircraft oversight
+- `/staff/operations` - Operations dashboard
+- `/staff/settings` - Staff settings
+- `/staff/pricing` or `/admin/pricing` - Unified pricing configurator
+
+### API Routes
+- `/api/stripe/webhook` - Stripe payment webhooks
+- `/api/stripe/create-checkout` - Create Stripe checkout session
+- `/api/google-calendar/*` - Google Calendar OAuth and sync
+- `/api/email-notifications/*` - Email notification processing
 
 ## Deployment
 
@@ -228,6 +353,43 @@ See `env.local.example` for complete list.
 2. Add all required variables for Production
 3. Redeploy if needed
 
+## Project Organization
+
+### Documentation Structure
+
+All documentation is organized in the `docs/` directory:
+
+```
+docs/
+├── README.md                       # Documentation index
+├── architecture/                   # System architecture
+│   ├── database-schema.md
+│   └── schema-reference.md
+├── development/                    # Development guides
+│   ├── auth/                       # Authentication docs
+│   ├── getting-started.md
+│   ├── deployment.md
+│   ├── troubleshooting.md
+│   └── database-migrations.md
+├── features/                       # Feature documentation
+│   ├── google-integration.md
+│   ├── pricing.md
+│   └── seo-strategy.md
+├── setup/                          # Configuration guides
+│   ├── email-configuration.md
+│   └── stripe-configuration.md
+└── design/                         # Design guidelines
+    └── guidelines.md
+```
+
+**Root-level files are limited to**:
+- `README.md` - This file
+- `CONTRIBUTING.md` - Contribution guidelines
+- `CURSOR_CONTEXT.md` - AI assistant reference
+- `LICENSE` - License file
+
+⚠️ **Do not create new documentation files in the project root!** Use the appropriate `docs/` subdirectory.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
@@ -240,6 +402,13 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open Pull Request
 
+### Documentation Guidelines
+
+- Place new docs in appropriate `docs/` subdirectory
+- Update `docs/README.md` with links to new documents
+- Keep README.md and CURSOR_CONTEXT.md updated
+- Follow existing naming conventions (kebab-case)
+
 ## Security
 
 - Never commit secrets or API keys
@@ -250,24 +419,76 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## Troubleshooting
 
-### Can't access admin dashboard?
-- Verify user has `admin` or `cfi` role in `user_profiles` table
-- Run `scripts/check-setup.sql` to diagnose issues
-- Promote user: `UPDATE user_profiles SET role = 'admin' WHERE email = 'your@email.com'`
+### Authentication Issues
 
-### Database connection errors?
+**Can't log in / Session not persisting**
+- Clear browser cache and localStorage
+- Check Supabase URL configuration
+- Verify redirect URLs in Supabase Dashboard
+- See [Auth Production Guide](docs/development/auth/SUPABASE_AUTH_PRODUCTION_GUIDE.md)
+
+**403 Errors on logout**
+- Clear localStorage: `localStorage.clear()`
+- Hard refresh: `Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (Mac)
+
+### Access Control Issues
+
+**Can't access admin/staff dashboard**
+- Verify user has proper role in `user_profiles` table:
+  ```sql
+  SELECT email, role FROM user_profiles WHERE email = 'your@email.com';
+  ```
+- Promote user to admin:
+  ```sql
+  UPDATE user_profiles SET role = 'admin' WHERE email = 'your@email.com';
+  ```
+
+### Database Issues
+
+**Connection errors**
 - Check Supabase URL and keys are correct
 - Verify Supabase project is active
-- Ensure RLS policies are properly configured
+- Check RLS policies aren't blocking access
+- Review [Troubleshooting Guide](docs/development/troubleshooting.md)
 
-### Build errors?
+**Migration failures**
+- Check `migrations/README.md` for migration order
+- Verify no dependent views need updating
+- Review migration logs in Supabase Dashboard
+
+### Build Issues
+
+**TypeScript errors**
 ```bash
+# Clear and reinstall
 rm -rf node_modules dist
 npm install
+npm run check
+```
+
+**Vite build fails**
+```bash
+# Clear Vite cache
+rm -rf node_modules/.vite
 npm run build
 ```
 
-See [Getting Started Guide](docs/development/getting-started.md) for more troubleshooting.
+### Production Issues
+
+**API routes return 500**
+- Check Vercel function logs
+- Verify environment variables are set (without VITE_ prefix)
+- Check Supabase service role key is valid
+
+**Stripe webhooks not working**
+- Verify webhook secret matches Stripe dashboard
+- Check webhook endpoint is accessible
+- Review Vercel function logs
+
+For detailed troubleshooting, see:
+- [Troubleshooting Guide](docs/development/troubleshooting.md)
+- [Auth Guide](docs/development/auth/SUPABASE_AUTH_PRODUCTION_GUIDE.md)
+- [Deployment Guide](docs/development/deployment.md)
 
 ## Performance
 
