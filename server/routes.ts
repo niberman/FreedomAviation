@@ -135,6 +135,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // put application routes here
   // prefix all routes with /api
 
+  // Supabase auth proxy - must come before other routes
+  const authProxyRouter = (await import("./auth-proxy.js")).default;
+  app.use("/auth", authProxyRouter);
+
   // Handle OPTIONS preflight requests for CORS
   app.options("/api/*", (req: Request, res: Response) => {
     const origin = req.headers.origin;
