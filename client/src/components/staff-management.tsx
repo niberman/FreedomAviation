@@ -112,17 +112,28 @@ export function StaffManagement() {
         throw new Error("Please fill in all required fields");
       }
 
-      // Use Supabase Admin API to create user
-      const { data: { user: newUser }, error: createError } = await supabase.auth.admin.createUser({
-        email,
-        email_confirm: true,
-        user_metadata: {
+      // Use server-side API to create staff member (requires service role key)
+      const response = await fetch('/api/staff/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          email,
           full_name: fullName,
           role,
-        }
+          sendInvite: true,
+        }),
       });
 
-      if (createError) throw createError;
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to create staff member');
+      }
+
+      const newUser = result.user;
       if (!newUser) throw new Error("Failed to create user");
 
       // Update user profile with additional details
@@ -547,6 +558,7 @@ export function StaffManagement() {
     </>
   );
 }
+
 
 
 

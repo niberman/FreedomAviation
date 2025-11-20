@@ -191,7 +191,7 @@ export default function StaffHome() {
       icon: Wrench,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
-      path: managePath,
+      path: `${managePath}?tab=requests`,
       stats: {
         pending: stats?.pendingServiceRequests || 0,
         inProgress: stats?.inProgressServiceRequests || 0
@@ -203,7 +203,7 @@ export default function StaffHome() {
       icon: Plane,
       color: "text-green-600",
       bgColor: "bg-green-50",
-      path: managePath,
+      path: `${managePath}?tab=aircraft`,
       stats: {
         total: stats?.totalAircraft || 0
       }
@@ -214,7 +214,7 @@ export default function StaffHome() {
       icon: Settings2,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
-      path: managePath,
+      path: `${managePath}?tab=maintenance`,
       stats: {
         overdue: stats?.overdueMaintenanceCount || 0,
         dueSoon: stats?.dueSoonMaintenanceCount || 0
@@ -226,7 +226,7 @@ export default function StaffHome() {
       icon: Users,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
-      path: managePath,
+      path: `${managePath}?tab=clients`,
       stats: {
         total: stats?.totalOwners || 0
       }
@@ -237,7 +237,7 @@ export default function StaffHome() {
       icon: DollarSign,
       color: "text-emerald-600",
       bgColor: "bg-emerald-50",
-      path: managePath,
+      path: `${managePath}?tab=invoices`,
       stats: {
         unpaid: stats?.unpaidInvoicesCount || 0
       }
@@ -248,7 +248,7 @@ export default function StaffHome() {
       icon: BarChart3,
       color: "text-indigo-600",
       bgColor: "bg-indigo-50",
-      path: managePath,
+      path: `${managePath}?tab=reports`,
       stats: {}
     }
   ];

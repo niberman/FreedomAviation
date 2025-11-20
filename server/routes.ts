@@ -1605,6 +1605,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create staff member endpoint (with role support)
+  app.post("/api/staff/create", async (req: Request, res: Response) => {
+    // Set CORS headers
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      "https://freedomaviationco.com",
+      "https://www.freedomaviationco.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+    ];
+    
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    try {
+      if (!supabase || !supabaseAnon) {
+        return res.status(503).json({ 
+          error: "Supabase not configured",
+          message: "Server is missing Supabase credentials"
+        });
+      }
+
+      // Verify authentication
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+
+      if (!token) {
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Missing authorization token"
+        });
+      }
+
+      const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+
+      if (authError || !user) {
+        console.error("❌ Error verifying auth token for /api/staff/create:", authError);
+        return res.status(401).json({
+          error: "Unauthorized",
+          message: "Invalid or expired token"
+        });
+      }
+
+      // Check user role - only admin or founder can create staff
+      const { data: profile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("id, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("❌ Error fetching staff profile in /api/staff/create:", profileError);
+        return res.status(500).json({
+          error: "Failed to fetch user profile",
+          message: profileError.message,
+        });
+      }
+
+      if (!profile || !profile.role) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "User profile not found or role missing",
+        });
+      }
+
+      if (!["admin", "founder"].includes(profile.role)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Insufficient permissions. Only admins and founders can create staff.",
+        });
+      }
+
+      const { email, full_name, role = "staff", sendInvite = true } = req.body;
+
+      if (!email || !full_name || !role) {
+        return res.status(400).json({ 
+          error: "Missing required fields",
+          message: "Email, full name, and role are required"
+        });
+      }
+
+      // Validate role
+      const validRoles = ["staff", "ops", "cfi", "admin", "founder"];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({
+          error: "Invalid role",
+          message: `Role must be one of: ${validRoles.join(", ")}`
+        });
+      }
+
+      console.log(`📝 Creating staff member: ${email} with role: ${role}`);
+
+      // Create user using admin API
+      const baseUrl = process.env.SITE_URL || process.env.FRONTEND_URL || "https://www.freedomaviationco.com";
+      const { data: createdUser, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        email_confirm: !sendInvite, // If not sending invite, auto-confirm
+        user_metadata: {
+          full_name,
+          role,
+        }
+      });
+
+      if (createError) {
+        console.error("❌ Error creating staff member:", createError);
+        return res.status(500).json({ 
+          error: "Failed to create staff member",
+          message: createError.message
+        });
+      }
+
+      if (!createdUser || !createdUser.user) {
+        return res.status(500).json({ 
+          error: "Failed to create staff member",
+          message: "No user returned from Supabase"
+        });
+      }
+
+      // Update user profile with role (trigger should create it, but we ensure role is set)
+      const { error: updateError } = await supabase
+        .from("user_profiles")
+        .upsert({
+          id: createdUser.user.id,
+          email: createdUser.user.email || email,
+          full_name,
+          role,
+        }, {
+          onConflict: "id"
+        });
+
+      if (updateError) {
+        console.error("❌ Error updating staff profile:", updateError);
+        console.warn("⚠️  Staff created but profile role not updated");
+      }
+
+      // Send invite email if requested
+      if (sendInvite) {
+        const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+          redirectTo: `${baseUrl}/onboarding`
+        });
+
+        if (inviteError) {
+          console.error("❌ Error sending invite email:", inviteError);
+          console.warn("⚠️  Staff created but invite email not sent");
+        }
+      }
+
+      console.log("✅ Staff member created successfully:", JSON.stringify({ userId: createdUser.user.id, email: createdUser.user.email, role }));
+      res.status(201).json({ 
+        success: true,
+        user: createdUser.user,
+        message: sendInvite ? "Staff member created and invite email sent" : "Staff member created"
+      });
+    } catch (error: any) {
+      console.error("❌ Error in /api/staff/create:", error);
+      res.status(500).json({ 
+        error: "Failed to create staff member",
+        message: error.message || "An unexpected error occurred"
+      });
+    }
+  });
+
   // Staff: List or update service requests
   app.get("/api/service-requests", async (req: Request, res: Response) => {
     const origin = req.headers.origin;
