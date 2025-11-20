@@ -11,13 +11,23 @@ Welcome to the Freedom Aviation documentation. This directory contains comprehen
 
 ### 🏗️ Architecture
 - **[Database Schema](architecture/database-schema.md)** - Complete database reference with RLS policies
+- **[Schema Reference](architecture/schema-reference.md)** - Comprehensive schema guide with relationships
 
 ### ✨ Features
 - **[Google Integration](features/google-integration.md)** - OAuth and Calendar sync
-- **[SEO Strategy](features/seo-strategy.md)** - Search engine optimization
+- **[SEO Strategy](features/seo-strategy.md)** - Search engine optimization and deployment
+- **[Pricing System](features/pricing.md)** - Pricing tiers and calculator
+- **[Roles & Notifications](ROLES_AND_NOTIFICATIONS.md)** - User roles and notification system
+
+### 🎨 Design
+- **[Design Guidelines](design/guidelines.md)** - Design system and principles
 
 ### 👨‍💻 Development
 - **[Contributing Guide](../CONTRIBUTING.md)** - How to contribute to the project
+- **[Getting Started](development/getting-started.md)** - Development setup
+- **[Database Migrations](development/database-migrations.md)** - Migration guide
+- **[Deployment](development/deployment.md)** - Production deployment guide
+- **[Troubleshooting](development/troubleshooting.md)** - Common issues and solutions
 - **[Main README](../README.md)** - Project overview
 
 ## Quick Links
@@ -31,26 +41,40 @@ Welcome to the Freedom Aviation documentation. This directory contains comprehen
 - [Stripe Payments](setup/stripe-configuration.md)
 - [Email Services](setup/email-configuration.md)
 - [Google OAuth & Calendar](features/google-integration.md)
+- [Roles & Permissions](ROLES_AND_NOTIFICATIONS.md)
+- [Pricing Configuration](features/pricing.md)
 
 ### Reference
 - [Database Schema](architecture/database-schema.md) - Tables, columns, and RLS
+- [Schema Reference](architecture/schema-reference.md) - Detailed schema documentation
+- [Database Migrations](development/database-migrations.md) - Migration procedures
 - [SEO Implementation](features/seo-strategy.md) - Keywords and optimization
+- [Roles System](ROLES_AND_NOTIFICATIONS.md) - User roles and access control
+- [Design System](design/guidelines.md) - UI/UX guidelines
 
 ## Documentation Organization
 
 ```
 docs/
 ├── README.md (you are here)
+├── ROLES_AND_NOTIFICATIONS.md
 ├── setup/
 │   ├── stripe-configuration.md
 │   └── email-configuration.md
 ├── features/
 │   ├── google-integration.md
-│   └── seo-strategy.md
+│   ├── seo-strategy.md
+│   └── pricing.md
 ├── architecture/
-│   └── database-schema.md
+│   ├── database-schema.md
+│   └── schema-reference.md
+├── design/
+│   └── guidelines.md
 └── development/
-    └── getting-started.md
+    ├── getting-started.md
+    ├── database-migrations.md
+    ├── deployment.md
+    └── troubleshooting.md
 ```
 
 ## Finding What You Need
@@ -71,6 +95,21 @@ docs/
 
 **Understand the database**
 → [Database Schema](architecture/database-schema.md)
+
+**Manage database migrations**
+→ [Database Migrations](development/database-migrations.md)
+
+**Configure user roles**
+→ [Roles & Notifications](ROLES_AND_NOTIFICATIONS.md)
+
+**Deploy to production**
+→ [Deployment Guide](development/deployment.md)
+
+**Troubleshoot issues**
+→ [Troubleshooting](development/troubleshooting.md)
+
+**Understand design system**
+→ [Design Guidelines](design/guidelines.md)
 
 **Improve SEO**
 → [SEO Strategy](features/seo-strategy.md)
