@@ -85,6 +85,14 @@ Freedom Aviation is a comprehensive web application for managing aircraft, membe
 - ⚡ Lighthouse score 90+ across metrics
 - 📱 Progressive Web App (PWA) ready
 
+**iOS Native App (via Capacitor)**
+- 📱 Native iOS app with web technologies
+- 🍎 App Store ready
+- 📸 Camera and photo library access
+- 🔔 Push notifications support
+- 🔐 OAuth redirects via custom URL scheme
+- 🎨 Native splash screen and icons
+
 **Developer Experience**
 - 📘 TypeScript throughout
 - 🎨 Tailwind CSS + shadcn/ui components
@@ -149,6 +157,7 @@ For complete documentation, see the **[docs/](docs/)** directory.
 - **[Getting Started Guide](docs/development/getting-started.md)** - Development environment setup
 - **[Deployment Guide](docs/development/deployment.md)** - Production deployment
 - **[Troubleshooting](docs/development/troubleshooting.md)** - Common issues and solutions
+- **[iOS Setup Guide](docs/IOS_SETUP.md)** - 📱 Build and deploy the iOS app
 
 ### 🏗️ Architecture & Database
 - **[Database Schema](docs/architecture/database-schema.md)** - Complete database reference
@@ -246,6 +255,13 @@ npm run test:watch   # Run tests in watch mode
 npm run test:ui      # Open Vitest UI
 npm run test:coverage # Generate coverage report
 
+# iOS (Capacitor)
+npm run cap:sync     # Build web app and sync to all platforms
+npm run cap:sync:ios # Build web app and sync to iOS
+npm run cap:open:ios # Open iOS project in Xcode
+npm run cap:run:ios  # Build, sync, and open iOS in Xcode
+npm run cap:add:ios  # Add iOS platform (already done)
+
 # Production
 npm start            # Start production server
 ```
@@ -340,7 +356,7 @@ See `env.local.example` for complete list with descriptions.
 - **`preview`** → Preview environment
 - **`feature/*`** → Feature branches (auto-preview)
 
-### Deploying to Production
+### Deploying to Production (Web)
 
 1. Merge to `main` branch
 2. Vercel automatically deploys
@@ -352,6 +368,26 @@ See `env.local.example` for complete list with descriptions.
 1. Go to Vercel Dashboard → Project Settings → Environment Variables
 2. Add all required variables for Production
 3. Redeploy if needed
+
+### Deploying iOS App
+
+The iOS app is built using Capacitor and can be deployed to the App Store:
+
+1. **Build and sync**:
+   ```bash
+   npm run cap:sync:ios
+   ```
+
+2. **Open in Xcode**:
+   ```bash
+   npm run cap:open:ios
+   ```
+
+3. **Configure signing** in Xcode (Signing & Capabilities)
+
+4. **Archive and upload** to App Store Connect
+
+For detailed iOS deployment instructions, see **[iOS Setup Guide](docs/IOS_SETUP.md)**.
 
 ## Project Organization
 
