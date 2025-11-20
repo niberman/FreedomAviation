@@ -759,8 +759,8 @@ export interface VOwnerAircraft {
   status?: string;
   created_at: string;
   updated_at: string;
-  hobbs_time?: number;
-  tach_time?: number;
+  hobbs_hours?: number;
+  tach_hours?: number;
 }
 
 export interface VServiceRequest {

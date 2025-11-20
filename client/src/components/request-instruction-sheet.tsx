@@ -74,16 +74,19 @@ export function RequestInstructionSheet({ open, onOpenChange, aircraft }: Reques
     setLoading(true);
     try {
       const { error } = await supabase
-        .from("instruction_requests")
+        .from("service_requests")
         .insert({
-          student_id: user.id,
           aircraft_id: aircraft.id,
+          user_id: user.id,
+          service_type: "Flight Instruction",
+          description: `${instructionType} - ${duration} hours`,
+          priority: "medium",
+          status: "pending",
           requested_date: format(date, "yyyy-MM-dd"),
           requested_time: time,
-          instruction_type: instructionType,
-          duration_hours: parseFloat(duration),
           notes: notes || null,
-          status: "pending"
+          is_extra_charge: true,
+          credits_used: 0,
         });
 
       if (error) throw error;

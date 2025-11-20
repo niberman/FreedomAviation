@@ -195,17 +195,17 @@ export default function Login() {
           const { data: userData } = await supabase.auth.getUser();
           
           if (userData?.user) {
-            // Save the quote
-            await supabase.from("support_tickets").insert([{
-              owner_id: userData.user.id,
-              subject: "Pricing Quote Request",
-              body: JSON.stringify({
-                aircraft_class: quoteData.aircraft_class,
+            // Save the quote to membership_quotes
+            await supabase.from("membership_quotes").insert([{
+              user_id: userData.user.id,
+              package_id: quoteData.aircraft_class,
+              tier_name: quoteData.aircraft_class,
+              total_monthly: quoteData.monthly_price,
+              notes: JSON.stringify({
                 monthly_hours: quoteData.monthly_hours,
-                monthly_price: quoteData.monthly_price,
                 source: "signup_flow",
               }),
-              status: "open",
+              status: "pending",
             }]);
             
             // Clear the pending quote
