@@ -72,6 +72,12 @@ export default function StaffDashboard() {
   const { toast } = useToast();
   const { user, session } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Get tab from URL query parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabFromUrl = urlParams.get('tab') || 'invoices';
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
+  
   const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>("");
   const [description, setDescription] = useState("");
@@ -768,7 +774,7 @@ export default function StaffDashboard() {
             <p className="text-muted-foreground">Complete tools for managing all aspects of aviation operations</p>
           </div>
 
-          <Tabs defaultValue="invoices" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-14 h-auto gap-1">
               <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
               <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>

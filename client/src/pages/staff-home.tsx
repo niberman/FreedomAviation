@@ -150,7 +150,7 @@ export default function StaffHome() {
           description: `${(req.aircraft as any)?.tail_number || 'N/A'} - ${req.requested_date ? format(new Date(req.requested_date), 'MMM d') : 'ASAP'}`,
           priority: 'high',
           actionLabel: 'Review',
-          actionPath: managePath
+          actionPath: `${managePath}?tab=requests`
         });
       });
 
@@ -175,7 +175,7 @@ export default function StaffHome() {
           description: `${(item.aircraft as any)?.tail_number || 'N/A'} - Due ${format(new Date(item.due_date), 'MMM d')}`,
           priority: 'critical',
           actionLabel: 'View',
-          actionPath: managePath
+          actionPath: `${managePath}?tab=maintenance`
         });
       });
 
