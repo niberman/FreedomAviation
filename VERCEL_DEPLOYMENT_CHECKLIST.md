@@ -53,8 +53,8 @@ EMAIL_SERVICE=resend
 RESEND_API_KEY=re_Z3Xdz4Q5_NP4hM4HvhFNbunCre7WR6uA2
 EMAIL_FROM=Freedom Aviation <info@freedomaviationco.com>
 
-# Stripe
-STRIPE_SECRET_KEY=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
+# Stripe (get from Stripe Dashboard)
+STRIPE_SECRET_KEY=sk_live_YOUR_STRIPE_SECRET_KEY_HERE
 STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET_HERE
 
 # Site Configuration
