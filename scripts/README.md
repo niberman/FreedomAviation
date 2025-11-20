@@ -207,6 +207,64 @@ WHERE email = 'your@email.com';
 
 **When to use**: Updating role referential integrity
 
+## Schema Export Scripts
+
+### export-complete-schema.sql
+**Purpose**: Export complete current database schema from Supabase
+
+**Usage**:
+1. Open Supabase SQL Editor
+2. Copy and paste the entire script
+3. Run it
+4. Copy output from Messages tab
+5. Use to update `supabase-schema.sql`
+
+**What it exports**:
+- Enum types
+- Table definitions with all columns
+- Column comments
+- Indexes
+- RLS policies
+- Functions
+- Triggers
+- Grants
+
+**When to use**: When you need to sync `supabase-schema.sql` with actual database state
+
+### dump-schema.js
+**Purpose**: Check which tables exist and provide export instructions
+
+**Usage**:
+```bash
+node scripts/dump-schema.js
+```
+
+**What it does**:
+- Tests connection to Supabase
+- Lists all accessible tables
+- Provides multiple export method options
+- Shows project ID for CLI commands
+
+**When to use**: Quick check of database status or to get export instructions
+
+### pull-schema.sh
+**Purpose**: Display instructions for pulling schema
+
+**Usage**:
+```bash
+chmod +x scripts/pull-schema.sh
+./scripts/pull-schema.sh
+```
+
+**What it does**: Shows multiple methods to export schema (CLI, pg_dump, SQL Editor)
+
+**When to use**: When you need guidance on schema export options
+
+### pull-schema.mjs
+**Purpose**: Automated schema export (requires RPC function)
+
+**Note**: This script requires an `exec_sql` RPC function in your database. Use `export-complete-schema.sql` instead for most cases.
+
 ## Utility Shell Scripts
 
 ### get-webhook-secret.sh
