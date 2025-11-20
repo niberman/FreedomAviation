@@ -13,6 +13,7 @@ import { DevToolbar } from "@/components/dev-toolbar";
 import { NavBar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { siteConfig, isMarketingDomain } from "@/lib/site-config";
+import { AuthRedirectHandler } from "@/components/auth-redirect-handler";
 import Home from "./pages/home";
 import Login from "./pages/login";
 import ForgotPassword from "./pages/forgot-password";
@@ -189,6 +190,7 @@ function App() {
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
+            <AuthRedirectHandler />
             <TooltipProvider>
               <div className="flex min-h-screen flex-col">
                 <Toaster />
