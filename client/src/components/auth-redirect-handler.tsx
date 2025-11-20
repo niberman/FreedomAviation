@@ -1,14 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
 export function AuthRedirectHandler() {
   const [location] = useLocation();
+  const { session, loading } = useAuth();
   const hasProcessed = useRef(false);
 
   useEffect(() => {
     // Only process once per mount
-    if (hasProcessed.current) {
+    if (hasProcessed.current || loading) {
       return;
     }
 
@@ -30,25 +32,31 @@ export function AuthRedirectHandler() {
           window.location.href = `/reset-password${hash}`;
         }
       } else if (tokenType === 'invite' && accessToken && refreshToken) {
-        // User invitation token
-        hasProcessed.current = true;
-        
-        // Set the session first so the user is authenticated
-        supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        }).then(({ data, error }) => {
-          if (error) {
-            console.error('[AuthRedirectHandler] Error setting invite session:', error);
-          } else {
-            console.log('[AuthRedirectHandler] Invite token processed, redirecting to /onboarding');
-            // Redirect to onboarding without the hash
-            window.location.href = '/onboarding';
-          }
-        });
+        // User invitation token - only process if not already signed in
+        if (!session) {
+          hasProcessed.current = true;
+          
+          // Set the session first so the user is authenticated
+          supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          }).then(({ data, error }) => {
+            if (error) {
+              console.error('[AuthRedirectHandler] Error setting invite session:', error);
+            } else {
+              console.log('[AuthRedirectHandler] Invite token processed, redirecting to /onboarding');
+              // Redirect to onboarding without the hash
+              window.location.href = '/onboarding';
+            }
+          });
+        } else {
+          // Already signed in, just clear the hash to avoid confusion
+          console.log('[AuthRedirectHandler] Invite token detected but user already signed in, clearing hash');
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
       }
     }
-  }, []); // Empty dependency array - only run once
+  }, [loading]); // Run when loading completes
 
   return null;
 }
