@@ -117,3 +117,6 @@ $$ LANGUAGE plpgsql;
 COMMENT ON TABLE public.notifications IS 'User-facing notifications displayed in the NotificationCenter component';
 COMMENT ON FUNCTION create_notification IS 'Helper function to create notifications programmatically';
 
+
+
+
