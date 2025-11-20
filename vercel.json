@@ -6,10 +6,6 @@
 
   "rewrites": [
     {
-      "source": "/auth/:path*",
-      "destination": "https://wsepwuxkwjnsgmkddkjw.supabase.co/auth/:path*"
-    },
-    {
       "source": "/api/(.*)",
       "destination": "/api"
     },
