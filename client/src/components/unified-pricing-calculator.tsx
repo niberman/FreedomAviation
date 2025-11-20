@@ -101,23 +101,24 @@ export function UnifiedPricingCalculator({
       const summary = getPricingSummary(selectedTier, selectedHours, selectedAddons);
       
       if (userData?.user) {
-        // User is logged in - save the quote
-        await supabase.from('support_tickets').insert([{
-          owner_id: userData.user.id,
-          subject: 'Pricing Quote Request',
-          body: JSON.stringify({
-            tier: selectedTierData.name,
-            tier_id: selectedTier,
+        // User is logged in - save the quote to membership_quotes
+        await supabase.from('membership_quotes').insert([{
+          user_id: userData.user.id,
+          package_id: selectedTier,
+          tier_name: selectedTierData.name,
+          base_monthly: basePrice,
+          hangar_id: selectedLocation?.id || null,
+          hangar_cost: hangarCost,
+          total_monthly: totalPrice,
+          notes: JSON.stringify({
             hours_range: selectedHours,
             hangar_location: selectedLocation?.name || 'Not selected',
-            hangar_cost: hangarCost,
-            base_price: basePrice,
             addons: selectedAddons,
-            total_price: totalPrice,
             summary: summary,
+            source: 'pricing_calculator',
             timestamp: new Date().toISOString(),
           }),
-          status: 'open',
+          status: 'pending',
         }]);
         
         toast({ 

@@ -448,6 +448,59 @@ export interface Database {
           updated_at?: string
         }
       }
+      membership_quotes: {
+        Row: {
+          id: string
+          user_id: string
+          package_id: string
+          tier_name: string | null
+          base_monthly: number | null
+          hangar_id: string | null
+          hangar_cost: number | null
+          total_monthly: number | null
+          aircraft_tail: string | null
+          aircraft_make: string | null
+          aircraft_model: string | null
+          status: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          package_id: string
+          tier_name?: string | null
+          base_monthly?: number | null
+          hangar_id?: string | null
+          hangar_cost?: number | null
+          total_monthly?: number | null
+          aircraft_tail?: string | null
+          aircraft_make?: string | null
+          aircraft_model?: string | null
+          status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          package_id?: string
+          tier_name?: string | null
+          base_monthly?: number | null
+          hangar_id?: string | null
+          hangar_cost?: number | null
+          total_monthly?: number | null
+          aircraft_tail?: string | null
+          aircraft_make?: string | null
+          aircraft_model?: string | null
+          status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }
@@ -492,3 +545,7 @@ export type PricingPackageUpdate = Database['public']['Tables']['pricing_package
 export type NotificationPreferences = Database['public']['Tables']['notification_preferences']['Row']
 export type NotificationPreferencesInsert = Database['public']['Tables']['notification_preferences']['Insert']
 export type NotificationPreferencesUpdate = Database['public']['Tables']['notification_preferences']['Update']
+
+export type MembershipQuote = Database['public']['Tables']['membership_quotes']['Row']
+export type MembershipQuoteInsert = Database['public']['Tables']['membership_quotes']['Insert']
+export type MembershipQuoteUpdate = Database['public']['Tables']['membership_quotes']['Update']

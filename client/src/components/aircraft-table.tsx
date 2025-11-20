@@ -137,20 +137,24 @@ export function AircraftTable({
       }
 
       if (serviceType === "oil_topoff") {
+        // Create a service request for oil top-off instead of consumable event
         const { error } = await supabase
-          .from("consumable_events")
+          .from("service_requests")
           .insert([
             {
               aircraft_id: aircraft.id,
-              kind: "OIL",
-              quantity: 2,
-              unit: "qt",
-              notes: notes || "Top-off request from staff dashboard",
+              user_id: aircraft.owner_id || '',
+              service_type: "Oil Top-Off",
+              description: `Oil top-off: ${notes || "2 quarts requested from staff dashboard"}`,
+              priority: "low",
+              status: "pending",
+              is_extra_charge: true,
+              credits_used: 0,
             },
           ]);
 
         if (error) {
-          throw new Error(error.message ?? "Unable to log oil top-off.");
+          throw new Error(error.message ?? "Unable to create oil top-off request.");
         }
         return;
       }
