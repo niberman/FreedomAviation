@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 import logoImage from "@assets/falogo.png";
 import { Lock, Loader2, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
