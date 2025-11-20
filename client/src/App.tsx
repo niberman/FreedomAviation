@@ -14,6 +14,8 @@ import { NavBar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { siteConfig, isMarketingDomain } from "@/lib/site-config";
 import { AuthRedirectHandler } from "@/components/auth-redirect-handler";
+import { PWAUpdatePrompt, OnlineStatus } from "@/components/PWAUpdatePrompt";
+import { usePWA } from "@/hooks/usePWA";
 import Home from "./pages/home";
 import Login from "./pages/login";
 import ForgotPassword from "./pages/forgot-password";
@@ -178,6 +180,10 @@ function App() {
     currentPath.startsWith("/admin");
   const isOnboarding = currentPath.startsWith("/onboarding");
   const showMarketingChrome = !isDashboardRoute && !isOnboarding && currentPath !== "/demo";
+  
+  // PWA hooks
+  const { needRefresh, offlineReady, updateServiceWorker } = usePWA();
+  
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -201,6 +207,15 @@ function App() {
                 {showMarketingChrome && <Footer />}
               </div>
               <DevToolbar />
+              
+              {/* PWA Components */}
+              <OnlineStatus />
+              <PWAUpdatePrompt
+                show={needRefresh || offlineReady}
+                offlineReady={offlineReady}
+                onUpdate={() => updateServiceWorker(true)}
+                onDismiss={offlineReady ? () => {} : undefined}
+              />
             </TooltipProvider>
           </AuthProvider>
         </QueryClientProvider>
