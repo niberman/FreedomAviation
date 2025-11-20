@@ -94,7 +94,7 @@ Environment: Production, Preview, Development
 ### Stripe
 ```
 Name: STRIPE_SECRET_KEY
-Value: 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
+Value: sk_live_YOUR_STRIPE_SECRET_KEY_HERE (get from Stripe Dashboard)
 Environment: Production, Preview, Development
 ```
 
