@@ -1198,12 +1198,20 @@ export default function StaffDashboard() {
                               </div>
                             ) : (
                               owners
-                                .filter((owner: any) => owner && owner.id && owner.id.trim() !== '')
-                                .map((owner: any) => (
-                                  <SelectItem key={owner.id} value={owner.id}>
-                                    {owner.full_name || owner.email}
-                                  </SelectItem>
-                                ))
+                                .filter((owner: any) => {
+                                  // Filter out invalid entries
+                                  if (!owner || !owner.id) return false;
+                                  const id = String(owner.id).trim();
+                                  return id !== '' && id !== 'undefined' && id !== 'null';
+                                })
+                                .map((owner: any) => {
+                                  const ownerId = String(owner.id).trim();
+                                  return (
+                                    <SelectItem key={ownerId} value={ownerId}>
+                                      {owner.full_name || owner.email || 'Unknown Client'}
+                                    </SelectItem>
+                                  );
+                                })
                             )}
                           </SelectContent>
                         </Select>
@@ -1223,12 +1231,20 @@ export default function StaffDashboard() {
                         <SelectContent>
                           <SelectItem value="__none__">None</SelectItem>
                           {filteredAircraft
-                            .filter((ac: any) => ac && ac.id && ac.id.trim() !== '')
-                            .map((ac: any) => (
-                              <SelectItem key={ac.id} value={ac.id}>
-                                {ac.tail_number}
-                              </SelectItem>
-                            ))}
+                            .filter((ac: any) => {
+                              // Filter out invalid entries
+                              if (!ac || !ac.id) return false;
+                              const id = String(ac.id).trim();
+                              return id !== '' && id !== 'undefined' && id !== 'null';
+                            })
+                            .map((ac: any) => {
+                              const aircraftId = String(ac.id).trim();
+                              return (
+                                <SelectItem key={aircraftId} value={aircraftId}>
+                                  {ac.tail_number || 'Unknown Aircraft'}
+                                </SelectItem>
+                              );
+                            })}
                         </SelectContent>
                       </Select>
                     </div>
