@@ -81,17 +81,30 @@ Freedom Aviation is a comprehensive web application for managing aircraft, membe
 
 ## Documentation
 
-### Setup & Configuration
-- **[Getting Started](docs/development/getting-started.md)** - Complete development setup guide
-- **[Database Schema](docs/architecture/database-schema.md)** - Database structure and RLS policies
-- **[Stripe Configuration](docs/setup/stripe-configuration.md)** - Payment integration setup
+For complete documentation, see the **[docs/](docs/)** directory.
+
+### Quick Start
+- **[Getting Started Guide](docs/development/getting-started.md)** - Development environment setup
+- **[Deployment Guide](docs/development/deployment.md)** - Production deployment
+- **[Troubleshooting](docs/development/troubleshooting.md)** - Common issues and solutions
+
+### Architecture & Database
+- **[Database Schema](docs/architecture/database-schema.md)** - Complete database reference
+- **[Schema Reference](docs/architecture/schema-reference.md)** - Detailed schema documentation
+- **[Database Migrations](migrations/)** - Migration scripts and guide
 
 ### Features
 - **[Google Integration](docs/features/google-integration.md)** - OAuth and Calendar sync
 - **[SEO Strategy](docs/features/seo-strategy.md)** - Search engine optimization
+- **[Pricing System](docs/features/pricing.md)** - Pricing tiers and calculator
 
-### Development
-- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
+### Design & Development
+- **[Design Guidelines](docs/design/guidelines.md)** - Design system and UI principles
+- **[Contributing Guide](CONTRIBUTING.md)** - Development workflow
+- **[Utility Scripts](scripts/)** - Database and deployment scripts
+
+### AI Assistant Reference
+- **[Cursor Context](CURSOR_CONTEXT.md)** - Complete context for AI coding assistants
 
 ## Tech Stack
 
