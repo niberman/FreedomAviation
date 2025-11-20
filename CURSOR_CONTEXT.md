@@ -1,8 +1,29 @@
 # Freedom Aviation - Complete Context for Cursor AI
 
-**Last Updated**: November 14, 2025  
+**Last Updated**: November 20, 2025  
 **Purpose**: Master reference document for AI assistants working on this codebase  
 **Status**: ✅ Production - Actively Maintained
+
+## 🤖 AI Direct Database Access
+
+**The AI can execute SQL directly in Supabase!**
+
+### One-Time Setup:
+Run `/scripts/setup-sql-execution.sql` in Supabase SQL Editor (see `SETUP_SQL_EXECUTION.md`)
+
+### Usage:
+```bash
+node scripts/execute-sql.js "ALTER TABLE users..."
+node scripts/execute-sql.js -f migrations/fix-something.sql
+```
+
+### When AI Should Use This:
+- ✅ Running database migrations automatically
+- ✅ Fixing foreign key constraints
+- ✅ Creating missing tables
+- ✅ Applying schema changes
+
+**After setup complete, AI can fix database issues without waiting for user!**
 
 ---
 
