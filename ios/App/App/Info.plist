@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>FreedomAviation</string>
+	<string>FreedomAviation</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -18,10 +18,36 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.freedomaviation.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>freedomaviation</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>googlechrome</string>
+		<string>googlechromes</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>FreedomAviation would like to access your camera to upload photos of your aircraft and documents.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>FreedomAviation would like to save photos to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FreedomAviation would like to access your photo library to upload photos of your aircraft and documents.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This allows us to provide you with a better experience and relevant content.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -45,31 +71,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>FreedomAviation would like to access your camera to upload photos of your aircraft and documents.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>FreedomAviation would like to access your photo library to upload photos of your aircraft and documents.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>FreedomAviation would like to save photos to your photo library.</string>
-	<key>NSUserTrackingUsageDescription</key>
-	<string>This allows us to provide you with a better experience and relevant content.</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.freedomaviation.app</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>freedomaviation</string>
-			</array>
-		</dict>
-	</array>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>https</string>
-		<string>http</string>
-		<string>googlechrome</string>
-		<string>googlechromes</string>
-	</array>
 </dict>
 </plist>

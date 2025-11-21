@@ -320,3 +320,4 @@ Your Freedom Aviation app is now a full-featured Progressive Web App with:
 
 **Next:** Run `npm run build && npm start` and test the installation flow!
 
+

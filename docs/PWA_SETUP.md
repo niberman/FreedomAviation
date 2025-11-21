@@ -417,3 +417,4 @@ Potential improvements:
 - [MDN: Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
 - [web.dev: PWA Checklist](https://web.dev/pwa-checklist/)
 
+

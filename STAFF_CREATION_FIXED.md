@@ -83,3 +83,4 @@ POST https://wsepwuxkwjnsgmkddkjw.supabase.co/auth/v1/admin/users 403 (Forbidden
 ---
 
 **No more 403 errors!** Staff creation now works properly through secure server-side API.
+

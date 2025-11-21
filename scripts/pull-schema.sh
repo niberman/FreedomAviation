@@ -54,3 +54,4 @@ echo "  psql -h db.${PROJECT_ID}.supabase.co -U postgres -d postgres \\"
 echo "    -c \"\\d+ *\" > schema-info.txt"
 echo ""
 
+
