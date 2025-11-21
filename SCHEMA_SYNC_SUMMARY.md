@@ -156,3 +156,4 @@ Once you've synced the schema:
 
 **TL;DR**: Run `scripts/export-complete-schema.sql` in Supabase SQL Editor, copy the output from the Messages tab, and use it to update `supabase-schema.sql`. The easiest method takes about 5 minutes.
 
+

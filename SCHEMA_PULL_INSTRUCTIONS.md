@@ -144,3 +144,4 @@ If you encounter any issues:
 2. Verify you have permission to access the schema information
 3. Ensure your Supabase project is active and accessible
 
+
