@@ -393,10 +393,12 @@ export default function StaffDashboard() {
   });
 
   const isAdmin = userProfile?.role === 'admin';
+  const isStaff = userProfile?.role === 'staff' || userProfile?.role === 'ops' || userProfile?.role === 'founder';
+  const canSeeAllInvoices = isAdmin || isStaff;
 
-  // Fetch instruction invoices for current CFI
+  // Fetch instruction invoices - staff/admin see all, CFIs see only their own
   const { data: invoices = [], isLoading: isLoadingInvoices, refetch: refetchInvoices, error: invoicesError } = useQuery<InstructionInvoice[]>({
-    queryKey: ['/api/cfi/invoices', user?.id, isDev, isAdmin],
+    queryKey: ['/api/cfi/invoices', user?.id, isDev, canSeeAllInvoices],
     queryFn: async () => {
       // In dev mode without user, return empty array (RLS will block anyway)
       // User should log in to see invoices
@@ -420,8 +422,8 @@ export default function StaffDashboard() {
         `)
         .eq('category', 'instruction');
 
-      // Admins see all invoices, CFIs see only their own
-      if (!isAdmin && user) {
+      // Staff/Admin see all invoices, CFIs see only their own
+      if (!canSeeAllInvoices && user) {
         query = query.eq('created_by_cfi_id', user.id);
       }
 
@@ -435,7 +437,8 @@ export default function StaffDashboard() {
           .select('*')
           .eq('category', 'instruction');
 
-        if (!isAdmin && user) {
+        // Staff/Admin see all invoices, CFIs see only their own
+        if (!canSeeAllInvoices && user) {
           baseQuery = baseQuery.eq('created_by_cfi_id', user.id);
         }
 
