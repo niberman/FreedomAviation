@@ -47,81 +47,27 @@ import { ReportsDashboard } from "@/components/reports-dashboard";
 import { DocumentManagement } from "@/components/document-management";
 import { HangarManagement } from "@/components/hangar-management";
 
-interface InstructionInvoice {
-  id: string;
-  owner_id: string;
-  aircraft_id: string;
-  invoice_number: string;
-  amount: number;
-  status: string;
-  category: string;
-  created_by_cfi_id: string;
-  created_at: string;
-  due_date?: string | null;
-  paid_date?: string | null;
-  aircraft?: { tail_number: string };
-  owner?: { full_name: string; email: string };
-  invoice_lines?: Array<{
-    description: string;
-    quantity: number;
-    unit_cents: number;
-  }>;
-}
+import { InvoicesTab } from "@/components/staff-dashboard/InvoicesTab";
+import { useClients } from "@/hooks/useClients";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAircraftTable } from "@/hooks/useAircraft";
 
 export default function StaffDashboard() {
   const { toast } = useToast();
   const { user, session } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
-  const [selectedAircraftId, setSelectedAircraftId] = useState<string>("");
-  const [description, setDescription] = useState("");
-  const [flightDate, setFlightDate] = useState("");
-  const [hours, setHours] = useState("");
-  const [ratePerHour, setRatePerHour] = useState("150");
-  const [showPreview, setShowPreview] = useState(false);
   const [selectedServiceRequest, setSelectedServiceRequest] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  const { isAdmin } = useUserProfile();
 
-  // Fetch owners - use API endpoint to bypass RLS
-  const { data: owners = [], isLoading: isLoadingOwners, error: ownersError } = useQuery({
-    queryKey: ['/api/clients', session?.access_token],
-    queryFn: async () => {
-      console.log('🔍 Fetching owners for invoice creation...');
-      
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error('Not authenticated. Please sign in again.');
-      }
-      
-      // Use API endpoint which uses service role to bypass RLS
-      const response = await fetch('/api/clients', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Error fetching owners:', errorText);
-        throw new Error(`Failed to fetch clients: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ Fetched owners:', data.clients?.length || 0);
-      
-      // API returns {clients: [...], total: 12}, extract the clients array
-      return data.clients || [];
-    },
-    enabled: !!session?.access_token,
-  });
+  // Fetch owners
+  const { data: owners = [], isLoading: isLoadingOwners, error: ownersError } = useClients();
 
   // Log owners data and show error toast if needed
   useEffect(() => {
     if (owners && owners.length > 0) {
-      console.log('👥 Available owners for invoice:', owners.length);
+      console.log('👥 Available owners:', owners.length);
     } else if (!isLoadingOwners && owners.length === 0) {
       console.warn('⚠️ No owners found in database');
     }
@@ -129,94 +75,13 @@ export default function StaffDashboard() {
     if (ownersError) {
       toast({
         title: 'Error loading clients',
-        description: ownersError instanceof Error ? ownersError.message : 'Failed to load clients. Please check your permissions.',
+        description: ownersError instanceof Error ? ownersError.message : 'Failed to load clients.',
         variant: 'destructive',
       });
     }
   }, [owners, isLoadingOwners, ownersError, toast]);
 
-  // Fetch aircraft for invoice dropdown - use API endpoint to bypass RLS
-  const { data: aircraft = [] } = useQuery({
-    queryKey: ['/api/aircraft', 'dropdown', session?.access_token],
-    queryFn: async () => {
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error('Not authenticated. Please sign in again.');
-      }
-
-      const response = await fetch('/api/aircraft', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Error fetching aircraft:', errorText);
-        throw new Error(`Failed to fetch aircraft: ${response.status}`);
-      }
-
-      const data = await response.json();
-      // API returns {aircraft: [...], total: X}
-      return data.aircraft || [];
-    },
-    enabled: !!session?.access_token,
-  });
-
-  // Fetch aircraft with full details for the AircraftTable - use API endpoint to bypass RLS
-  const { data: aircraftFull = [], isLoading: isLoadingAircraft, error: aircraftError } = useQuery({
-    queryKey: ['/api/aircraft', 'full', session?.access_token],
-    queryFn: async () => {
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error('Not authenticated. Please sign in again.');
-      }
-
-      try {
-        // Use API endpoint which bypasses RLS with service role
-        const response = await fetch('/api/aircraft', {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Error fetching aircraft:', errorText);
-          throw new Error(`Failed to fetch aircraft: ${response.status}`);
-        }
-
-        const result = await response.json();
-        const data = result.aircraft || [];
-        
-        // Transform to match AircraftTable interface
-        return data.map((ac: any) => {
-          const ownerRecord = ac.owner || null;
-          const ownerName = ownerRecord?.full_name || ownerRecord?.email || null;
-
-          return {
-            id: ac.id,
-            tailNumber: ac.tail_number,
-            make: ac.make || 'N/A',
-            model: ac.model || '',
-            class: ac.class || 'Unknown',
-            baseAirport: ac.base_location || 'KAPA',
-            owner: ownerName || 'Unassigned',
-            ownerId: ac.owner_id ?? null,
-            ownerEmail: ownerRecord?.email ?? null,
-          };
-        });
-      } catch (err: any) {
-        console.error('❌ Error in aircraft query:', err);
-        throw err;
-      }
-    },
-    enabled: !!session?.access_token,
-  });
+  const { aircraftFull, isLoading: isLoadingAircraft, error: aircraftError } = useAircraftTable();
 
   // Handle aircraft loading errors
   useEffect(() => {
@@ -224,7 +89,7 @@ export default function StaffDashboard() {
       console.error('Aircraft query error:', aircraftError);
       toast({
         title: 'Error loading aircraft',
-        description: aircraftError instanceof Error ? aircraftError.message : 'Failed to load aircraft. Please try refreshing the page.',
+        description: aircraftError instanceof Error ? aircraftError.message : 'Failed to load aircraft.',
         variant: 'destructive',
       });
     }
@@ -396,331 +261,7 @@ export default function StaffDashboard() {
   const isStaff = userProfile?.role === 'staff' || userProfile?.role === 'ops' || userProfile?.role === 'founder';
   const canSeeAllInvoices = isAdmin || isStaff;
 
-  // Fetch instruction invoices - staff/admin see all, CFIs see only their own
-  const { data: invoices = [], isLoading: isLoadingInvoices, refetch: refetchInvoices, error: invoicesError } = useQuery<InstructionInvoice[]>({
-    queryKey: ['/api/cfi/invoices', user?.id, isDev, canSeeAllInvoices],
-    queryFn: async () => {
-      // In dev mode without user, return empty array (RLS will block anyway)
-      // User should log in to see invoices
-      if (!user && isDev) {
-        return [];
-      }
 
-      // In production, require authentication
-      if (!user) {
-        throw new Error('Not authenticated. Please log in to view invoices.');
-      }
-
-      // Build the query - try nested query first
-      let query = supabase
-        .from('invoices')
-        .select(`
-          *,
-          aircraft:aircraft_id(tail_number),
-          owner:owner_id(full_name, email),
-          invoice_lines(description, quantity, unit_cents)
-        `)
-        .eq('category', 'instruction');
-
-      // Staff/Admin see all invoices, CFIs see only their own
-      if (!canSeeAllInvoices && user) {
-        query = query.eq('created_by_cfi_id', user.id);
-      }
-
-      let { data, error } = await query.order('created_at', { ascending: false });
-      
-      // If nested query fails, try fetching separately
-      if (error && (error.message?.includes('invoice_lines') || error.message?.includes('aircraft') || error.message?.includes('owner'))) {
-        // Build base query without nested relations
-        let baseQuery = supabase
-          .from('invoices')
-          .select('*')
-          .eq('category', 'instruction');
-
-        // Staff/Admin see all invoices, CFIs see only their own
-        if (!canSeeAllInvoices && user) {
-          baseQuery = baseQuery.eq('created_by_cfi_id', user.id);
-        }
-
-        const invoicesResult = await baseQuery.order('created_at', { ascending: false });
-        
-        if (invoicesResult.error) {
-          error = invoicesResult.error;
-          data = null;
-        } else {
-          const invoiceData = invoicesResult.data || [];
-          const invoiceIds = invoiceData.map((inv: any) => inv.id);
-          const aircraftIds = [...new Set(invoiceData.map((inv: any) => inv.aircraft_id))];
-          const ownerIds = [...new Set(invoiceData.map((inv: any) => inv.owner_id))];
-          
-          // Fetch related data separately
-          const [linesResult, aircraftResult, ownerResult] = await Promise.all([
-            invoiceIds.length > 0 
-              ? supabase
-                  .from('invoice_lines')
-                  .select('id, invoice_id, description, quantity, unit_cents')
-                  .in('invoice_id', invoiceIds)
-              : { data: [], error: null },
-            aircraftIds.length > 0
-              ? supabase
-                  .from('aircraft')
-                  .select('id, tail_number')
-                  .in('id', aircraftIds)
-              : { data: [], error: null },
-            ownerIds.length > 0
-              ? supabase
-                  .from('user_profiles')
-                  .select('id, full_name, email')
-                  .in('id', ownerIds)
-              : { data: [], error: null },
-          ]);
-          
-          // Combine data
-          const linesByInvoiceId = (linesResult.data || []).reduce((acc: any, line: any) => {
-            if (!acc[line.invoice_id]) {
-              acc[line.invoice_id] = [];
-            }
-            acc[line.invoice_id].push({
-              description: line.description,
-              quantity: Number(line.quantity),
-              unit_cents: Number(line.unit_cents),
-            });
-            return acc;
-          }, {});
-          
-          const aircraftById = (aircraftResult.data || []).reduce((acc: any, ac: any) => {
-            acc[ac.id] = { tail_number: ac.tail_number };
-            return acc;
-          }, {});
-          
-          const ownerById = (ownerResult.data || []).reduce((acc: any, owner: any) => {
-            acc[owner.id] = { full_name: owner.full_name, email: owner.email };
-            return acc;
-          }, {});
-          
-          // Combine everything
-          data = invoiceData.map((invoice: any) => ({
-            ...invoice,
-            invoice_lines: linesByInvoiceId[invoice.id] || [],
-            aircraft: aircraftById[invoice.aircraft_id] || null,
-            owner: ownerById[invoice.owner_id] || null,
-          }));
-          
-          error = null; // Clear error since we successfully fetched
-        }
-      }
-      
-      if (error) {
-        console.error('❌ Error fetching invoices:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        
-        // Check for authentication/RLS errors
-        if (error.message?.includes('JWT') || error.message?.includes('authentication') || error.code === 'PGRST301') {
-          throw new Error('Authentication required. Please log in to view invoices.');
-        }
-        
-        if (error.code === 'PGRST116') {
-          throw new Error('No invoices found. This might be a permissions issue.');
-        }
-        
-        throw new Error(error.message || 'Failed to load invoices. Please try again.');
-      }
-      
-      return (data || []) as InstructionInvoice[];
-    },
-    // Only enable query if user exists (or in dev mode, but we'll handle that in the function)
-    enabled: Boolean(user?.id),
-    retry: false, // Don't retry on auth errors
-  });
-
-  // Handle invoice loading errors with toast
-  useEffect(() => {
-    if (invoicesError) {
-      console.error('Invoice query error:', invoicesError);
-      toast({
-        title: 'Error loading invoices',
-        description: invoicesError instanceof Error ? invoicesError.message : 'Failed to load invoices. Please try refreshing the page.',
-        variant: 'destructive',
-      });
-    }
-  }, [invoicesError, toast]);
-
-  // Create invoice and send to client mutation
-  const createAndSendInvoiceMutation = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const rateCents = Math.round(parseFloat(ratePerHour) * 100);
-      const hoursDecimal = parseFloat(hours);
-
-      // Create the invoice (aircraft_id is optional)
-      // Convert "__none__" to null for optional aircraft
-      const aircraftId = selectedAircraftId === "__none__" || !selectedAircraftId ? null : selectedAircraftId;
-      
-      const { data: invoiceData, error: createError } = await supabase.rpc('create_instruction_invoice', {
-        p_owner_id: selectedOwnerId,
-        p_aircraft_id: aircraftId,
-        p_description: `${description} - ${flightDate}`,
-        p_hours: hoursDecimal,
-        p_rate_cents: rateCents,
-        p_cfi_id: user.id,
-      });
-
-      if (createError) throw createError;
-      if (!invoiceData) throw new Error('Invoice creation failed');
-
-      const invoiceId = invoiceData;
-
-      // Finalize the invoice
-      const { error: finalizeError } = await supabase.rpc('finalize_invoice', {
-        p_invoice_id: invoiceId,
-      });
-      if (finalizeError) throw finalizeError;
-
-      // Send email to client
-      try {
-        // Always use www domain in production to avoid CORS issues from redirects
-        // Vercel redirects non-www to www, which breaks CORS during redirect
-        let apiUrl: string;
-        if (window.location.hostname === "freedomaviationco.com") {
-          // If on non-www, explicitly use www to avoid redirect CORS issues
-          apiUrl = "https://www.freedomaviationco.com/api/invoices/send-email";
-        } else {
-          // Use current origin (localhost, www, or other)
-          apiUrl = `${window.location.origin}/api/invoices/send-email`;
-        }
-        // Get auth token for API request
-        const { data: { session } } = await supabase.auth.getSession();
-        const authToken = session?.access_token;
-
-        const emailResponse = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(authToken && { Authorization: `Bearer ${authToken}` }),
-          },
-          credentials: "include",
-          body: JSON.stringify({ invoiceId }),
-        });
-
-        if (!emailResponse.ok) {
-          const errorText = await emailResponse.text();
-          let error: any;
-          try {
-            error = JSON.parse(errorText);
-          } catch {
-            error = { error: errorText || "Unknown error" };
-          }
-          
-          console.error("❌ Failed to send invoice email:");
-          console.error("❌ Response status:", emailResponse.status);
-          console.error("❌ Error object:", error);
-          console.error("❌ Error message:", error.message || error.error);
-          console.error("❌ Error details:", error.details);
-          
-          // Don't throw - email failure shouldn't prevent invoice creation
-          // But show a warning toast with the actual error message
-          const errorMessage = error.message || error.error || "Unknown error";
-          
-          // If the error is about status being "sent", show a more helpful message
-          if (errorMessage.includes('sent')) {
-            toast({
-              title: "Invoice already sent",
-              description: "This invoice has already been sent to the client. The email was not resent.",
-              variant: "default",
-            });
-          } else {
-            toast({
-              title: "Invoice created",
-              description: `Invoice created successfully, but email could not be sent: ${errorMessage}`,
-              variant: "destructive",
-            });
-          }
-        } else {
-          const result = await emailResponse.json();
-          console.log("✅ Email API response:", result);
-          
-          // Check if email was actually sent or just logged
-          if (result.emailService === "console" || result.sent === false) {
-            console.warn("⚠️ Email service is in console mode - email was NOT actually sent");
-            toast({
-              title: "Invoice created",
-              description: "Invoice created, but email service is in console mode. Email was logged to server console only.",
-              variant: "default",
-            });
-          } else {
-            console.log("✅ Email sent successfully");
-          }
-        }
-      } catch (emailError) {
-        console.error("❌ Error calling email API:", emailError);
-        // Don't throw - email failure shouldn't prevent invoice creation
-        toast({
-          title: "Invoice created",
-          description: "Invoice created successfully, but there was an error sending the email. Please check server logs.",
-          variant: "destructive",
-        });
-      }
-
-      return invoiceId;
-    },
-    onSuccess: async () => {
-      // Invalidate and refetch invoices to show the newly created invoice
-      await queryClient.invalidateQueries({ 
-        queryKey: ['/api/cfi/invoices'],
-      });
-      await queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === '/api/cfi/invoices',
-      });
-      await refetchInvoices();
-      toast({
-        title: "Invoice sent",
-        description: "Invoice has been created and sent to the client.",
-      });
-      // Reset form and close preview
-      setSelectedOwnerId("");
-      setSelectedAircraftId("");
-      setDescription("");
-      setFlightDate("");
-      setHours("");
-      setRatePerHour("150");
-      setShowPreview(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-
-  const handlePreview = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedOwnerId || !description || !flightDate || !hours || !ratePerHour) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all required fields (Client, Description, Flight Date, Hours, and Rate).",
-        variant: "destructive",
-      });
-      return;
-    }
-    setShowPreview(true);
-  };
-
-  const filteredAircraft = selectedOwnerId
-    ? aircraft.filter((a: any) => a.owner_id === selectedOwnerId)
-    : aircraft;
-
-  const totalAmount = hours && ratePerHour
-    ? (parseFloat(hours) * parseFloat(ratePerHour)).toFixed(2)
-    : "0.00";
-
-  // Get preview data
-  const selectedOwner = owners.find((o: any) => o.id === selectedOwnerId);
-  const selectedAircraft = aircraft.find((a: any) => a.id === selectedAircraftId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -1160,14 +701,15 @@ export default function StaffDashboard() {
                 <p className="text-sm text-muted-foreground">Create and manage instruction invoices for clients</p>
               </div>
             </div>
-
+            <InvoicesTab />
+            {/* START_DELETE_INVOICES */}
             {/* Create Invoice Form */}
             <Card>
               <CardHeader>
                 <CardTitle>Create Instruction Invoice</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handlePreview} className="space-y-6">
+                <div className="hidden">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="owner">Client *</Label>
@@ -1317,12 +859,12 @@ export default function StaffDashboard() {
                       Preview Invoice
                     </Button>
                   </div>
-                </form>
+                </div>
               </CardContent>
             </Card>
 
             {/* Invoice Preview Dialog */}
-            <Dialog open={showPreview} onOpenChange={setShowPreview}>
+            <Dialog open={false} onOpenChange={() => {}}>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Invoice Preview</DialogTitle>
@@ -1376,12 +918,12 @@ export default function StaffDashboard() {
                     Cancel
                   </Button>
                   <Button
-                    onClick={() => createAndSendInvoiceMutation.mutate()}
-                    disabled={createAndSendInvoiceMutation.isPending}
+                    onClick={() => {}}
+                    disabled={true}
                     data-testid="button-send-to-client"
                     size="lg"
                   >
-                    {createAndSendInvoiceMutation.isPending ? "Sending..." : "Send to Client"}
+                    Send to Client
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1396,14 +938,14 @@ export default function StaffDashboard() {
                     {isAdmin ? 'All invoices' : 'Your invoices'}
                   </p>
                 </div>
-                {invoices.length > 0 && (
+                {false && (
                   <Badge variant="secondary" className="text-sm">
-                    {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
+                    0 invoices
                   </Badge>
                 )}
               </div>
               
-              {invoicesError ? (
+              {false ? (
                 <Card>
                   <CardContent className="py-8 text-center">
                     <p className="text-destructive font-medium mb-2">Error loading invoices</p>
@@ -1426,7 +968,7 @@ export default function StaffDashboard() {
                     )}
                   </CardContent>
                 </Card>
-              ) : isLoadingInvoices ? (
+              ) : false ? (
                 <Card>
                   <CardContent className="py-8 text-center">
                     <p className="text-muted-foreground">Loading invoices...</p>
@@ -1441,7 +983,7 @@ export default function StaffDashboard() {
                     </p>
                   </CardContent>
                 </Card>
-              ) : invoices.length === 0 ? (
+              ) : true ? (
                 <Card>
                   <CardContent className="py-8 text-center">
                     <p className="text-muted-foreground mb-2">No instruction invoices yet.</p>
@@ -1451,7 +993,8 @@ export default function StaffDashboard() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 gap-4">
+                <div className="hidden">
+                  {/*
                   {invoices
                     .filter((invoice) => invoice && invoice.id)
                     .map((invoice) => {
@@ -1563,10 +1106,11 @@ export default function StaffDashboard() {
                         </CardContent>
                       </Card>
                     );
-                  })}
+                  */}
                 </div>
               )}
             </div>
+            {/* END_DELETE_INVOICES */}
           </TabsContent>
 
           {/* Fuel Tracking */}
