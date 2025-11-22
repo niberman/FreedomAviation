@@ -240,27 +240,6 @@ export default function StaffDashboard() {
 
   const isDev = !import.meta.env.PROD;
 
-  // Check if user is admin
-  const { data: userProfile } = useQuery({
-    queryKey: ['user-profile', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-    retry: false,
-  });
-
-  const isAdmin = userProfile?.role === 'admin';
-  const isStaff = userProfile?.role === 'staff' || userProfile?.role === 'ops' || userProfile?.role === 'founder';
-  const canSeeAllInvoices = isAdmin || isStaff;
-
 
 
   return (
