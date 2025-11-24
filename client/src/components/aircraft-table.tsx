@@ -372,21 +372,22 @@ export function AircraftTable({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-lg font-semibold">Aircraft Inventory</h3>
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="text-base sm:text-lg font-semibold">Aircraft Inventory</h3>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Button
             variant="default"
             onClick={() => setIsAddDialogOpen(true)}
             data-testid="button-add-aircraft"
+            className="w-full sm:w-auto touch-manipulation"
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Aircraft
           </Button>
           <Select value={baseFilter} onValueChange={setBaseFilter}>
             <SelectTrigger
-              className="w-[180px]"
+              className="w-full sm:w-[180px] touch-manipulation"
               data-testid="select-base-filter"
             >
               <SelectValue placeholder="Filter by base" />
@@ -400,16 +401,16 @@ export function AircraftTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto border rounded-md scroll-smooth-touch scrollbar-hide">
+      <div className="overflow-x-auto border rounded-md scroll-smooth-touch scrollbar-hide -mx-2 sm:mx-0">
         <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow>
-              <TableHead>Tail Number</TableHead>
-              <TableHead>Aircraft</TableHead>
-              <TableHead>Class</TableHead>
-              <TableHead>Base</TableHead>
-              <TableHead>Owner</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-xs sm:text-sm">Tail Number</TableHead>
+              <TableHead className="text-xs sm:text-sm">Aircraft</TableHead>
+              <TableHead className="text-xs sm:text-sm">Class</TableHead>
+              <TableHead className="text-xs sm:text-sm">Base</TableHead>
+              <TableHead className="text-xs sm:text-sm">Owner</TableHead>
+              <TableHead className="text-right text-xs sm:text-sm">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -417,7 +418,7 @@ export function AircraftTable({
               <TableRow>
                 <TableCell
                   colSpan={6}
-                  className="text-center text-muted-foreground"
+                  className="text-center text-muted-foreground py-8"
                 >
                   No aircraft at this base yet.
                 </TableCell>
@@ -425,17 +426,17 @@ export function AircraftTable({
             ) : (
               filteredAircraft.map((a) => (
                 <TableRow key={a.id} data-testid={`aircraft-row-${a.id}`}>
-                  <TableCell className="font-mono font-semibold">
+                  <TableCell className="font-mono font-semibold text-xs sm:text-sm whitespace-nowrap">
                     {a.tailNumber}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs sm:text-sm whitespace-nowrap">
                     {a.make} {a.model}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{a.class}</Badge>
+                    <Badge variant="secondary" className="text-xs">{a.class}</Badge>
                   </TableCell>
-                  <TableCell className="font-mono">{a.baseAirport}</TableCell>
-                  <TableCell>{a.owner}</TableCell>
+                  <TableCell className="font-mono text-xs sm:text-sm">{a.baseAirport}</TableCell>
+                  <TableCell className="text-xs sm:text-sm max-w-[150px] truncate">{a.owner}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       <Button
@@ -443,8 +444,9 @@ export function AircraftTable({
                         variant="ghost"
                         onClick={() => handleOpenAssignDialog(a)}
                         data-testid={`button-assign-${a.id}`}
+                        className="h-8 w-8 sm:h-9 sm:w-9 touch-manipulation"
                       >
-                        <UserPlus className="h-4 w-4" />
+                        <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         <span className="sr-only">Assign to client</span>
                       </Button>
                       <Button
@@ -456,17 +458,19 @@ export function AircraftTable({
                         }
                         onClick={() => handleOpenServiceDialog(a)}
                         data-testid={`button-add-service-${a.id}`}
+                        className="text-xs touch-manipulation whitespace-nowrap"
                       >
                         {serviceMutation.isPending &&
                         serviceMutation.variables?.aircraft.id === a.id ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Adding...
+                            <Loader2 className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4 animate-spin" />
+                            <span className="hidden sm:inline">Adding...</span>
                           </>
                         ) : (
                           <>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Service
+                            <Plus className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
+                            <span className="hidden sm:inline">Add Service</span>
+                            <span className="sm:hidden">Add</span>
                           </>
                         )}
                       </Button>
@@ -480,18 +484,18 @@ export function AircraftTable({
       </div>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Aircraft</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Add New Aircraft</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Record a new aircraft and optionally assign it to a client.
             </DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-4" onSubmit={handleCreateAircraft}>
-            <div className="grid gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="aircraft-tail">Tail Number *</Label>
+          <form className="space-y-3 sm:space-y-4" onSubmit={handleCreateAircraft}>
+            <div className="grid gap-2 sm:gap-3">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="aircraft-tail" className="text-sm">Tail Number *</Label>
                 <Input
                   id="aircraft-tail"
                   placeholder="N123FA"
@@ -505,12 +509,13 @@ export function AircraftTable({
                   required
                   autoFocus
                   data-testid="input-aircraft-tail"
+                  className="text-sm touch-manipulation"
                 />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="aircraft-make">Make</Label>
+              <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="aircraft-make" className="text-sm">Make</Label>
                   <Input
                     id="aircraft-make"
                     placeholder="Cirrus"
@@ -522,10 +527,11 @@ export function AircraftTable({
                       }))
                     }
                     data-testid="input-aircraft-make"
+                    className="text-sm touch-manipulation"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aircraft-model">Model</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="aircraft-model" className="text-sm">Model</Label>
                   <Input
                     id="aircraft-model"
                     placeholder="SR22T"
@@ -537,13 +543,14 @@ export function AircraftTable({
                       }))
                     }
                     data-testid="input-aircraft-model"
+                    className="text-sm touch-manipulation"
                   />
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="aircraft-class">Class</Label>
+              <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="aircraft-class" className="text-sm">Class</Label>
                   <Input
                     id="aircraft-class"
                     placeholder="TAA"
@@ -555,10 +562,11 @@ export function AircraftTable({
                       }))
                     }
                     data-testid="input-aircraft-class"
+                    className="text-sm touch-manipulation"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aircraft-base">Base</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="aircraft-base" className="text-sm">Base</Label>
                   <Input
                     id="aircraft-base"
                     placeholder="KAPA"
@@ -570,13 +578,14 @@ export function AircraftTable({
                       }))
                     }
                     data-testid="input-aircraft-base"
+                    className="text-sm touch-manipulation"
                   />
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="aircraft-year">Year</Label>
+              <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="aircraft-year" className="text-sm">Year</Label>
                   <Input
                     id="aircraft-year"
                     type="number"
@@ -591,10 +600,11 @@ export function AircraftTable({
                       }))
                     }
                     data-testid="input-aircraft-year"
+                    className="text-sm touch-manipulation"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Assign to Client</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label className="text-sm">Assign to Client</Label>
                   <Select
                     value={newAircraft.ownerId}
                     onValueChange={(value) =>
@@ -604,7 +614,7 @@ export function AircraftTable({
                       }))
                     }
                   >
-                    <SelectTrigger data-testid="select-aircraft-owner">
+                    <SelectTrigger data-testid="select-aircraft-owner" className="text-sm touch-manipulation">
                       <SelectValue placeholder="Unassigned" />
                     </SelectTrigger>
                     <SelectContent>
@@ -621,9 +631,9 @@ export function AircraftTable({
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-base">Aircraft Systems</Label>
-                <div className="flex items-center space-x-6">
+              <div className="space-y-2 sm:space-y-3">
+                <Label className="text-sm sm:text-base">Aircraft Systems</Label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="aircraft-tks"
@@ -635,8 +645,9 @@ export function AircraftTable({
                         }))
                       }
                       data-testid="checkbox-aircraft-tks"
+                      className="touch-manipulation"
                     />
-                    <Label htmlFor="aircraft-tks" className="font-normal cursor-pointer">
+                    <Label htmlFor="aircraft-tks" className="font-normal cursor-pointer text-sm">
                       TKS Ice Protection
                     </Label>
                   </div>
@@ -651,19 +662,20 @@ export function AircraftTable({
                         }))
                       }
                       data-testid="checkbox-aircraft-oxygen"
+                      className="touch-manipulation"
                     />
-                    <Label htmlFor="aircraft-oxygen" className="font-normal cursor-pointer">
+                    <Label htmlFor="aircraft-oxygen" className="font-normal cursor-pointer text-sm">
                       Oxygen System
                     </Label>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Systems determine pricing class: Class I (oil only) or Class II (TKS/oxygen)
                 </p>
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -671,6 +683,7 @@ export function AircraftTable({
                   setIsAddDialogOpen(false);
                   setNewAircraft(createInitialAircraftState());
                 }}
+                className="w-full sm:w-auto touch-manipulation"
               >
                 Cancel
               </Button>
@@ -678,6 +691,7 @@ export function AircraftTable({
                 type="submit"
                 disabled={isSubmitting}
                 data-testid="button-save-aircraft"
+                className="w-full sm:w-auto touch-manipulation"
               >
                 {isSubmitting ? (
                   <>
@@ -700,18 +714,18 @@ export function AircraftTable({
         }
         setIsAssignDialogOpen(open);
       }}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Assign Aircraft to Client</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Assign Aircraft to Client</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Choose which client should own this aircraft.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAssignAircraft} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Aircraft</Label>
-              <div className="rounded-md border bg-muted px-3 py-2 font-mono">
+          <form onSubmit={handleAssignAircraft} className="space-y-3 sm:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-sm">Aircraft</Label>
+              <div className="rounded-md border bg-muted px-3 py-2 font-mono text-sm">
                 {selectedAircraftForAssign?.tailNumber ?? "N/A"}
               </div>
               {selectedAircraftForAssign && (
@@ -721,13 +735,13 @@ export function AircraftTable({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="assign-owner">Assign to Client</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="assign-owner" className="text-sm">Assign to Client</Label>
               <Select
                 value={selectedOwnerIdForAssign}
                 onValueChange={setSelectedOwnerIdForAssign}
               >
-                <SelectTrigger id="assign-owner" data-testid="select-assign-owner">
+                <SelectTrigger id="assign-owner" data-testid="select-assign-owner" className="text-sm touch-manipulation">
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent>
@@ -741,14 +755,15 @@ export function AircraftTable({
               </Select>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={resetAssignDialog}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="outline" onClick={resetAssignDialog} className="w-full sm:w-auto touch-manipulation">
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isAssignSubmitting}
                 data-testid="button-save-assignment"
+                className="w-full sm:w-auto touch-manipulation"
               >
                 {isAssignSubmitting ? (
                   <>
@@ -772,29 +787,29 @@ export function AircraftTable({
           setServiceNotes("");
         }
       }}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Service</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Add Service</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Select a service type to add for {selectedAircraftForService?.tailNumber || "this aircraft"}.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmitService} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Aircraft</Label>
-              <div className="rounded-md border bg-muted px-3 py-2 font-mono">
+          <form onSubmit={handleSubmitService} className="space-y-3 sm:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-sm">Aircraft</Label>
+              <div className="rounded-md border bg-muted px-3 py-2 font-mono text-sm">
                 {selectedAircraftForService?.tailNumber ?? "N/A"}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="service-type">Service Type</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="service-type" className="text-sm">Service Type</Label>
               <Select
                 value={selectedServiceType}
                 onValueChange={(value) => setSelectedServiceType(value as ServiceType | "oil_topoff")}
               >
-                <SelectTrigger id="service-type" data-testid="select-service-type">
+                <SelectTrigger id="service-type" data-testid="select-service-type" className="text-sm touch-manipulation">
                   <SelectValue placeholder="Select service type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -807,8 +822,8 @@ export function AircraftTable({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="service-notes">Notes (Optional)</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="service-notes" className="text-sm">Notes (Optional)</Label>
               <Textarea
                 id="service-notes"
                 placeholder="Add any notes or details about this service..."
@@ -816,10 +831,11 @@ export function AircraftTable({
                 onChange={(e) => setServiceNotes(e.target.value)}
                 rows={3}
                 data-testid="textarea-service-notes"
+                className="text-sm touch-manipulation"
               />
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -832,6 +848,7 @@ export function AircraftTable({
                   }
                 }}
                 disabled={serviceMutation.isPending}
+                className="w-full sm:w-auto touch-manipulation"
               >
                 Cancel
               </Button>
@@ -839,6 +856,7 @@ export function AircraftTable({
                 type="submit"
                 disabled={serviceMutation.isPending}
                 data-testid="button-submit-service"
+                className="w-full sm:w-auto touch-manipulation"
               >
                 {serviceMutation.isPending ? (
                   <>

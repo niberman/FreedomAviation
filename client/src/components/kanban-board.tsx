@@ -159,27 +159,27 @@ export function KanbanBoard({ items = [], onCardSelect, onStatusChange }: Kanban
   };
 
   const boardContainerClass = isMobile
-    ? "flex w-full gap-4 overflow-x-auto pb-6 -mx-4 px-4 snap-x snap-mandatory md:m-0 md:px-0"
-    : "grid grid-cols-1 md:grid-cols-3 gap-6";
+    ? "flex w-full gap-3 overflow-x-auto pb-4 -mx-2 px-2 snap-x snap-mandatory scroll-smooth md:m-0 md:px-0"
+    : "grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6";
 
   const columnWrapperClass = isMobile
-    ? "flex-1 min-w-[260px] snap-center"
+    ? "flex-1 min-w-[280px] sm:min-w-[300px] snap-center"
     : "";
 
   return (
     <div className={cn(boardContainerClass)}>
       {columns.map(column => (
         <div key={column.id} className={columnWrapperClass}>
-          <div className="flex items-center gap-2 mb-4">
-            <div className={`w-3 h-3 rounded-full ${column.color}`} />
-            <h3 className="font-semibold">{column.title}</h3>
-            <Badge variant="secondary" className="ml-auto">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${column.color}`} />
+            <h3 className="font-semibold text-sm sm:text-base">{column.title}</h3>
+            <Badge variant="secondary" className="ml-auto text-xs">
               {requests.filter(r => r.status === column.id).length}
             </Badge>
           </div>
           
           <div 
-            className="space-y-3 min-h-[400px] p-2 rounded-md bg-muted/30"
+            className="space-y-2 sm:space-y-3 min-h-[400px] p-2 sm:p-2.5 rounded-md bg-muted/30"
             onDrop={(e) => handleDrop(e, column.id)}
             onDragOver={handleDragOver}
             data-testid={`kanban-column-${column.id}`}
@@ -192,8 +192,8 @@ export function KanbanBoard({ items = [], onCardSelect, onStatusChange }: Kanban
                   draggable={!isMobile}
                   onDragStart={(e) => handleDragStart(e, request.id)}
                   className={cn(
-                    "hover-elevate",
-                    isMobile ? "cursor-pointer" : "cursor-move"
+                    "hover-elevate transition-shadow",
+                    isMobile ? "cursor-pointer active:scale-[0.98]" : "cursor-move"
                   )}
                   data-testid={`kanban-card-${request.id}`}
                   onClick={() => onCardSelect?.(request.id)}
@@ -206,32 +206,32 @@ export function KanbanBoard({ items = [], onCardSelect, onStatusChange }: Kanban
                     }
                   }}
                 >
-                  <CardHeader className="p-4 pb-2">
+                  <CardHeader className="p-3 sm:p-4 pb-2">
                     <div className="flex items-start justify-between gap-2">
-                      <Badge variant="outline" className="font-mono">
+                      <Badge variant="outline" className="font-mono text-xs">
                         {request.tailNumber}
                       </Badge>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs whitespace-nowrap">
                         {getServiceTypeLabel(request.type)}
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-4 pt-2">
+                  <CardContent className="p-3 sm:p-4 pt-2">
                     {request.ownerName && (
-                      <p className="text-xs font-medium mb-1.5">
+                      <p className="text-xs font-medium mb-1.5 truncate">
                         {request.ownerName}
                       </p>
                     )}
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {request.requestedFor}
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                      <Clock className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{request.requestedFor}</span>
                     </div>
                     {request.notes && (
-                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-2 line-clamp-2 leading-relaxed">
                         {request.notes}
                       </p>
                     )}
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
                       {(() => {
                         const currentIndex = statusOrder.indexOf(request.status);
                         const previousStatus =
@@ -246,7 +246,7 @@ export function KanbanBoard({ items = [], onCardSelect, onStatusChange }: Kanban
                             {previousStatus && (
                               <Button
                                 size="sm"
-                                className="h-7 px-2 text-xs"
+                                className="h-7 px-2 text-xs touch-manipulation flex-1 sm:flex-none"
                                 variant="outline"
                                 onClick={(event) =>
                                   handleMoveButtonClick(event, request.id, previousStatus)
@@ -254,19 +254,19 @@ export function KanbanBoard({ items = [], onCardSelect, onStatusChange }: Kanban
                                 aria-label={`Move request to ${columnLabels[previousStatus]}`}
                               >
                                 <ArrowLeft className="mr-1 h-3 w-3" />
-                                {columnLabels[previousStatus]}
+                                <span className="truncate">{columnLabels[previousStatus]}</span>
                               </Button>
                             )}
                             {nextStatus && (
                               <Button
                                 size="sm"
-                                className="h-7 px-2 text-xs"
+                                className="h-7 px-2 text-xs touch-manipulation flex-1 sm:flex-none"
                                 onClick={(event) =>
                                   handleMoveButtonClick(event, request.id, nextStatus)
                                 }
                                 aria-label={`Move request to ${columnLabels[nextStatus]}`}
                               >
-                                {columnLabels[nextStatus]}
+                                <span className="truncate">{columnLabels[nextStatus]}</span>
                                 <ArrowRight className="ml-1 h-3 w-3" />
                               </Button>
                             )}
