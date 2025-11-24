@@ -187,19 +187,19 @@ export default function StaffOperations() {
       navItems={staffDashboardNavItems}
       actions={<ThemeToggle />}
     >
-      <Tabs defaultValue="requests" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="requests">Service Requests</TabsTrigger>
-          <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+      <Tabs defaultValue="requests" className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-2 h-auto">
+          <TabsTrigger value="requests" className="text-sm sm:text-base py-2.5 touch-manipulation">Service Requests</TabsTrigger>
+          <TabsTrigger value="maintenance" className="text-sm sm:text-base py-2.5 touch-manipulation">Maintenance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="requests" className="space-y-6">
+        <TabsContent value="requests" className="space-y-4 sm:space-y-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-2xl font-semibold">Service Requests</h2>
+              <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+              <h2 className="text-lg sm:text-2xl font-semibold">Service Requests</h2>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Manage service requests from aircraft owners
             </p>
           </div>
@@ -267,13 +267,13 @@ export default function StaffOperations() {
           )}
         </TabsContent>
 
-        <TabsContent value="maintenance" className="space-y-6">
+        <TabsContent value="maintenance" className="space-y-4 sm:space-y-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-2xl font-semibold">Maintenance Tracking</h2>
+              <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+              <h2 className="text-lg sm:text-2xl font-semibold">Maintenance Tracking</h2>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Monitor maintenance schedules and due dates across the fleet
             </p>
           </div>

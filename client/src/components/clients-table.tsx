@@ -234,15 +234,16 @@ export function ClientsTable() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Client Management</h2>
-          <p className="text-sm text-muted-foreground">View and manage owner accounts</p>
+          <h2 className="text-lg sm:text-2xl font-semibold">Client Management</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">View and manage owner accounts</p>
         </div>
         <Button
           onClick={() => setIsAddDialogOpen(true)}
           data-testid="button-add-client"
+          className="w-full sm:w-auto touch-manipulation"
         >
           <Plus className="h-4 w-4 mr-2" />
           Invite Client
@@ -251,7 +252,7 @@ export function ClientsTable() {
 
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertDescription>
+        <AlertDescription className="text-xs sm:text-sm">
           Clients shown here are users with role='owner'. If a user signed up but isn't showing, 
           their role may need to be set to 'owner' in the database.
           {clients.length === 0 && !isLoading && !clientsError && (
@@ -265,8 +266,8 @@ export function ClientsTable() {
 
       {/* Temporary: Show button to fix Noah's role */}
       <Card>
-        <CardContent className="p-4">
-          <p className="text-sm text-muted-foreground mb-2">
+        <CardContent className="p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-2">
             Quick fix: If you have users in the database without the 'owner' role, click below to update them:
           </p>
           <Button
@@ -297,6 +298,7 @@ export function ClientsTable() {
               }
             }}
             data-testid="button-fix-roles"
+            className="touch-manipulation text-xs sm:text-sm w-full sm:w-auto"
           >
             Set all users without role to 'owner'
           </Button>
@@ -305,54 +307,54 @@ export function ClientsTable() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <User className="h-4 w-4 sm:h-5 sm:w-5" />
             Clients ({clients.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {clients.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
+            <p className="text-center text-muted-foreground py-8 text-sm">
               No clients found. Clients must sign up through the authentication system first.
             </p>
           ) : (
-            <div className="w-full overflow-x-auto scroll-smooth-touch scrollbar-hide">
+            <div className="w-full overflow-x-auto scroll-smooth-touch scrollbar-hide -mx-2 sm:mx-0">
               <Table className="min-w-[720px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Aircraft</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Name</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Email</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Phone</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Aircraft</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Joined</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Status</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {clients.map((client: Client) => (
                     <TableRow key={client.id} data-testid={`client-row-${client.id}`}>
-                      <TableCell className="font-medium">{client.full_name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          {client.email}
+                      <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{client.full_name}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Mail className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate max-w-[150px] sm:max-w-none">{client.email}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-xs sm:text-sm whitespace-nowrap">
                         {client.phone || "—"}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Plane className="h-4 w-4 text-muted-foreground" />
+                      <TableCell className="text-xs sm:text-sm">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Plane className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
                           {client.aircraft_count || 0}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-xs sm:text-sm whitespace-nowrap">
                         {new Date(client.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">Active</Badge>
+                        <Badge variant="secondary" className="text-xs">Active</Badge>
                       </TableCell>
                       <TableCell>
                         <Button
@@ -360,8 +362,9 @@ export function ClientsTable() {
                           variant="ghost"
                           onClick={() => handleEditClient(client)}
                           data-testid={`button-edit-${client.id}`}
+                          className="h-8 w-8 p-0 touch-manipulation"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -375,17 +378,17 @@ export function ClientsTable() {
 
       {/* Add Client Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Invite New Client</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Invite New Client</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Send an invitation to a new client. They will receive an email with a secure link to set their own password and access the dashboard.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddClient}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="add-email">Email *</Label>
+            <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="add-email" className="text-sm">Email *</Label>
                 <Input
                   id="add-email"
                   type="email"
@@ -394,13 +397,14 @@ export function ClientsTable() {
                   onChange={(e) => setNewClientEmail(e.target.value)}
                   data-testid="input-add-client-email"
                   required
+                  className="text-sm touch-manipulation"
                 />
                 <p className="text-xs text-muted-foreground">
                   An invitation email will be sent to this address
                 </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-name">Full Name *</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="add-name" className="text-sm">Full Name *</Label>
                 <Input
                   id="add-name"
                   placeholder="John Doe"
@@ -408,10 +412,11 @@ export function ClientsTable() {
                   onChange={(e) => setNewClientName(e.target.value)}
                   data-testid="input-add-client-name"
                   required
+                  className="text-sm touch-manipulation"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-phone">Phone (optional)</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="add-phone" className="text-sm">Phone (optional)</Label>
                 <Input
                   id="add-phone"
                   type="tel"
@@ -419,14 +424,16 @@ export function ClientsTable() {
                   value={newClientPhone}
                   onChange={(e) => setNewClientPhone(e.target.value)}
                   data-testid="input-add-client-phone"
+                  className="text-sm touch-manipulation"
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsAddDialogOpen(false)}
+                className="w-full sm:w-auto touch-manipulation"
               >
                 Cancel
               </Button>
@@ -434,6 +441,7 @@ export function ClientsTable() {
                 type="submit"
                 disabled={createClientMutation.isPending}
                 data-testid="button-create-client"
+                className="w-full sm:w-auto touch-manipulation"
               >
                 {createClientMutation.isPending ? "Sending Invitation..." : "Send Invitation"}
               </Button>
@@ -444,17 +452,17 @@ export function ClientsTable() {
 
       {/* Edit Client Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Client</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Edit Client</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Update client information
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateClient}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Full Name *</Label>
+            <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="edit-name" className="text-sm">Full Name *</Label>
                 <Input
                   id="edit-name"
                   placeholder="John Doe"
@@ -462,10 +470,11 @@ export function ClientsTable() {
                   onChange={(e) => setEditClientName(e.target.value)}
                   data-testid="input-edit-client-name"
                   required
+                  className="text-sm touch-manipulation"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-phone">Phone (optional)</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="edit-phone" className="text-sm">Phone (optional)</Label>
                 <Input
                   id="edit-phone"
                   type="tel"
@@ -473,14 +482,16 @@ export function ClientsTable() {
                   value={editClientPhone}
                   onChange={(e) => setEditClientPhone(e.target.value)}
                   data-testid="input-edit-client-phone"
+                  className="text-sm touch-manipulation"
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}
+                className="w-full sm:w-auto touch-manipulation"
               >
                 Cancel
               </Button>
@@ -488,6 +499,7 @@ export function ClientsTable() {
                 type="submit"
                 disabled={updateClientMutation.isPending}
                 data-testid="button-update-client"
+                className="w-full sm:w-auto touch-manipulation"
               >
                 {updateClientMutation.isPending ? "Updating..." : "Update Client"}
               </Button>

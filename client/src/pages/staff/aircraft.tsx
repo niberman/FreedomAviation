@@ -186,12 +186,12 @@ export default function StaffAircraft() {
       navItems={staffDashboardNavItems}
       actions={<ThemeToggle />}
     >
-      <div className="space-y-1">
+      <div className="space-y-1 mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
-          <Plane className="h-5 w-5 text-muted-foreground" />
-          <h2 className="text-2xl font-semibold">Fleet Management</h2>
+          <Plane className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+          <h2 className="text-lg sm:text-2xl font-semibold">Fleet Management</h2>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Track aircraft details, ownership, and maintenance status
         </p>
       </div>
