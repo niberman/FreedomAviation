@@ -22,7 +22,7 @@ export function useAircraft() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Error fetching aircraft:', errorText);
+        console.error('Error fetching aircraft:', errorText);
         throw new Error(`Failed to fetch aircraft: ${response.status}`);
       }
 

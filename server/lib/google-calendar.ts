@@ -138,15 +138,15 @@ export async function createCalendarEvent(
 
   switch (slot.status) {
     case 'available':
-      summary = '✈️ Available for Flight Instruction';
+      summary = 'Available for Flight Instruction';
       colorId = '2'; // Green
       break;
     case 'booked':
-      summary = '✈️ Flight Instruction - Booked';
+      summary = 'Flight Instruction - Booked';
       colorId = '11'; // Red
       break;
     case 'blocked':
-      summary = '🚫 Unavailable';
+      summary = 'Unavailable';
       colorId = '8'; // Gray
       break;
   }
@@ -192,15 +192,15 @@ export async function updateCalendarEvent(
 
   switch (slot.status) {
     case 'available':
-      summary = '✈️ Available for Flight Instruction';
+      summary = 'Available for Flight Instruction';
       colorId = '2'; // Green
       break;
     case 'booked':
-      summary = '✈️ Flight Instruction - Booked';
+      summary = 'Flight Instruction - Booked';
       colorId = '11'; // Red
       break;
     case 'blocked':
-      summary = '🚫 Unavailable';
+      summary = 'Unavailable';
       colorId = '8'; // Gray
       break;
   }

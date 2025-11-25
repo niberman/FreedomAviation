@@ -144,27 +144,68 @@ app.use((req, res, next) => {
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
     const PORT = process.env.PORT || "5000";
-    const port = parseInt(PORT, 10);
+    const startPort = parseInt(PORT, 10);
+    const maxPort = startPort + 9; // Try 10 ports
+    let currentPort = startPort;
+    let serverStarted = false;
 
-    log(`Starting server on port ${port} (from PORT=${PORT})`);
+    const tryPort = (port: number): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        log(`Attempting to start server on port ${port}...`);
 
-    server.listen(port, "0.0.0.0", () => {
-      log(`✓ Server successfully listening on port ${port}`);
-      log(`✓ Environment: ${app.get("env")}`);
-      log(`✓ Ready to accept connections`);
-    });
+        const onError = (error: any) => {
+          if (error.code === "EADDRINUSE") {
+            log(`Port ${port} is already in use, trying next port...`);
+            server.removeListener("error", onError);
+            server.removeListener("listening", onListening);
+            resolve();
+          } else if (error.code === "EACCES") {
+            log(`✗ Error: Permission denied to bind to port ${port}`);
+            reject(error);
+          } else {
+            log(`✗ Server error: ${error.message}`);
+            reject(error);
+          }
+        };
 
-    server.on("error", (error: any) => {
-      if (error.code === "EADDRINUSE") {
-        log(`✗ Error: Port ${port} is already in use`);
-      } else if (error.code === "EACCES") {
-        log(`✗ Error: Permission denied to bind to port ${port}`);
-      } else {
-        log(`✗ Server error: ${error.message}`);
+        const onListening = () => {
+          log(`Server successfully listening on port ${port}`);
+          log(`Environment: ${app.get("env")}`);
+          log(`Ready to accept connections`);
+          serverStarted = true;
+          server.removeListener("error", onError);
+          resolve();
+        };
+
+        server.once("error", onError);
+        server.once("listening", onListening);
+
+        try {
+          server.listen(port, "0.0.0.0");
+        } catch (err) {
+          reject(err);
+        }
+      });
+    };
+
+    // Try ports sequentially until one works
+    while (currentPort <= maxPort && !serverStarted) {
+      try {
+        await tryPort(currentPort);
+        if (!serverStarted) {
+          currentPort++;
+        }
+      } catch (error: any) {
+        console.error("Server startup error:", error);
+        process.exit(1);
       }
-      console.error("Server startup error:", error);
+    }
+
+    if (!serverStarted) {
+      log(`✗ Could not start server on any port between ${startPort} and ${maxPort}`);
+      log(`✗ All ports are in use. Please free up a port or specify a different PORT in your environment.`);
       process.exit(1);
-    });
+    }
   } catch (error) {
     console.error("Failed to initialize server:", error);
     log(`✗ Fatal error during server initialization: ${error}`);

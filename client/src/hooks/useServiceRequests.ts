@@ -10,7 +10,7 @@ export function useServiceRequests() {
     queryKey: ['/api/service-requests'],
     queryFn: async () => {
       try {
-        console.log('🔍 Fetching service requests...');
+        console.log('Fetching service requests...');
         
         const res = await authenticatedFetch('/api/service-requests');
         
@@ -31,10 +31,10 @@ export function useServiceRequests() {
         }
         
         const json = await res.json();
-        console.log('✅ Fetched service requests:', json.serviceRequests?.length || 0);
+        console.log('Fetched service requests:', json.serviceRequests?.length || 0);
         return json.serviceRequests || [];
       } catch (error) {
-        console.error('❌ Error fetching service requests:', error);
+        console.error('Error fetching service requests:', error);
         throw error;
       }
     },

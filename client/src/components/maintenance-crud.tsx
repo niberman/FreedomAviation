@@ -230,7 +230,7 @@ export function MaintenanceCRUD() {
         .from("maintenance")
         .update({ 
           status: "completed",
-          completed_at: new Date().toISOString()
+          completed_date: new Date().toISOString().split('T')[0]
         })
         .eq("id", id);
       if (error) throw error;

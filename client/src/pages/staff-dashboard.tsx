@@ -46,6 +46,7 @@ import { ServiceCreditManagement } from "@/components/service-credit-management"
 import { ReportsDashboard } from "@/components/reports-dashboard";
 import { DocumentManagement } from "@/components/document-management";
 import { HangarManagement } from "@/components/hangar-management";
+import { RampDashboard } from "@/components/ramp-dashboard";
 
 import { InvoicesTab } from "@/components/staff-dashboard/InvoicesTab";
 import { useClients } from "@/hooks/useClients";
@@ -67,9 +68,9 @@ export default function StaffDashboard() {
   // Log owners data and show error toast if needed
   useEffect(() => {
     if (owners && owners.length > 0) {
-      console.log('👥 Available owners:', owners.length);
+      console.log('Available owners:', owners.length);
     } else if (!isLoadingOwners && owners.length === 0) {
-      console.warn('⚠️ No owners found in database');
+      console.warn('No owners found in database');
     }
     
     if (ownersError) {
@@ -100,7 +101,7 @@ export default function StaffDashboard() {
     queryKey: ['/api/service-requests'],
     queryFn: async () => {
       try {
-        console.log('🔍 Fetching service requests...');
+        console.log('Fetching service requests...');
         
         const res = await authenticatedFetch('/api/service-requests');
         
@@ -121,10 +122,10 @@ export default function StaffDashboard() {
         }
         
         const json = await res.json();
-        console.log('✅ Fetched service requests:', json.serviceRequests?.length || 0);
+        console.log('Fetched service requests:', json.serviceRequests?.length || 0);
         return json.serviceRequests || [];
       } catch (error) {
-        console.error('❌ Error fetching service requests:', error);
+        console.error('Error fetching service requests:', error);
         // The authenticatedFetch will handle 401 errors and session refresh
         throw error;
       }
@@ -291,8 +292,9 @@ export default function StaffDashboard() {
             <p className="text-muted-foreground">Complete tools for managing all aspects of aviation operations</p>
           </div>
 
-          <Tabs defaultValue="invoices" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-14 h-auto gap-1">
+          <Tabs defaultValue="ramp" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-15 h-auto gap-1">
+              <TabsTrigger value="ramp" data-testid="tab-ramp" className="text-xs sm:text-sm">Ramp Ops</TabsTrigger>
               <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
               <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>
               <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
@@ -308,6 +310,11 @@ export default function StaffDashboard() {
               <TabsTrigger value="staff" data-testid="tab-staff" className="text-xs sm:text-sm">Staff</TabsTrigger>
               <TabsTrigger value="pricing" data-testid="tab-pricing" className="text-xs sm:text-sm">Pricing</TabsTrigger>
             </TabsList>
+
+          {/* Ramp Operations Dashboard */}
+          <TabsContent value="ramp" className="space-y-6">
+            <RampDashboard />
+          </TabsContent>
 
           {/* Service Requests */}
           <TabsContent value="requests" className="space-y-6">
@@ -681,415 +688,6 @@ export default function StaffDashboard() {
               </div>
             </div>
             <InvoicesTab />
-            {/* START_DELETE_INVOICES */}
-            {/* Create Invoice Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Create Instruction Invoice</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="hidden">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="owner">Client *</Label>
-                      {ownersError ? (
-                        <div className="p-3 border border-destructive/50 bg-destructive/10 rounded-md">
-                          <p className="text-sm text-destructive">
-                            Error loading clients: {ownersError instanceof Error ? ownersError.message : 'Unknown error'}
-                          </p>
-                        </div>
-                      ) : (
-                        <Select 
-                          value={selectedOwnerId} 
-                          onValueChange={setSelectedOwnerId}
-                          disabled={isLoadingOwners}
-                        >
-                          <SelectTrigger id="owner" data-testid="select-owner">
-                            <SelectValue placeholder={
-                              isLoadingOwners ? "Loading clients..." : 
-                              owners.length === 0 ? "No clients found" : 
-                              "Select client"
-                            } />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {isLoadingOwners ? (
-                              <div className="p-4 text-center text-sm text-muted-foreground">
-                                Loading clients...
-                              </div>
-                            ) : owners.length === 0 ? (
-                              <div className="p-4 text-center text-sm text-muted-foreground">
-                                No clients found. Create a client first.
-                              </div>
-                            ) : (
-                              owners
-                                .filter((owner: any) => {
-                                  // Filter out invalid entries
-                                  if (!owner || !owner.id) return false;
-                                  const id = String(owner.id).trim();
-                                  return id !== '' && id !== 'undefined' && id !== 'null';
-                                })
-                                .map((owner: any) => {
-                                  const ownerId = String(owner.id).trim();
-                                  return (
-                                    <SelectItem key={ownerId} value={ownerId}>
-                                      {owner.full_name || owner.email || 'Unknown Client'}
-                                    </SelectItem>
-                                  );
-                                })
-                            )}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="aircraft">Aircraft (Optional)</Label>
-                      <Select 
-                        value={selectedAircraftId} 
-                        onValueChange={setSelectedAircraftId}
-                        disabled={!selectedOwnerId}
-                      >
-                        <SelectTrigger id="aircraft" data-testid="select-aircraft">
-                          <SelectValue placeholder="Select aircraft (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">None</SelectItem>
-                          {filteredAircraft
-                            .filter((ac: any) => {
-                              // Filter out invalid entries
-                              if (!ac || !ac.id) return false;
-                              const id = String(ac.id).trim();
-                              return id !== '' && id !== 'undefined' && id !== 'null';
-                            })
-                            .map((ac: any) => {
-                              const aircraftId = String(ac.id).trim();
-                              return (
-                                <SelectItem key={aircraftId} value={aircraftId}>
-                                  {ac.tail_number || 'Unknown Aircraft'}
-                                </SelectItem>
-                              );
-                            })}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description *</Label>
-                      <Input
-                        id="description"
-                        data-testid="input-description"
-                        placeholder="e.g., IPC training, BFR, Flight instruction"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="flight-date">Flight Date *</Label>
-                      <Input
-                        id="flight-date"
-                        data-testid="input-flight-date"
-                        type="date"
-                        max={new Date().toISOString().split('T')[0]}
-                        value={flightDate}
-                        onChange={(e) => setFlightDate(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="hours">Instruction Hours *</Label>
-                      <Input
-                        id="hours"
-                        data-testid="input-hours"
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="e.g., 2.5"
-                        value={hours}
-                        onChange={(e) => setHours(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="rate">Hourly Rate ($) *</Label>
-                      <Input
-                        id="rate"
-                        data-testid="input-rate"
-                        type="number"
-                        step="1"
-                        min="0"
-                        placeholder="e.g., 150"
-                        value={ratePerHour}
-                        onChange={(e) => setRatePerHour(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Amount</p>
-                      <p className="text-2xl font-bold">${totalAmount}</p>
-                    </div>
-                    <Button 
-                      type="submit" 
-                      data-testid="button-preview-invoice"
-                      size="lg"
-                    >
-                      Preview Invoice
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Invoice Preview Dialog */}
-            <Dialog open={false} onOpenChange={() => {}}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Invoice Preview</DialogTitle>
-                  <DialogDescription>
-                    Review the invoice details before sending to the client.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-6 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Client</p>
-                      <p className="text-base font-medium">{selectedOwner?.full_name || selectedOwner?.email || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Aircraft</p>
-                      <p className="text-base font-mono font-semibold">{selectedAircraft?.tail_number || 'Not specified'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Description</p>
-                      <p className="text-base">{description || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Flight Date</p>
-                      <p className="text-base">{flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : 'N/A'}</p>
-                    </div>
-                  </div>
-                  <div className="border-t pt-4">
-                    <p className="text-sm font-medium text-muted-foreground mb-3">Line Items</p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium mb-1">{description} - {flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : ''}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {hours} {parseFloat(hours) === 1 ? 'hr' : 'hrs'} × ${parseFloat(ratePerHour).toFixed(2)}/hr
-                          </p>
-                        </div>
-                        <p className="text-lg font-bold ml-4">${totalAmount}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t pt-4 flex justify-between items-center bg-muted/50 p-4 rounded-lg">
-                    <p className="text-lg font-semibold">Total Amount</p>
-                    <p className="text-2xl font-bold">${totalAmount}</p>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowPreview(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => {}}
-                    disabled={true}
-                    data-testid="button-send-to-client"
-                    size="lg"
-                  >
-                    Send to Client
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Invoice List */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold">Instruction Invoices</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {isAdmin ? 'All invoices' : 'Your invoices'}
-                  </p>
-                </div>
-                {false && (
-                  <Badge variant="secondary" className="text-sm">
-                    0 invoices
-                  </Badge>
-                )}
-              </div>
-              
-              {false ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-destructive font-medium mb-2">Error loading invoices</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {invoicesError instanceof Error ? invoicesError.message : 'Unknown error occurred'}
-                    </p>
-                    {!user && (
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Please log in to view invoices.
-                      </p>
-                    )}
-                    {user && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => refetchInvoices()}
-                      >
-                        Retry
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : false ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground">Loading invoices...</p>
-                  </CardContent>
-                </Card>
-              ) : !user ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground mb-2">Authentication required</p>
-                    <p className="text-sm text-muted-foreground">
-                      Please log in to view and manage invoices.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : true ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground mb-2">No instruction invoices yet.</p>
-                    <p className="text-sm text-muted-foreground">
-                      Create an invoice using the form above to get started.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="hidden">
-                  {/*
-                  {invoices
-                    .filter((invoice) => invoice && invoice.id)
-                    .map((invoice) => {
-                    // Calculate total from all invoice lines
-                    let calculatedTotal = invoice.amount;
-                    if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
-                      calculatedTotal = invoice.invoice_lines.reduce((sum, line) => {
-                        return sum + (line.quantity * line.unit_cents / 100);
-                      }, 0);
-                    }
-                    
-                    return (
-                      <Card key={invoice.id} data-testid={`invoice-${invoice.id}`} className="hover:shadow-md transition-shadow">
-                        <CardHeader>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <CardTitle className="text-lg font-mono">
-                                  {invoice.aircraft?.tail_number || 'N/A'}
-                                </CardTitle>
-                                <Badge 
-                                  variant={
-                                    invoice.status === 'paid' ? 'default' :
-                                    invoice.status === 'finalized' || invoice.status === 'sent' ? 'secondary' :
-                                    'outline'
-                                  }
-                                  data-testid={`badge-status-${invoice.id}`}
-                                  className="capitalize"
-                                >
-                                  {invoice.status}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {invoice.owner?.full_name || invoice.owner?.email || 'Unknown Client'}
-                              </p>
-                              <p className="text-xs text-muted-foreground font-mono mt-1">
-                                Invoice #{invoice.invoice_number}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm text-muted-foreground mb-1">Total</p>
-                              <p className="text-2xl font-bold">${calculatedTotal.toFixed(2)}</p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {invoice.invoice_lines && invoice.invoice_lines.length > 0 && (
-                              <div className="space-y-2">
-                                <p className="text-sm font-medium text-muted-foreground">Line Items</p>
-                                <div className="space-y-2">
-                                  {invoice.invoice_lines.map((line, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                                      <div className="flex-1">
-                                        <p className="text-sm font-medium">{line.description}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {line.quantity} {line.quantity === 1 ? 'hr' : 'hrs'} × ${(line.unit_cents / 100).toFixed(2)}/hr
-                                        </p>
-                                      </div>
-                                      <p className="text-sm font-semibold">
-                                        ${(line.quantity * line.unit_cents / 100).toFixed(2)}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center justify-between pt-3 border-t">
-                              <div className="flex items-center gap-4">
-                                {invoice.created_at && (
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Created</p>
-                                    <p className="text-sm">
-                                      {format(new Date(invoice.created_at), 'MMM d, yyyy')}
-                                    </p>
-                                  </div>
-                                )}
-                                {invoice.due_date && (
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Due Date</p>
-                                    <p className="text-sm">
-                                      {format(new Date(invoice.due_date), 'MMM d, yyyy')}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="text-right">
-                                {(invoice.status === 'finalized' || invoice.status === 'sent') && (
-                                  <p className="text-sm text-muted-foreground">
-                                    Sent to client
-                                  </p>
-                                )}
-                                
-                                {invoice.status === 'paid' && invoice.paid_date && (
-                                  <div>
-                                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                                      ✓ Paid
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {format(new Date(invoice.paid_date), 'MMM d, yyyy')}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  */}
-                </div>
-              )}
-            </div>
-            {/* END_DELETE_INVOICES */}
           </TabsContent>
 
           {/* Fuel Tracking */}

@@ -11,6 +11,7 @@ import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
 import { DocsCard } from "@/features/owner/components/DocsCard";
 import { PasswordChangeCard } from "@/features/owner/components/PasswordChangeCard";
+import { DocumentManagement } from "@/components/document-management";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT } from "@/lib/demo-data";
@@ -308,6 +309,11 @@ export default function OwnerMore() {
             isLoading={tasksLoading} 
           />
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <h3 className="text-xl font-semibold">Documents & Compliance</h3>
+        <DocumentManagement />
       </section>
 
       <section className="space-y-4">

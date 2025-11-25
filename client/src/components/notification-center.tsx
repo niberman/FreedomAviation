@@ -77,7 +77,7 @@ export function NotificationCenter() {
       
       if (error?.code === "42P01") {
         // Table doesn't exist - disable component
-        console.log("⚠️ Notifications table not found - feature disabled");
+        console.log("Notifications table not found - feature disabled");
         setTableExists(false);
       } else {
         setTableExists(true);

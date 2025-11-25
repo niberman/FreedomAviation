@@ -8,7 +8,7 @@ import { processEmailNotifications, webhookProcessNotification } from "./routes/
 // Initialize Stripe
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 if (!stripeSecretKey) {
-  console.warn("⚠️  STRIPE_SECRET_KEY not set. Stripe payment features will be disabled.");
+  console.warn("STRIPE_SECRET_KEY not set. Stripe payment features will be disabled.");
 }
 
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
@@ -40,33 +40,34 @@ const envVars = {
   VITE_SUPABASE_ANON_KEY: !!process.env.VITE_SUPABASE_ANON_KEY,
 };
 
-console.log("🔍 Supabase environment variables check:");
-console.log("  - SUPABASE_URL:", envVars.SUPABASE_URL ? "✓ Set" : "✗ Missing");
-console.log("  - NEXT_PUBLIC_SUPABASE_URL:", envVars.NEXT_PUBLIC_SUPABASE_URL ? "✓ Set" : "✗ Missing");
-console.log("  - VITE_SUPABASE_URL:", envVars.VITE_SUPABASE_URL ? "✓ Set (NOTE: Not available in serverless runtime!)" : "✗ Missing");
-console.log("  - SUPABASE_SERVICE_ROLE_KEY:", envVars.SUPABASE_SERVICE_ROLE_KEY ? "✓ Set" : "✗ Missing");
-console.log("  - SUPABASE_ANON_KEY:", envVars.SUPABASE_ANON_KEY ? "✓ Set" : "✗ Missing");
-console.log("  - NEXT_PUBLIC_SUPABASE_ANON_KEY:", envVars.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "✓ Set" : "✗ Missing");
-console.log("  - VITE_SUPABASE_ANON_KEY:", envVars.VITE_SUPABASE_ANON_KEY ? "✓ Set (NOTE: Not available in serverless runtime!)" : "✗ Missing");
+console.log("Supabase environment variables check:");
+console.log("  - SUPABASE_URL:", envVars.SUPABASE_URL ? "Set" : "Missing (optional for development)");
+console.log("  - NEXT_PUBLIC_SUPABASE_URL:", envVars.NEXT_PUBLIC_SUPABASE_URL ? "Set" : "Missing (optional for development)");
+console.log("  - VITE_SUPABASE_URL:", envVars.VITE_SUPABASE_URL ? "Set (NOTE: Not available in serverless runtime!)" : "Missing (optional for development)");
+console.log("  - SUPABASE_SERVICE_ROLE_KEY:", envVars.SUPABASE_SERVICE_ROLE_KEY ? "Set" : "Missing (optional for development)");
+console.log("  - SUPABASE_ANON_KEY:", envVars.SUPABASE_ANON_KEY ? "Set" : "Missing (optional for development)");
+console.log("  - NEXT_PUBLIC_SUPABASE_ANON_KEY:", envVars.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "Set" : "Missing (optional for development)");
+console.log("  - VITE_SUPABASE_ANON_KEY:", envVars.VITE_SUPABASE_ANON_KEY ? "Set (NOTE: Not available in serverless runtime!)" : "Missing (optional for development)");
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error("❌ CRITICAL: Supabase credentials not set!");
-  console.error("   Required environment variables for serverless functions:");
-  console.error("   - SUPABASE_URL:", supabaseUrl ? "✓" : "✗ MISSING (required)");
-  console.error("   - SUPABASE_SERVICE_ROLE_KEY:", supabaseServiceKey ? "✓" : "✗ MISSING (required)");
-  console.error("   - SUPABASE_ANON_KEY:", supabaseAnonKey ? "✓" : "✗ MISSING (required)");
-  console.error("");
-  console.error("   NOTE: VITE_ prefixed variables are NOT available in Vercel serverless functions.");
-  console.error("   They are only available during the build process for client-side code.");
-  console.error("   Make sure to set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SUPABASE_ANON_KEY");
-  console.error("   (without VITE_ prefix) in your Vercel project settings.");
-  console.error("");
-  console.error("   Some features will NOT work until these are set.");
+  console.warn("WARNING: Supabase credentials not fully configured!");
+  console.warn("   This is OK for development, but some features will be disabled:");
+  console.warn("   - SUPABASE_URL:", supabaseUrl ? "OK" : "MISSING");
+  console.warn("   - SUPABASE_SERVICE_ROLE_KEY:", supabaseServiceKey ? "OK" : "MISSING");
+  console.warn("   - SUPABASE_ANON_KEY:", supabaseAnonKey ? "OK" : "MISSING");
+  console.warn("");
+  console.warn("   To enable full functionality, set these environment variables:");
+  console.warn("   1. Copy .env.local.example to .env.local");
+  console.warn("   2. Add your Supabase credentials");
+  console.warn("   3. Restart the dev server");
+  console.warn("");
+  console.warn("   NOTE: VITE_ prefixed variables are NOT available in Vercel serverless functions.");
+  console.warn("   Server will continue starting with limited functionality...");
 }
 
-if (!supabaseAnonKey) {
-  console.warn("⚠️  SUPABASE_ANON_KEY not set. Authentication may not work properly.");
-  console.warn("   Set SUPABASE_ANON_KEY (without VITE_ prefix) in your Vercel project settings.");
+if (!supabaseAnonKey && (supabaseUrl && supabaseServiceKey)) {
+  console.warn("SUPABASE_ANON_KEY not set. Authentication may not work properly.");
+  console.warn("   Set SUPABASE_ANON_KEY (without VITE_ prefix) for full authentication support.");
 }
 
 // Service role client for admin operations (bypasses RLS)
@@ -205,7 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = await supabaseAnon.auth.getUser(token);
 
       if (authError || !user) {
-        console.error("❌ Error verifying auth token for /api/clients:", authError);
+        console.error("Error verifying auth token for /api/clients:", authError);
         return res.status(401).json({
           error: "Unauthorized",
           message: "Invalid or expired token",
@@ -219,7 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .maybeSingle();
 
       if (profileError) {
-        console.error("❌ Error fetching staff profile in /api/clients:", profileError);
+        console.error("Error fetching staff profile in /api/clients:", profileError);
         return res.status(500).json({
           error: "Failed to fetch user profile",
           message: profileError.message,
@@ -247,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .order("created_at", { ascending: false });
 
       if (ownersError) {
-        console.error("❌ Error fetching owners in /api/clients:", ownersError);
+        console.error("Error fetching owners in /api/clients:", ownersError);
         return res.status(500).json({
           error: "Failed to load clients",
           message: ownersError.message,
@@ -259,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select("owner_id");
 
       if (aircraftError) {
-        console.error("⚠️ Error fetching aircraft for /api/clients:", aircraftError);
+        console.error("Error fetching aircraft for /api/clients:", aircraftError);
       }
 
       const aircraftCounts = new Map<string, number>();
@@ -283,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total: clients.length,
       });
     } catch (error: any) {
-      console.error("❌ Unexpected error in /api/clients:", error);
+      console.error("Unexpected error in /api/clients:", error);
       res.status(500).json({
         error: "Failed to load clients",
         message: error?.message || "Unknown error occurred",
@@ -333,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = await supabaseAnon.auth.getUser(token);
 
       if (authError || !user) {
-        console.error("❌ Error verifying auth token for /api/aircraft:", authError);
+        console.error("Error verifying auth token for /api/aircraft:", authError);
         return res.status(401).json({
           error: "Unauthorized",
           message: "Invalid or expired token",
@@ -348,7 +349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .maybeSingle();
 
       if (profileError) {
-        console.error("❌ Error fetching user profile in /api/aircraft:", profileError);
+        console.error("Error fetching user profile in /api/aircraft:", profileError);
         return res.status(500).json({
           error: "Failed to fetch user profile",
           message: profileError.message,
@@ -388,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .order("tail_number");
 
       if (aircraftError) {
-        console.error("❌ Error fetching aircraft in /api/aircraft:", aircraftError);
+        console.error("Error fetching aircraft in /api/aircraft:", aircraftError);
         return res.status(500).json({
           error: "Failed to load aircraft",
           message: aircraftError.message,
@@ -400,7 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         total: aircraft?.length || 0,
       });
     } catch (error: any) {
-      console.error("❌ Unexpected error in /api/aircraft:", error);
+      console.error("Unexpected error in /api/aircraft:", error);
       res.status(500).json({
         error: "Failed to load aircraft",
         message: error?.message || "Unknown error occurred",
@@ -453,7 +454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error("❌ Error sending test email:", error);
+      console.error("Error sending test email:", error);
       res.status(500).json({ 
         error: "Failed to send test email",
         message: error.message,
@@ -631,7 +632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
       if (!webhookSecret) {
-        console.warn("⚠️  STRIPE_WEBHOOK_SECRET not set. Webhook verification disabled.");
+        console.warn("STRIPE_WEBHOOK_SECRET not set. Webhook verification disabled.");
         return res.status(400).json({ error: "Webhook secret not configured" });
       }
 
@@ -665,7 +666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .single();
             
             if (fetchError || !invoice) {
-              console.error(`❌ Invoice ${invoiceId} not found:`, fetchError);
+              console.error(`Invoice ${invoiceId} not found:`, fetchError);
               break;
             }
             
@@ -690,7 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
           } else {
-            console.warn("⚠️ checkout.session.completed event missing invoice_id in metadata");
+            console.warn("checkout.session.completed event missing invoice_id in metadata");
           }
           break;
         }
@@ -745,7 +746,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case "payment_intent.payment_failed": {
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
-          console.error(`❌ Payment failed: ${paymentIntent.id}`);
+          console.error(`Payment failed: ${paymentIntent.id}`);
           
           // Optionally, you could update invoice status or send notification
           // For now, we'll just log it
@@ -849,7 +850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         } catch (err) {
-          console.warn("⚠️ Error verifying auth token:", err);
+          console.warn("Error verifying auth token:", err);
         }
       }
 
@@ -858,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!currentUserId) {
         // For now, we'll allow the request but log a warning
         // In production, you should require authentication
-        console.warn("⚠️ No authentication provided for invoice send-email request");
+        console.warn("No authentication provided for invoice send-email request");
       }
 
       // Fetch invoice with all necessary data
@@ -901,7 +902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (ownerError || !ownerData) {
           console.error("❌ Error fetching owner:", ownerError);
-          console.error("❌ Owner ID:", invoiceData.owner_id);
+          console.error("Owner ID:", invoiceData.owner_id);
           return res.status(500).json({ 
             error: "Failed to fetch owner information",
             details: ownerError?.message || "Owner not found",
@@ -989,7 +990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: "Authentication required"
           });
         }
-        console.warn("⚠️ Allowing invoice send without authentication (development mode)");
+        console.warn("Allowing invoice send without authentication (development mode)");
       }
 
       // Allow sending email for finalized or sent invoices (to enable resending)
@@ -1002,8 +1003,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get owner info
       const owner = invoice.owner as any;
       if (!owner || !owner.email) {
-        console.error("❌ Owner data:", owner);
-        console.error("❌ Invoice owner_id:", invoice.owner_id);
+        console.error("Owner data:", owner);
+        console.error("Invoice owner_id:", invoice.owner_id);
         return res.status(400).json({ 
           error: "Owner email not found",
           details: owner ? "Owner found but email is missing" : "Owner not found"
@@ -1624,12 +1625,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check Supabase configuration with detailed logging
       if (!supabase || !supabaseAnon) {
-        console.error("❌ Supabase not configured:");
-        console.error("  - supabaseUrl:", supabaseUrl ? "✓ Set" : "✗ Missing");
-        console.error("  - supabaseServiceKey:", supabaseServiceKey ? "✓ Set" : "✗ Missing");
-        console.error("  - supabaseAnonKey:", supabaseAnonKey ? "✓ Set" : "✗ Missing");
-        console.error("  - supabase client:", supabase ? "✓ Initialized" : "✗ Not initialized");
-        console.error("  - supabaseAnon client:", supabaseAnon ? "✓ Initialized" : "✗ Not initialized");
+        console.error("Supabase not configured:");
+        console.error("  - supabaseUrl:", supabaseUrl ? "Set" : "Missing");
+        console.error("  - supabaseServiceKey:", supabaseServiceKey ? "Set" : "Missing");
+        console.error("  - supabaseAnonKey:", supabaseAnonKey ? "Set" : "Missing");
+        console.error("  - supabase client:", supabase ? "Initialized" : "Not initialized");
+        console.error("  - supabaseAnon client:", supabaseAnon ? "Initialized" : "Not initialized");
         return res.status(503).json({ 
           error: "Supabase not configured",
           message: "Server is missing required Supabase environment variables. Check SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SUPABASE_ANON_KEY.",
@@ -1646,7 +1647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
       
       if (!token) {
-        console.warn("⚠️ No authorization token provided");
+        console.warn("No authorization token provided");
         return res.status(401).json({ 
           error: "Unauthorized",
           message: "Missing authorization token. Please log in."
@@ -1657,14 +1658,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
       
       if (authError || !user) {
-        console.error("❌ Auth verification failed:", authError?.message);
+        console.error("Auth verification failed:", authError?.message);
         return res.status(401).json({ 
           error: "Unauthorized",
           message: "Invalid or expired token. Please log in again."
         });
       }
       
-      console.log("✓ User authenticated:", user.id);
+      console.log("User authenticated:", user.id);
       
       // Check user role
       const { data: profile, error: profileError } = await supabase
@@ -1682,14 +1683,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!profile || !["admin", "cfi", "staff", "founder", "ops"].includes(profile.role)) {
-        console.warn("⚠️ User lacks required role. User role:", profile?.role);
+        console.warn("User lacks required role. User role:", profile?.role);
         return res.status(403).json({ 
           error: "Forbidden",
           message: "You don't have permission to access this resource. Required role: admin, cfi, staff, founder, or ops."
         });
       }
       
-      console.log("✓ User has required role:", profile.role);
+      console.log("User has required role:", profile.role);
       console.log("📊 Fetching service requests...");
       
       // Fetch recent service requests, join owner & aircraft
@@ -1704,7 +1705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw error;
       }
       
-      console.log(`✓ Successfully fetched ${requests?.length || 0} service requests`);
+      console.log(`Successfully fetched ${requests?.length || 0} service requests`);
       res.json({ serviceRequests: requests || [] });
     } catch (err: any) {
       console.error("❌ Unexpected error in /api/service-requests:", err);
@@ -1905,7 +1906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If table doesn't exist or other error, return gracefully
       if (tokenError) {
-        console.warn("⚠️ Google Calendar tokens table not accessible:", tokenError.message);
+        console.warn("Google Calendar tokens table not accessible:", tokenError.message);
         return res.json({ 
           connected: false, 
           syncEnabled: false,

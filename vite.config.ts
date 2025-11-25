@@ -34,7 +34,8 @@ export default defineConfig({
   server: {
     fs: {
       strict: true,
-      deny: ["**/.*"],
+      // Allow .env files but deny other dotfiles for security
+      deny: ["**/.git/**", "**/node_modules/**", "**/.vscode/**", "**/.cursor/**"],
     },
   },
 });
