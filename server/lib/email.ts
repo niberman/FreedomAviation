@@ -207,9 +207,9 @@ Freedom Aviation
       return sendViaResend(data.ownerEmail, `Invoice ${data.invoiceNumber} - Freedom Aviation`, html, text);
 
     default:
-      console.warn(`⚠️ Unknown email service: ${emailService}, using console mode`);
-      console.warn(`⚠️ Valid options: 'console', 'resend', 'smtp'`);
-      console.warn(`⚠️ Email will NOT be sent - only logged to console`);
+      console.warn(`Unknown email service: ${emailService}, using console mode`);
+      console.warn(`Valid options: 'console', 'resend', 'smtp'`);
+      console.warn(`Email will NOT be sent - only logged to console`);
       return;
   }
 }
@@ -366,7 +366,7 @@ function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
               <table role="presentation" style="width: 100%; margin: 24px 0;">
                 <tr>
                   <td style="padding: 16px; background-color: #f9fafb; border-radius: 6px; margin-bottom: 12px;">
-                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 16px; font-weight: 600;">🛩️ Expert Aircraft Care</h3>
+                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 16px; font-weight: 600;">Expert Aircraft Care</h3>
                     <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
                       Professional detailing, maintenance tracking, and readiness services tailored to your aircraft and flying schedule.
                     </p>
@@ -375,7 +375,7 @@ function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
                 <tr><td style="height: 12px;"></td></tr>
                 <tr>
                   <td style="padding: 16px; background-color: #f9fafb; border-radius: 6px; margin-bottom: 12px;">
-                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 16px; font-weight: 600;">📱 Digital Owner Portal</h3>
+                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 16px; font-weight: 600;">Digital Owner Portal</h3>
                     <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
                       Access your aircraft information, request services, view maintenance logs, and manage everything from one convenient dashboard.
                     </p>
@@ -384,7 +384,7 @@ function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
                 <tr><td style="height: 12px;"></td></tr>
                 <tr>
                   <td style="padding: 16px; background-color: #f9fafb; border-radius: 6px;">
-                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 16px; font-weight: 600;">🔧 Proactive Maintenance</h3>
+                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 16px; font-weight: 600;">Proactive Maintenance</h3>
                     <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
                       We'll keep you informed about upcoming maintenance, inspections, and any service your aircraft needs.
                     </p>
@@ -444,13 +444,13 @@ We're thrilled to have you as part of the Freedom Aviation family. Your membersh
 
 What you can expect from us:
 
-🛩️ Expert Aircraft Care
+Expert Aircraft Care
 Professional detailing, maintenance tracking, and readiness services tailored to your aircraft and flying schedule.
 
-📱 Digital Owner Portal
+Digital Owner Portal
 Access your aircraft information, request services, view maintenance logs, and manage everything from one convenient dashboard.
 
-🔧 Proactive Maintenance
+Proactive Maintenance
 We'll keep you informed about upcoming maintenance, inspections, and any service your aircraft needs.
 
 Access your dashboard: https://www.freedomaviationco.com/dashboard
@@ -478,7 +478,7 @@ ${process.env.EMAIL_FROM || "info@freedomaviationco.com"}
       return sendViaResend(data.userEmail, "Welcome to Freedom Aviation!", html, text);
 
     default:
-      console.warn(`⚠️ Unknown email service: ${emailService}, using console mode`);
+      console.warn(`Unknown email service: ${emailService}, using console mode`);
       return;
   }
 }

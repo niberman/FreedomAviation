@@ -229,7 +229,7 @@ ${process.env.EMAIL_FROM || 'info@freedomaviationco.com'} | (970) 618-2094
       );
 
     default:
-      console.warn(`⚠️ Unknown email service: ${emailService}, using console mode`);
+      console.warn(`Unknown email service: ${emailService}, using console mode`);
       return;
   }
 }
@@ -275,7 +275,7 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
       throw new Error(errorMessage);
     }
 
-    console.log(`✅ Welcome email sent to ${to}`);
+    console.log(`Welcome email sent to ${to}`);
   } catch (error: any) {
     console.error("Failed to send welcome email via Resend:", error);
     throw error;

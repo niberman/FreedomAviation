@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Plane, Wrench, GraduationCap } from "lucide-react";
+import { Plane, Wrench, GraduationCap, Calendar, Fuel, Zap, Wind, Warehouse, Droplets, Battery } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
@@ -373,187 +373,302 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
 
   return (
     <Card>
-      <CardHeader className="px-4 sm:px-6">
-        <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
+      <CardHeader>
+        <CardTitle className="text-lg">Quick Actions</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-2 sm:gap-3 px-4 sm:px-6">
+      <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Dialog open={openPrep} onOpenChange={setOpenPrep}>
           <DialogTrigger asChild>
             <Button 
               variant="default" 
-              className="w-full justify-start h-11 sm:h-10" 
+              size="lg"
+              className="w-full h-24 flex flex-col gap-2 bg-primary hover:bg-primary/90" 
               data-testid="button-prepare-aircraft"
               aria-label="Prepare my aircraft"
               onClick={() => setOpenPrep(true)}
             >
-              <Plane className="mr-2 h-4 w-4" />
-              Prepare My Aircraft
+              <Plane className="h-8 w-8" />
+              <span className="text-base font-semibold">Prepare My Aircraft</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-label="Prepare Aircraft Dialog">
-            <DialogHeader>
-              <DialogTitle>Prepare My Aircraft</DialogTitle>
-              <DialogDescription>
-                Submit your pre-flight concierge request with all the details we need to prepare your aircraft.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handlePrepareAircraft} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="prep_aircraft">Aircraft</Label>
-                  <Input
-                    id="prep_aircraft"
-                    value={aircraftData?.tail_number || "No aircraft"}
-                    disabled
-                    data-testid="input-prep-aircraft"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="prep_airport">Airport</Label>
-                  <Input
-                    id="prep_airport"
-                    placeholder="e.g., KAPA"
-                    value={prepForm.airport}
-                    onChange={(e) => setPrepForm({ ...prepForm, airport: e.target.value.toUpperCase() })}
-                    data-testid="input-prep-airport"
-                  />
-                </div>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl" aria-label="Prepare Aircraft Dialog">
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-2xl">Prepare Aircraft</DialogTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="font-mono text-sm px-3 py-1">
+                  {aircraftData?.tail_number || "N/A"}
+                </Badge>
+                <Badge variant="outline" className="text-sm px-3 py-1">
+                  {prepForm.airport || "KAPA"}
+                </Badge>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            </DialogHeader>
+            
+            <form onSubmit={handlePrepareAircraft} className="space-y-6 mt-4">
+              {/* Section A: Flight Schedule */}
+              <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <Calendar className="h-4 w-4" />
+                  Flight Schedule
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="prep_departure">Requested Departure *</Label>
+                  <Label htmlFor="prep_departure" className="text-sm font-medium">Requested Departure *</Label>
                   <Input
                     id="prep_departure"
                     type="datetime-local"
                     value={prepForm.requested_departure}
                     onChange={(e) => setPrepForm({ ...prepForm, requested_departure: e.target.value })}
                     required
+                    className="text-base"
                     data-testid="input-prep-departure"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Fuel Request</Label>
-                  <RadioGroup 
-                    value={prepForm.fuel_target} 
-                    onValueChange={(v) => setPrepForm({ ...prepForm, fuel_target: v as FuelTarget })}
-                    className="space-y-2"
+              </div>
+
+              {/* Section B: Fuel Requirements */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <Fuel className="h-4 w-4" />
+                  Fuel Requirements
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Card 1: Fill to Full */}
+                  <button
+                    type="button"
+                    onClick={() => setPrepForm({ ...prepForm, fuel_target: 'FILL_TO_FULL' })}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      prepForm.fuel_target === 'FILL_TO_FULL'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
                   >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="ADD_QUANTITY" id="fuel-add" />
-                      <Label htmlFor="fuel-add" className="flex-1 font-normal">Add specific gallons</Label>
-                      <Input
-                        className="w-28"
-                        type="number"
-                        step="0.1"
-                        min={0}
-                        disabled={prepForm.fuel_target !== 'ADD_QUANTITY'}
-                        value={prepForm.fuel_add_quantity}
-                        onChange={(e) => setPrepForm({ ...prepForm, fuel_add_quantity: e.target.value === '' ? '' : Number(e.target.value) })}
-                        placeholder="e.g. 20.0"
-                        data-testid="input-fuel-add"
-                      />
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-md ${
+                        prepForm.fuel_target === 'FILL_TO_FULL' ? 'bg-primary/10' : 'bg-slate-100 dark:bg-slate-800'
+                      }`}>
+                        <Battery className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm">Fill to Full</div>
+                        <div className="text-xs text-muted-foreground">100% capacity</div>
+                      </div>
                     </div>
+                  </button>
 
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="FILL_TO_TABS" id="fuel-tabs" />
-                      <Label htmlFor="fuel-tabs" className="flex-1 font-normal">Fill to Tabs</Label>
+                  {/* Card 2: Fill to Tabs */}
+                  <button
+                    type="button"
+                    onClick={() => setPrepForm({ ...prepForm, fuel_target: 'FILL_TO_TABS' })}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      prepForm.fuel_target === 'FILL_TO_TABS'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-md ${
+                        prepForm.fuel_target === 'FILL_TO_TABS' ? 'bg-primary/10' : 'bg-slate-100 dark:bg-slate-800'
+                      }`}>
+                        <Droplets className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm">Fill to Tabs</div>
+                        <div className="text-xs text-muted-foreground">Standard level</div>
+                      </div>
                     </div>
+                  </button>
 
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="FILL_TO_TABS_PLUS" id="fuel-tabs-plus" />
-                      <Label htmlFor="fuel-tabs-plus" className="flex-1 font-normal">Fill to Tabs +</Label>
-                      <Input
-                        className="w-28"
-                        type="number"
-                        step="0.1"
-                        min={0}
-                        disabled={prepForm.fuel_target !== 'FILL_TO_TABS_PLUS'}
-                        value={prepForm.fuel_tabs_plus}
-                        onChange={(e) => setPrepForm({ ...prepForm, fuel_tabs_plus: e.target.value === '' ? '' : Number(e.target.value) })}
-                        placeholder="e.g. 10.0"
-                        data-testid="input-fuel-tabs-plus"
-                      />
+                  {/* Card 3: Tabs Plus */}
+                  <button
+                    type="button"
+                    onClick={() => setPrepForm({ ...prepForm, fuel_target: 'FILL_TO_TABS_PLUS' })}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      prepForm.fuel_target === 'FILL_TO_TABS_PLUS'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-md ${
+                          prepForm.fuel_target === 'FILL_TO_TABS_PLUS' ? 'bg-primary/10' : 'bg-slate-100 dark:bg-slate-800'
+                        }`}>
+                          <Fuel className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-sm">Tabs Plus</div>
+                          <div className="text-xs text-muted-foreground">Tabs + extra</div>
+                        </div>
+                      </div>
+                      {prepForm.fuel_target === 'FILL_TO_TABS_PLUS' && (
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min={0}
+                          value={prepForm.fuel_tabs_plus}
+                          onChange={(e) => setPrepForm({ ...prepForm, fuel_tabs_plus: e.target.value === '' ? '' : Number(e.target.value) })}
+                          placeholder="Additional gallons"
+                          className="text-sm"
+                          data-testid="input-fuel-tabs-plus"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      )}
                     </div>
+                  </button>
 
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="FILL_TO_FULL" id="fuel-full" />
-                      <Label htmlFor="fuel-full" className="flex-1 font-normal">Fill to Full</Label>
+                  {/* Card 4: Specific Amount */}
+                  <button
+                    type="button"
+                    onClick={() => setPrepForm({ ...prepForm, fuel_target: 'ADD_QUANTITY' })}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      prepForm.fuel_target === 'ADD_QUANTITY'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-md ${
+                          prepForm.fuel_target === 'ADD_QUANTITY' ? 'bg-primary/10' : 'bg-slate-100 dark:bg-slate-800'
+                        }`}>
+                          <Fuel className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-sm">Specific Amount</div>
+                          <div className="text-xs text-muted-foreground">Custom gallons</div>
+                        </div>
+                      </div>
+                      {prepForm.fuel_target === 'ADD_QUANTITY' && (
+                        <Input
+                          type="number"
+                          step="0.1"
+                          min={0}
+                          value={prepForm.fuel_add_quantity}
+                          onChange={(e) => setPrepForm({ ...prepForm, fuel_add_quantity: e.target.value === '' ? '' : Number(e.target.value) })}
+                          placeholder="Gallons to add"
+                          className="text-sm"
+                          data-testid="input-fuel-add"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      )}
                     </div>
-                  </RadioGroup>
-                  <div className="text-xs text-muted-foreground pt-1">
-                    Estimated add: <span className="font-semibold">{fuelPreview.toFixed(1)} gal</span>
-                  </div>
+                  </button>
+                </div>
+                <div className="text-xs text-muted-foreground px-1">
+                  Estimated fuel to add: <span className="font-semibold">{fuelPreview.toFixed(1)} gallons</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="prep_o2"
-                    checked={prepForm.o2_topoff}
-                    onCheckedChange={(v) => setPrepForm({ ...prepForm, o2_topoff: !!v })}
-                    data-testid="checkbox-o2"
-                  />
-                  <Label htmlFor="prep_o2">O₂ Top-off</Label>
+              {/* Section C: Ground Services */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <Zap className="h-4 w-4" />
+                  Ground Services
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="prep_tks"
-                    checked={prepForm.tks_topoff}
-                    onCheckedChange={(v) => setPrepForm({ ...prepForm, tks_topoff: !!v })}
-                    data-testid="checkbox-tks"
-                  />
-                  <Label htmlFor="prep_tks">TKS Top-off</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="prep_gpu"
-                    checked={prepForm.gpu_required}
-                    onCheckedChange={(v) => setPrepForm({ ...prepForm, gpu_required: !!v })}
-                    data-testid="checkbox-gpu"
-                  />
-                  <Label htmlFor="prep_gpu">GPU</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="prep_hangar"
-                    checked={prepForm.hangar_pullout}
-                    onCheckedChange={(v) => setPrepForm({ ...prepForm, hangar_pullout: !!v })}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPrepForm({ ...prepForm, hangar_pullout: !prepForm.hangar_pullout })}
+                    className={`p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                      prepForm.hangar_pullout
+                        ? 'border-primary bg-primary/5'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
                     data-testid="checkbox-hangar"
-                  />
-                  <Label htmlFor="prep_hangar">Hangar Pull-out</Label>
+                  >
+                    <Warehouse className={`h-5 w-5 ${prepForm.hangar_pullout ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="text-sm font-medium">Hangar Pull-out</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPrepForm({ ...prepForm, gpu_required: !prepForm.gpu_required })}
+                    className={`p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                      prepForm.gpu_required
+                        ? 'border-primary bg-primary/5'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                    data-testid="checkbox-gpu"
+                  >
+                    <Zap className={`h-5 w-5 ${prepForm.gpu_required ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="text-sm font-medium">GPU</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPrepForm({ ...prepForm, o2_topoff: !prepForm.o2_topoff })}
+                    className={`p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                      prepForm.o2_topoff
+                        ? 'border-primary bg-primary/5'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                    data-testid="checkbox-o2"
+                  >
+                    <Wind className={`h-5 w-5 ${prepForm.o2_topoff ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="text-sm font-medium">O₂ Service</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPrepForm({ ...prepForm, tks_topoff: !prepForm.tks_topoff })}
+                    className={`p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                      prepForm.tks_topoff
+                        ? 'border-primary bg-primary/5'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                    data-testid="checkbox-tks"
+                  >
+                    <Droplets className={`h-5 w-5 ${prepForm.tks_topoff ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className="text-sm font-medium">TKS Fluid</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
+              {/* Section D: Concierge & Notes */}
+              <div className="space-y-4 pt-2">
                 <div className="space-y-2">
-                  <Label htmlFor="prep_provisioning">Cabin Provisioning</Label>
+                  <Label htmlFor="prep_provisioning" className="text-sm font-medium">Cabin Provisioning</Label>
                   <Textarea
                     id="prep_provisioning"
-                    placeholder="Water, snacks, etc."
+                    placeholder="Coffee, ice, catering, water bottles..."
                     value={prepForm.cabin_provisioning}
                     onChange={(e) => setPrepForm({ ...prepForm, cabin_provisioning: e.target.value })}
+                    className="resize-none border-slate-200 dark:border-slate-800 focus:border-primary"
+                    rows={2}
                     data-testid="textarea-provisioning"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="prep_description">Additional Notes</Label>
+                  <Label htmlFor="prep_description" className="text-sm font-medium">Additional Notes</Label>
                   <Textarea
                     id="prep_description"
-                    placeholder="Any special requests or instructions"
+                    placeholder="Any special requests or instructions..."
                     value={prepForm.description}
                     onChange={(e) => setPrepForm({ ...prepForm, description: e.target.value })}
+                    className="resize-none border-slate-200 dark:border-slate-800 focus:border-primary"
+                    rows={2}
                     data-testid="textarea-notes"
                   />
                 </div>
               </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setOpenPrep(false)} data-testid="button-cancel-prep">
+              {/* Footer */}
+              <DialogFooter className="flex gap-3 sm:gap-3">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => setOpenPrep(false)} 
+                  className="flex-1 sm:flex-initial"
+                  data-testid="button-cancel-prep"
+                >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading} data-testid="button-submit-prep">
+                <Button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="flex-1 sm:flex-1"
+                  data-testid="button-submit-prep"
+                >
                   {loading ? "Submitting..." : "Submit Request"}
                 </Button>
               </DialogFooter>
@@ -565,13 +680,14 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
           <DialogTrigger asChild>
             <Button 
               variant="outline" 
-              className="w-full justify-start h-11 sm:h-10" 
+              size="lg"
+              className="w-full h-24 flex flex-col gap-2 hover:bg-accent" 
               data-testid="button-request-service"
               aria-label="Request service"
               onClick={() => setOpenService(true)}
             >
-              <Wrench className="mr-2 h-4 w-4" />
-              Request Service
+              <Wrench className="h-8 w-8" />
+              <span className="text-base font-semibold">Request Service</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-label="Request Service Dialog">
@@ -638,13 +754,14 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
           <DialogTrigger asChild>
             <Button 
               variant="outline" 
-              className="w-full justify-start h-11 sm:h-10" 
+              size="lg"
+              className="w-full h-24 flex flex-col gap-2 hover:bg-accent" 
               data-testid="button-request-instruction"
               aria-label="Request flight instruction"
               onClick={() => setOpenInstruction(true)}
             >
-              <GraduationCap className="mr-2 h-4 w-4" />
-              Request Flight Instruction
+              <GraduationCap className="h-8 w-8" />
+              <span className="text-base font-semibold">Flight Instruction</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-label="Flight Instruction Dialog">

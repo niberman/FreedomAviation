@@ -9,7 +9,7 @@ export async function getValidAuthToken(): Promise<string | null> {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError) {
-      console.error('❌ Session error:', sessionError);
+      console.error('Session error:', sessionError);
       return null;
     }
     
@@ -17,10 +17,10 @@ export async function getValidAuthToken(): Promise<string | null> {
       // Check if token is expired (with 5 minute buffer)
       const expiresAt = session.expires_at;
       if (expiresAt && expiresAt * 1000 - Date.now() < 5 * 60 * 1000) {
-        console.log('⚠️ Token expiring soon, refreshing...');
+        console.log('Token expiring soon, refreshing...');
         const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
         if (!refreshError && refreshedSession?.access_token) {
-          console.log('✅ Session refreshed successfully');
+          console.log('Session refreshed successfully');
           return refreshedSession.access_token;
         }
       }
@@ -28,18 +28,18 @@ export async function getValidAuthToken(): Promise<string | null> {
     }
     
     // No session, try to refresh
-    console.log('⚠️ No session found, attempting to refresh...');
+    console.log('No session found, attempting to refresh...');
     const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
     
     if (refreshError || !refreshedSession?.access_token) {
-      console.error('❌ Failed to refresh session:', refreshError);
+      console.error('Failed to refresh session:', refreshError);
       return null;
     }
     
-    console.log('✅ Session refreshed successfully');
+    console.log('Session refreshed successfully');
     return refreshedSession.access_token;
   } catch (error) {
-    console.error('❌ Error getting auth token:', error);
+    console.error('Error getting auth token:', error);
     return null;
   }
 }
@@ -71,7 +71,7 @@ export async function authenticatedFetch(
   
   // If we get a 401, try to refresh the token and retry once
   if (response.status === 401) {
-    console.warn('⚠️ Got 401, refreshing token and retrying...');
+    console.warn('Got 401, refreshing token and retrying...');
     const { data: { session }, error } = await supabase.auth.refreshSession();
     
     if (!error && session?.access_token) {
@@ -86,14 +86,14 @@ export async function authenticatedFetch(
       });
       
       if (retryResponse.ok) {
-        console.log('✅ Request succeeded after token refresh');
+        console.log('Request succeeded after token refresh');
         return retryResponse;
       }
     }
     
     // DON'T automatically sign out - let the app handle it via auth context
     // This prevents 403 errors and logout loops
-    console.error('❌ Session refresh failed. User needs to re-authenticate.');
+    console.error('Session refresh failed. User needs to re-authenticate.');
     throw new Error('Session expired. Please log in again.');
   }
   

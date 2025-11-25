@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -88,7 +88,7 @@ export function DocumentManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [selectedAircraft, setSelectedAircraft] = useState<string>("");
+  const [selectedAircraft, setSelectedAircraft] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   
   // Form state
@@ -112,7 +112,7 @@ export function DocumentManagement() {
         .limit(0);
       
       if (error?.code === "42P01") {
-        console.log("⚠️ Aircraft documents table not found - feature disabled");
+        console.log("Aircraft documents table not found - feature disabled");
         setTableExists(false);
       } else {
         setTableExists(true);
@@ -180,14 +180,16 @@ export function DocumentManagement() {
     enabled: !!user && tableExists === true,
   });
 
-  // Filter documents based on search and status
+  // Filter documents based on search and aircraft selection
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = searchTerm === "" || 
       doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.aircraft?.tail_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       DOCUMENT_TYPES[doc.type].label.toLowerCase().includes(searchTerm.toLowerCase());
     
-    return matchesSearch;
+    const matchesAircraft = selectedAircraft === "all" || doc.aircraft_id === selectedAircraft;
+    
+    return matchesSearch && matchesAircraft;
   });
 
   // Group documents by status
@@ -389,7 +391,7 @@ export function DocumentManagement() {
                   <SelectValue placeholder="All Aircraft" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Aircraft</SelectItem>
+                  <SelectItem value="all">All Aircraft</SelectItem>
                   {aircraft.map((ac) => (
                     <SelectItem key={ac.id} value={ac.id}>
                       {ac.tail_number}

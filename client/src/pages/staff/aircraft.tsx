@@ -35,7 +35,7 @@ export default function StaffAircraft() {
         
         // If nested query fails, fetch separately
         if (error) {
-          console.warn('⚠️ Nested query failed, trying separate queries:', error.message);
+          console.warn('Nested query failed, trying separate queries:', error.message);
           
           // Check if error is about missing columns (make, model, etc.)
           const isColumnError = error.message?.includes('column') || 
@@ -50,7 +50,7 @@ export default function StaffAircraft() {
               .order('tail_number');
             
             if (aircraftResult.error) {
-              console.error('❌ Error fetching aircraft:', aircraftResult.error);
+              console.error('Error fetching aircraft:', aircraftResult.error);
               throw new Error(`Database schema issue: Missing columns in aircraft table. Please run the fix-aircraft-table.sql script. Original error: ${error.message}`);
             }
             
@@ -93,7 +93,7 @@ export default function StaffAircraft() {
               .order('tail_number');
             
             if (aircraftResult.error) {
-              console.error('❌ Error fetching aircraft:', aircraftResult.error);
+              console.error('Error fetching aircraft:', aircraftResult.error);
               throw aircraftResult.error;
             }
             
@@ -150,7 +150,7 @@ export default function StaffAircraft() {
           };
         });
       } catch (err: any) {
-        console.error('❌ Error in aircraft query:', err);
+        console.error('Error in aircraft query:', err);
         // Provide more helpful error message
         if (err.message?.includes('permission') || err.code === 'PGRST301') {
           throw new Error('Permission denied. Please check your authentication and try again.');
