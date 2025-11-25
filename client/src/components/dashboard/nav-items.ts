@@ -11,6 +11,7 @@ export const staffDashboardNavItems = [
   { href: "/staff/members", label: "Members" },
   { href: "/staff/aircraft", label: "Aircraft" },
   { href: "/staff/operations", label: "Operations" },
+  { href: "/staff/ramp", label: "Ramp Ops" },
   { href: "/staff/settings", label: "Settings" },
 ];
 

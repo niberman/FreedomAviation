@@ -31,6 +31,7 @@ import DashboardSettings from "./pages/dashboard/settings";
 import StaffMembers from "./pages/staff/members";
 import StaffAircraft from "./pages/staff/aircraft";
 import StaffOperations from "./pages/staff/operations";
+import StaffRamp from "./pages/staff/ramp";
 import StaffSettings from "./pages/staff/settings";
 import UnifiedPricingConfigurator from "./pages/admin/UnifiedPricingConfigurator";
 import PricingConfiguratorPage from "./pages/pricing-configurator";
@@ -148,6 +149,11 @@ function Router() {
       <Route path="/staff/operations">
         <StaffProtectedRoute>
           <StaffOperations />
+        </StaffProtectedRoute>
+      </Route>
+      <Route path="/staff/ramp">
+        <StaffProtectedRoute>
+          <StaffRamp />
         </StaffProtectedRoute>
       </Route>
       <Route path="/staff/settings">
