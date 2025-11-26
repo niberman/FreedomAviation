@@ -6,13 +6,23 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
+import { Plus, Trash2, Wrench, Plane } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useClients } from "@/hooks/useClients";
 import { useAircraft } from "@/hooks/useAircraft";
 import { useInvoices } from "@/hooks/useInvoices";
-import { useCreateInvoice } from "@/hooks/useCreateInvoice";
+import { useCreateInvoice, useCreateMaintenanceInvoice } from "@/hooks/useCreateInvoice";
+
+interface MaintenanceLineItem {
+  id: string;
+  type: 'labor' | 'part' | 'fee';
+  description: string;
+  quantity: string;
+  rate: string;
+}
 
 export function InvoicesTab() {
   const { user } = useAuth();
@@ -21,40 +31,108 @@ export function InvoicesTab() {
   const { data: aircraft = [] } = useAircraft();
   const { data: invoices = [], isLoading: isLoadingInvoices, error: invoicesError, refetch: refetchInvoices } = useInvoices();
   const createInvoiceMutation = useCreateInvoice();
+  const createMaintenanceMutation = useCreateMaintenanceInvoice();
 
+  // Invoice type toggle
+  const [invoiceType, setInvoiceType] = useState<'instruction' | 'maintenance'>('instruction');
+
+  // Common fields
   const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>("");
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Flight instruction specific fields
   const [description, setDescription] = useState("");
   const [flightDate, setFlightDate] = useState("");
   const [hours, setHours] = useState("");
   const [ratePerHour, setRatePerHour] = useState("150");
-  const [showPreview, setShowPreview] = useState(false);
+
+  // Maintenance specific fields
+  const [maintenanceNotes, setMaintenanceNotes] = useState("");
+  const [lineItems, setLineItems] = useState<MaintenanceLineItem[]>([
+    { id: '1', type: 'labor', description: '', quantity: '', rate: '' }
+  ]);
 
   const selectedOwner = clients.find((o: any) => o.id === selectedOwnerId);
   const selectedAircraft = aircraft.find((a: any) => a.id === selectedAircraftId);
 
-  const totalAmount = (parseFloat(hours || "0") * parseFloat(ratePerHour || "0")).toFixed(2);
+  // Calculate totals
+  const instructionTotal = (parseFloat(hours || "0") * parseFloat(ratePerHour || "0")).toFixed(2);
+  const maintenanceTotal = lineItems.reduce((sum, item) => {
+    const qty = parseFloat(item.quantity || "0");
+    const rate = parseFloat(item.rate || "0");
+    return sum + (qty * rate);
+  }, 0).toFixed(2);
+  const totalAmount = invoiceType === 'instruction' ? instructionTotal : maintenanceTotal;
+
+  // Line item helpers
+  const addLineItem = () => {
+    setLineItems([...lineItems, {
+      id: Date.now().toString(),
+      type: 'labor',
+      description: '',
+      quantity: '',
+      rate: ''
+    }]);
+  };
+
+  const removeLineItem = (id: string) => {
+    if (lineItems.length > 1) {
+      setLineItems(lineItems.filter(item => item.id !== id));
+    }
+  };
+
+  const updateLineItem = (id: string, field: keyof MaintenanceLineItem, value: string) => {
+    setLineItems(lineItems.map(item => 
+      item.id === id ? { ...item, [field]: value } : item
+    ));
+  };
 
   const handleCreateInvoice = () => {
-    createInvoiceMutation.mutate({
-      ownerId: selectedOwnerId,
-      aircraftId: selectedAircraftId,
-      description,
-      flightDate,
-      hours,
-      ratePerHour
-    }, {
-      onSuccess: () => {
-        setShowPreview(false);
-        // Reset form
-        setSelectedOwnerId("");
-        setSelectedAircraftId("");
-        setDescription("");
-        setFlightDate("");
-        setHours("");
-        setRatePerHour("150");
-      }
-    });
+    if (invoiceType === 'instruction') {
+      createInvoiceMutation.mutate({
+        ownerId: selectedOwnerId,
+        aircraftId: selectedAircraftId,
+        description,
+        flightDate,
+        hours,
+        ratePerHour
+      }, {
+        onSuccess: () => {
+          setShowPreview(false);
+          resetForm();
+        }
+      });
+    } else {
+      // Maintenance invoice
+      createMaintenanceMutation.mutate({
+        ownerId: selectedOwnerId,
+        aircraftId: selectedAircraftId,
+        notes: maintenanceNotes,
+        lineItems: lineItems.map(item => ({
+          type: item.type,
+          description: item.description,
+          quantity: parseFloat(item.quantity || "0"),
+          rateCents: Math.round(parseFloat(item.rate || "0") * 100)
+        }))
+      }, {
+        onSuccess: () => {
+          setShowPreview(false);
+          resetForm();
+        }
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setSelectedOwnerId("");
+    setSelectedAircraftId("");
+    setDescription("");
+    setFlightDate("");
+    setHours("");
+    setRatePerHour("150");
+    setMaintenanceNotes("");
+    setLineItems([{ id: '1', type: 'labor', description: '', quantity: '', rate: '' }]);
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -62,15 +140,45 @@ export function InvoicesTab() {
     setShowPreview(true);
   };
 
+  const isFormValid = invoiceType === 'instruction'
+    ? selectedOwnerId && description && flightDate && hours && ratePerHour
+    : selectedOwnerId && lineItems.every(item => item.description && item.quantity && item.rate);
+
   return (
     <div className="space-y-6">
       {/* Invoice Creation Form */}
       <Card>
         <CardHeader>
           <CardTitle>Create New Invoice</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Create flight instruction or maintenance invoices for clients
+          </p>
         </CardHeader>
         <CardContent>
+          {/* Invoice Type Toggle */}
+          <div className="flex gap-2 mb-6">
+            <Button
+              type="button"
+              variant={invoiceType === 'instruction' ? 'default' : 'outline'}
+              onClick={() => setInvoiceType('instruction')}
+              className="flex items-center gap-2"
+            >
+              <Plane className="h-4 w-4" />
+              Flight Instruction
+            </Button>
+            <Button
+              type="button"
+              variant={invoiceType === 'maintenance' ? 'default' : 'outline'}
+              onClick={() => setInvoiceType('maintenance')}
+              className="flex items-center gap-2"
+            >
+              <Wrench className="h-4 w-4" />
+              Maintenance
+            </Button>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Common Fields: Client & Aircraft */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="client">Client *</Label>
@@ -89,7 +197,7 @@ export function InvoicesTab() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="aircraft">Aircraft (Optional)</Label>
+                <Label htmlFor="aircraft">Aircraft {invoiceType === 'maintenance' ? '*' : '(Optional)'}</Label>
                 <Select value={selectedAircraftId} onValueChange={setSelectedAircraftId}>
                   <SelectTrigger id="aircraft" data-testid="select-aircraft">
                     <SelectValue placeholder="Select aircraft" />
@@ -104,60 +212,160 @@ export function InvoicesTab() {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
-                <Input
-                  id="description"
-                  data-testid="input-description"
-                  placeholder="e.g., Flight Instruction"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="date">Flight Date *</Label>
-                <Input
-                  id="date"
-                  data-testid="input-date"
-                  type="date"
-                  value={flightDate}
-                  onChange={(e) => setFlightDate(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="hours">Hours *</Label>
-                <Input
-                  id="hours"
-                  data-testid="input-hours"
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  placeholder="e.g., 1.5"
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="rate">Hourly Rate ($) *</Label>
-                <Input
-                  id="rate"
-                  data-testid="input-rate"
-                  type="number"
-                  step="1"
-                  min="0"
-                  placeholder="e.g., 150"
-                  value={ratePerHour}
-                  onChange={(e) => setRatePerHour(e.target.value)}
-                />
-              </div>
             </div>
+
+            {/* Flight Instruction Form */}
+            {invoiceType === 'instruction' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description *</Label>
+                  <Input
+                    id="description"
+                    data-testid="input-description"
+                    placeholder="e.g., Flight Instruction"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="date">Flight Date *</Label>
+                  <Input
+                    id="date"
+                    data-testid="input-date"
+                    type="date"
+                    value={flightDate}
+                    onChange={(e) => setFlightDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hours">Hours *</Label>
+                  <Input
+                    id="hours"
+                    data-testid="input-hours"
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    placeholder="e.g., 1.5"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rate">Hourly Rate ($) *</Label>
+                  <Input
+                    id="rate"
+                    data-testid="input-rate"
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder="e.g., 150"
+                    value={ratePerHour}
+                    onChange={(e) => setRatePerHour(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Maintenance Form */}
+            {invoiceType === 'maintenance' && (
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Line Items *</Label>
+                  {lineItems.map((item, idx) => (
+                    <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-2">
+                        {idx === 0 && <Label className="text-xs text-muted-foreground">Type</Label>}
+                        <Select 
+                          value={item.type} 
+                          onValueChange={(val) => updateLineItem(item.id, 'type', val as 'labor' | 'part' | 'fee')}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="labor">Labor</SelectItem>
+                            <SelectItem value="part">Part</SelectItem>
+                            <SelectItem value="fee">Fee</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-4">
+                        {idx === 0 && <Label className="text-xs text-muted-foreground">Description</Label>}
+                        <Input
+                          placeholder={item.type === 'labor' ? 'e.g., Oil change' : item.type === 'part' ? 'e.g., Oil filter' : 'e.g., Shop fee'}
+                          value={item.description}
+                          onChange={(e) => updateLineItem(item.id, 'description', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        {idx === 0 && <Label className="text-xs text-muted-foreground">{item.type === 'labor' ? 'Hours' : 'Qty'}</Label>}
+                        <Input
+                          type="number"
+                          step={item.type === 'labor' ? '0.1' : '1'}
+                          min="0"
+                          placeholder={item.type === 'labor' ? '1.5' : '1'}
+                          value={item.quantity}
+                          onChange={(e) => updateLineItem(item.id, 'quantity', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        {idx === 0 && <Label className="text-xs text-muted-foreground">{item.type === 'labor' ? '$/hr' : 'Unit $'}</Label>}
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder={item.type === 'labor' ? '125' : '45'}
+                          value={item.rate}
+                          onChange={(e) => updateLineItem(item.id, 'rate', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2 flex items-center gap-2">
+                        <span className="text-sm font-medium w-20 text-right">
+                          ${(parseFloat(item.quantity || "0") * parseFloat(item.rate || "0")).toFixed(2)}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeLineItem(item.id)}
+                          disabled={lineItems.length === 1}
+                          className="h-8 w-8"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addLineItem}
+                    className="mt-2"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Line Item
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Additional notes for this invoice..."
+                    value={maintenanceNotes}
+                    onChange={(e) => setMaintenanceNotes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between pt-4 border-t">
               <div>
@@ -168,6 +376,7 @@ export function InvoicesTab() {
                 type="submit" 
                 data-testid="button-preview-invoice"
                 size="lg"
+                disabled={!isFormValid}
               >
                 Preview Invoice
               </Button>
@@ -180,7 +389,9 @@ export function InvoicesTab() {
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Invoice Preview</DialogTitle>
+            <DialogTitle>
+              {invoiceType === 'instruction' ? 'Flight Instruction' : 'Maintenance'} Invoice Preview
+            </DialogTitle>
             <DialogDescription>
               Review the invoice details before sending to the client.
             </DialogDescription>
@@ -195,29 +406,64 @@ export function InvoicesTab() {
                 <p className="text-sm font-medium text-muted-foreground">Aircraft</p>
                 <p className="text-base font-mono font-semibold">{selectedAircraft?.tail_number || 'Not specified'}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Description</p>
-                <p className="text-base">{description || 'N/A'}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Flight Date</p>
-                <p className="text-base">{flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : 'N/A'}</p>
-              </div>
+              {invoiceType === 'instruction' && (
+                <>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Description</p>
+                    <p className="text-base">{description || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Flight Date</p>
+                    <p className="text-base">{flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : 'N/A'}</p>
+                  </div>
+                </>
+              )}
+              {invoiceType === 'maintenance' && (
+                <div className="space-y-1 col-span-2">
+                  <p className="text-sm font-medium text-muted-foreground">Type</p>
+                  <Badge variant="secondary">Maintenance Invoice</Badge>
+                </div>
+              )}
             </div>
             <div className="border-t pt-4">
               <p className="text-sm font-medium text-muted-foreground mb-3">Line Items</p>
               <div className="space-y-2">
-                <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium mb-1">{description} - {flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : ''}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {hours} {parseFloat(hours) === 1 ? 'hr' : 'hrs'} × ${parseFloat(ratePerHour).toFixed(2)}/hr
-                    </p>
+                {invoiceType === 'instruction' ? (
+                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium mb-1">{description} - {flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : ''}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {hours} {parseFloat(hours) === 1 ? 'hr' : 'hrs'} × ${parseFloat(ratePerHour).toFixed(2)}/hr
+                      </p>
+                    </div>
+                    <p className="text-lg font-bold ml-4">${instructionTotal}</p>
                   </div>
-                  <p className="text-lg font-bold ml-4">${totalAmount}</p>
-                </div>
+                ) : (
+                  lineItems.map((item) => (
+                    <div key={item.id} className="flex justify-between items-center p-4 bg-muted rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium">{item.description}</p>
+                          <Badge variant="outline" className="text-xs capitalize">{item.type}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {item.quantity} {item.type === 'labor' ? (parseFloat(item.quantity) === 1 ? 'hr' : 'hrs') : 'units'} × ${parseFloat(item.rate).toFixed(2)}{item.type === 'labor' ? '/hr' : ' each'}
+                        </p>
+                      </div>
+                      <p className="text-lg font-bold ml-4">
+                        ${(parseFloat(item.quantity || "0") * parseFloat(item.rate || "0")).toFixed(2)}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
+            {invoiceType === 'maintenance' && maintenanceNotes && (
+              <div className="border-t pt-4">
+                <p className="text-sm font-medium text-muted-foreground mb-2">Notes</p>
+                <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">{maintenanceNotes}</p>
+              </div>
+            )}
             <div className="border-t pt-4 flex justify-between items-center bg-muted/50 p-4 rounded-lg">
               <p className="text-lg font-semibold">Total Amount</p>
               <p className="text-2xl font-bold">${totalAmount}</p>
@@ -232,11 +478,11 @@ export function InvoicesTab() {
             </Button>
             <Button
               onClick={handleCreateInvoice}
-              disabled={createInvoiceMutation.isPending}
+              disabled={createInvoiceMutation.isPending || createMaintenanceMutation.isPending}
               data-testid="button-send-to-client"
               size="lg"
             >
-              {createInvoiceMutation.isPending ? "Sending..." : "Send to Client"}
+              {(createInvoiceMutation.isPending || createMaintenanceMutation.isPending) ? "Sending..." : "Send to Client"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -246,7 +492,7 @@ export function InvoicesTab() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold">Instruction Invoices</h3>
+            <h3 className="text-lg font-semibold">All Invoices</h3>
             <p className="text-sm text-muted-foreground">
               {isAdmin ? 'All invoices' : 'Your invoices'}
             </p>
@@ -299,7 +545,7 @@ export function InvoicesTab() {
         ) : invoices.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center">
-              <p className="text-muted-foreground mb-2">No instruction invoices yet.</p>
+              <p className="text-muted-foreground mb-2">No invoices yet.</p>
               <p className="text-sm text-muted-foreground">
                 Create an invoice using the form above to get started.
               </p>
@@ -338,6 +584,14 @@ export function InvoicesTab() {
                           >
                             {invoice.status}
                           </Badge>
+                          {invoice.category && (
+                            <Badge 
+                              variant="outline"
+                              className="capitalize text-xs"
+                            >
+                              {invoice.category === 'instruction' ? 'Flight' : invoice.category}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {invoice.owner?.full_name || invoice.owner?.email || 'Unknown Client'}

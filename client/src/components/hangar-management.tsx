@@ -126,7 +126,7 @@ export function HangarManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingHangar, setEditingHangar] = useState<HangarSpace | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   
   // Form state
   const [name, setName] = useState("");
@@ -279,7 +279,7 @@ export function HangarManagement() {
         `)
         .order("name");
       
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
       
@@ -581,7 +581,7 @@ export function HangarManagement() {
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="available">Available</SelectItem>
                   <SelectItem value="occupied">Occupied</SelectItem>
                   <SelectItem value="maintenance">Maintenance</SelectItem>
