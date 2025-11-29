@@ -479,7 +479,7 @@ export default function StaffHome() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold">Recent Activity</h3>
-              <Button variant="outline" size="sm" onClick={() => setLocation(managePath)}>
+              <Button variant="outline" size="sm" onClick={() => setLocation(`${managePath}?tab=requests`)}>
                 View All
               </Button>
             </div>

@@ -45,7 +45,7 @@ export default function StaffOperations() {
         
         // If nested query fails, try fetching separately
         if (error && (error.message?.includes('aircraft') || error.message?.includes('owner') || error.message?.includes('user_profiles'))) {
-          console.warn('⚠️ Nested query failed, trying separate queries:', error.message);
+          console.warn('Nested query failed, trying separate queries:', error.message);
           
           // Fetch service requests without nested relations
           const srResult = await supabase
@@ -54,7 +54,7 @@ export default function StaffOperations() {
             .order('created_at', { ascending: false });
           
           if (srResult.error) {
-            console.error('❌ Error fetching service requests:', srResult.error);
+            console.error('Error fetching service requests:', srResult.error);
             throw srResult.error;
           }
           
@@ -102,13 +102,13 @@ export default function StaffOperations() {
         }
         
         if (error) {
-          console.error('❌ Error fetching service requests:', error);
+          console.error('Error fetching service requests:', error);
           throw error;
         }
         
         return data || [];
       } catch (err: any) {
-        console.error('❌ Error in service requests query:', err);
+        console.error('Error in service requests query:', err);
         // Provide more helpful error message
         if (err.message?.includes('permission') || err.code === 'PGRST301') {
           throw new Error('Permission denied. Please check your authentication and ensure you have admin or staff role.');

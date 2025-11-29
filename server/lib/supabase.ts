@@ -9,7 +9,7 @@ const supabaseUrl =
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error("❌ CRITICAL: Supabase credentials not set for server operations!");
+  console.error("CRITICAL: Supabase credentials not set for server operations!");
   console.error("   Required: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
 }
 

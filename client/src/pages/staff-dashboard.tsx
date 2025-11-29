@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { KanbanBoard } from "@/components/kanban-board";
 import { AircraftTable } from "@/components/aircraft-table";
 import { MaintenanceList } from "@/components/maintenance-list";
@@ -46,183 +46,72 @@ import { ServiceCreditManagement } from "@/components/service-credit-management"
 import { ReportsDashboard } from "@/components/reports-dashboard";
 import { DocumentManagement } from "@/components/document-management";
 import { HangarManagement } from "@/components/hangar-management";
+import { RampDashboard } from "@/components/ramp-dashboard";
 
-interface InstructionInvoice {
-  id: string;
-  owner_id: string;
-  aircraft_id: string;
-  invoice_number: string;
-  amount: number;
-  status: string;
-  category: string;
-  created_by_cfi_id: string;
-  created_at: string;
-  due_date?: string | null;
-  paid_date?: string | null;
-  aircraft?: { tail_number: string };
-  owner?: { full_name: string; email: string };
-  invoice_lines?: Array<{
-    description: string;
-    quantity: number;
-    unit_cents: number;
-  }>;
-}
+import { InvoicesTab } from "@/components/staff-dashboard/InvoicesTab";
+import { useClients } from "@/hooks/useClients";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAircraftTable } from "@/hooks/useAircraft";
+
+// Valid tab values for the management console
+const VALID_TABS = [
+  // "ramp", // Temporarily disabled
+  "requests", "aircraft", "maintenance", "clients", "hangars",
+  "documents", "credits", "fuel", "schedule", "logs", "invoices",
+  "reports", "staff", "pricing"
+] as const;
+
+type TabValue = typeof VALID_TABS[number];
 
 export default function StaffDashboard() {
   const { toast } = useToast();
   const { user, session } = useAuth();
   const queryClient = useQueryClient();
-  
-  // Get tab from URL query parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const tabFromUrl = urlParams.get('tab') || 'invoices';
-  const [activeTab, setActiveTab] = useState(tabFromUrl);
-  
-  const [selectedOwnerId, setSelectedOwnerId] = useState<string>("");
-  const [selectedAircraftId, setSelectedAircraftId] = useState<string>("");
-  const [description, setDescription] = useState("");
-  const [flightDate, setFlightDate] = useState("");
-  const [hours, setHours] = useState("");
-  const [ratePerHour, setRatePerHour] = useState("150");
-  const [showPreview, setShowPreview] = useState(false);
   const [selectedServiceRequest, setSelectedServiceRequest] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  // Get tab from URL query parameter
+  const searchString = useSearch();
+  const urlParams = new URLSearchParams(searchString);
+  const tabFromUrl = urlParams.get("tab");
+  
+  // Validate and set initial tab
+  const initialTab: TabValue = tabFromUrl && VALID_TABS.includes(tabFromUrl as TabValue) 
+    ? (tabFromUrl as TabValue) 
+    : "requests";
+  
+  const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
+  
+  // Sync tab state with URL parameter changes
+  useEffect(() => {
+    if (tabFromUrl && VALID_TABS.includes(tabFromUrl as TabValue)) {
+      setActiveTab(tabFromUrl as TabValue);
+    }
+  }, [tabFromUrl]);
 
-  // Fetch owners - use API endpoint to bypass RLS
-  const { data: owners = [], isLoading: isLoadingOwners, error: ownersError } = useQuery({
-    queryKey: ['/api/clients', session?.access_token],
-    queryFn: async () => {
-      console.log('🔍 Fetching owners for invoice creation...');
-      
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error('Not authenticated. Please sign in again.');
-      }
-      
-      // Use API endpoint which uses service role to bypass RLS
-      const response = await fetch('/api/clients', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
+  const { isAdmin } = useUserProfile();
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Error fetching owners:', errorText);
-        throw new Error(`Failed to fetch clients: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ Fetched owners:', data.clients?.length || 0);
-      
-      // API returns {clients: [...], total: 12}, extract the clients array
-      return data.clients || [];
-    },
-    enabled: !!session?.access_token,
-  });
+  // Fetch owners
+  const { data: owners = [], isLoading: isLoadingOwners, error: ownersError } = useClients();
 
   // Log owners data and show error toast if needed
   useEffect(() => {
     if (owners && owners.length > 0) {
-      console.log('👥 Available owners for invoice:', owners.length);
+      console.log('Available owners:', owners.length);
     } else if (!isLoadingOwners && owners.length === 0) {
-      console.warn('⚠️ No owners found in database');
+      console.warn('No owners found in database');
     }
     
     if (ownersError) {
       toast({
         title: 'Error loading clients',
-        description: ownersError instanceof Error ? ownersError.message : 'Failed to load clients. Please check your permissions.',
+        description: ownersError instanceof Error ? ownersError.message : 'Failed to load clients.',
         variant: 'destructive',
       });
     }
   }, [owners, isLoadingOwners, ownersError, toast]);
 
-  // Fetch aircraft for invoice dropdown - use API endpoint to bypass RLS
-  const { data: aircraft = [] } = useQuery({
-    queryKey: ['/api/aircraft', 'dropdown', session?.access_token],
-    queryFn: async () => {
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error('Not authenticated. Please sign in again.');
-      }
-
-      const response = await fetch('/api/aircraft', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Error fetching aircraft:', errorText);
-        throw new Error(`Failed to fetch aircraft: ${response.status}`);
-      }
-
-      const data = await response.json();
-      // API returns {aircraft: [...], total: X}
-      return data.aircraft || [];
-    },
-    enabled: !!session?.access_token,
-  });
-
-  // Fetch aircraft with full details for the AircraftTable - use API endpoint to bypass RLS
-  const { data: aircraftFull = [], isLoading: isLoadingAircraft, error: aircraftError } = useQuery({
-    queryKey: ['/api/aircraft', 'full', session?.access_token],
-    queryFn: async () => {
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error('Not authenticated. Please sign in again.');
-      }
-
-      try {
-        // Use API endpoint which bypasses RLS with service role
-        const response = await fetch('/api/aircraft', {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ Error fetching aircraft:', errorText);
-          throw new Error(`Failed to fetch aircraft: ${response.status}`);
-        }
-
-        const result = await response.json();
-        const data = result.aircraft || [];
-        
-        // Transform to match AircraftTable interface
-        return data.map((ac: any) => {
-          const ownerRecord = ac.owner || null;
-          const ownerName = ownerRecord?.full_name || ownerRecord?.email || null;
-
-          return {
-            id: ac.id,
-            tailNumber: ac.tail_number,
-            make: ac.make || 'N/A',
-            model: ac.model || '',
-            class: ac.class || 'Unknown',
-            baseAirport: ac.base_location || 'KAPA',
-            owner: ownerName || 'Unassigned',
-            ownerId: ac.owner_id ?? null,
-            ownerEmail: ownerRecord?.email ?? null,
-          };
-        });
-      } catch (err: any) {
-        console.error('❌ Error in aircraft query:', err);
-        throw err;
-      }
-    },
-    enabled: !!session?.access_token,
-  });
+  const { aircraftFull, isLoading: isLoadingAircraft, error: aircraftError } = useAircraftTable();
 
   // Handle aircraft loading errors
   useEffect(() => {
@@ -230,7 +119,7 @@ export default function StaffDashboard() {
       console.error('Aircraft query error:', aircraftError);
       toast({
         title: 'Error loading aircraft',
-        description: aircraftError instanceof Error ? aircraftError.message : 'Failed to load aircraft. Please try refreshing the page.',
+        description: aircraftError instanceof Error ? aircraftError.message : 'Failed to load aircraft.',
         variant: 'destructive',
       });
     }
@@ -241,7 +130,7 @@ export default function StaffDashboard() {
     queryKey: ['/api/service-requests'],
     queryFn: async () => {
       try {
-        console.log('🔍 Fetching service requests...');
+        console.log('Fetching service requests...');
         
         const res = await authenticatedFetch('/api/service-requests');
         
@@ -262,10 +151,10 @@ export default function StaffDashboard() {
         }
         
         const json = await res.json();
-        console.log('✅ Fetched service requests:', json.serviceRequests?.length || 0);
+        console.log('Fetched service requests:', json.serviceRequests?.length || 0);
         return json.serviceRequests || [];
       } catch (error) {
-        console.error('❌ Error fetching service requests:', error);
+        console.error('Error fetching service requests:', error);
         // The authenticatedFetch will handle 401 errors and session refresh
         throw error;
       }
@@ -381,349 +270,7 @@ export default function StaffDashboard() {
 
   const isDev = !import.meta.env.PROD;
 
-  // Check if user is admin
-  const { data: userProfile } = useQuery({
-    queryKey: ['user-profile', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-    retry: false,
-  });
 
-  const isAdmin = userProfile?.role === 'admin';
-
-  // Fetch instruction invoices for current CFI
-  const { data: invoices = [], isLoading: isLoadingInvoices, refetch: refetchInvoices, error: invoicesError } = useQuery<InstructionInvoice[]>({
-    queryKey: ['/api/cfi/invoices', user?.id, isDev, isAdmin],
-    queryFn: async () => {
-      // In dev mode without user, return empty array (RLS will block anyway)
-      // User should log in to see invoices
-      if (!user && isDev) {
-        return [];
-      }
-
-      // In production, require authentication
-      if (!user) {
-        throw new Error('Not authenticated. Please log in to view invoices.');
-      }
-
-      // Build the query - try nested query first
-      let query = supabase
-        .from('invoices')
-        .select(`
-          *,
-          aircraft:aircraft_id(tail_number),
-          owner:owner_id(full_name, email),
-          invoice_lines(description, quantity, unit_cents)
-        `)
-        .eq('category', 'instruction');
-
-      // Admins see all invoices, CFIs see only their own
-      if (!isAdmin && user) {
-        query = query.eq('created_by_cfi_id', user.id);
-      }
-
-      let { data, error } = await query.order('created_at', { ascending: false });
-      
-      // If nested query fails, try fetching separately
-      if (error && (error.message?.includes('invoice_lines') || error.message?.includes('aircraft') || error.message?.includes('owner'))) {
-        // Build base query without nested relations
-        let baseQuery = supabase
-          .from('invoices')
-          .select('*')
-          .eq('category', 'instruction');
-
-        if (!isAdmin && user) {
-          baseQuery = baseQuery.eq('created_by_cfi_id', user.id);
-        }
-
-        const invoicesResult = await baseQuery.order('created_at', { ascending: false });
-        
-        if (invoicesResult.error) {
-          error = invoicesResult.error;
-          data = null;
-        } else {
-          const invoiceData = invoicesResult.data || [];
-          const invoiceIds = invoiceData.map((inv: any) => inv.id);
-          const aircraftIds = [...new Set(invoiceData.map((inv: any) => inv.aircraft_id))];
-          const ownerIds = [...new Set(invoiceData.map((inv: any) => inv.owner_id))];
-          
-          // Fetch related data separately
-          const [linesResult, aircraftResult, ownerResult] = await Promise.all([
-            invoiceIds.length > 0 
-              ? supabase
-                  .from('invoice_lines')
-                  .select('id, invoice_id, description, quantity, unit_cents')
-                  .in('invoice_id', invoiceIds)
-              : { data: [], error: null },
-            aircraftIds.length > 0
-              ? supabase
-                  .from('aircraft')
-                  .select('id, tail_number')
-                  .in('id', aircraftIds)
-              : { data: [], error: null },
-            ownerIds.length > 0
-              ? supabase
-                  .from('user_profiles')
-                  .select('id, full_name, email')
-                  .in('id', ownerIds)
-              : { data: [], error: null },
-          ]);
-          
-          // Combine data
-          const linesByInvoiceId = (linesResult.data || []).reduce((acc: any, line: any) => {
-            if (!acc[line.invoice_id]) {
-              acc[line.invoice_id] = [];
-            }
-            acc[line.invoice_id].push({
-              description: line.description,
-              quantity: Number(line.quantity),
-              unit_cents: Number(line.unit_cents),
-            });
-            return acc;
-          }, {});
-          
-          const aircraftById = (aircraftResult.data || []).reduce((acc: any, ac: any) => {
-            acc[ac.id] = { tail_number: ac.tail_number };
-            return acc;
-          }, {});
-          
-          const ownerById = (ownerResult.data || []).reduce((acc: any, owner: any) => {
-            acc[owner.id] = { full_name: owner.full_name, email: owner.email };
-            return acc;
-          }, {});
-          
-          // Combine everything
-          data = invoiceData.map((invoice: any) => ({
-            ...invoice,
-            invoice_lines: linesByInvoiceId[invoice.id] || [],
-            aircraft: aircraftById[invoice.aircraft_id] || null,
-            owner: ownerById[invoice.owner_id] || null,
-          }));
-          
-          error = null; // Clear error since we successfully fetched
-        }
-      }
-      
-      if (error) {
-        console.error('❌ Error fetching invoices:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        
-        // Check for authentication/RLS errors
-        if (error.message?.includes('JWT') || error.message?.includes('authentication') || error.code === 'PGRST301') {
-          throw new Error('Authentication required. Please log in to view invoices.');
-        }
-        
-        if (error.code === 'PGRST116') {
-          throw new Error('No invoices found. This might be a permissions issue.');
-        }
-        
-        throw new Error(error.message || 'Failed to load invoices. Please try again.');
-      }
-      
-      return (data || []) as InstructionInvoice[];
-    },
-    // Only enable query if user exists (or in dev mode, but we'll handle that in the function)
-    enabled: Boolean(user?.id),
-    retry: false, // Don't retry on auth errors
-  });
-
-  // Handle invoice loading errors with toast
-  useEffect(() => {
-    if (invoicesError) {
-      console.error('Invoice query error:', invoicesError);
-      toast({
-        title: 'Error loading invoices',
-        description: invoicesError instanceof Error ? invoicesError.message : 'Failed to load invoices. Please try refreshing the page.',
-        variant: 'destructive',
-      });
-    }
-  }, [invoicesError, toast]);
-
-  // Create invoice and send to client mutation
-  const createAndSendInvoiceMutation = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const rateCents = Math.round(parseFloat(ratePerHour) * 100);
-      const hoursDecimal = parseFloat(hours);
-
-      // Create the invoice (aircraft_id is optional)
-      // Convert "__none__" to null for optional aircraft
-      const aircraftId = selectedAircraftId === "__none__" || !selectedAircraftId ? null : selectedAircraftId;
-      
-      const { data: invoiceData, error: createError } = await supabase.rpc('create_instruction_invoice', {
-        p_owner_id: selectedOwnerId,
-        p_aircraft_id: aircraftId,
-        p_description: `${description} - ${flightDate}`,
-        p_hours: hoursDecimal,
-        p_rate_cents: rateCents,
-        p_cfi_id: user.id,
-      });
-
-      if (createError) throw createError;
-      if (!invoiceData) throw new Error('Invoice creation failed');
-
-      const invoiceId = invoiceData;
-
-      // Finalize the invoice
-      const { error: finalizeError } = await supabase.rpc('finalize_invoice', {
-        p_invoice_id: invoiceId,
-      });
-      if (finalizeError) throw finalizeError;
-
-      // Send email to client
-      try {
-        // Always use www domain in production to avoid CORS issues from redirects
-        // Vercel redirects non-www to www, which breaks CORS during redirect
-        let apiUrl: string;
-        if (window.location.hostname === "freedomaviationco.com") {
-          // If on non-www, explicitly use www to avoid redirect CORS issues
-          apiUrl = "https://www.freedomaviationco.com/api/invoices/send-email";
-        } else {
-          // Use current origin (localhost, www, or other)
-          apiUrl = `${window.location.origin}/api/invoices/send-email`;
-        }
-        // Get auth token for API request
-        const { data: { session } } = await supabase.auth.getSession();
-        const authToken = session?.access_token;
-
-        const emailResponse = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(authToken && { Authorization: `Bearer ${authToken}` }),
-          },
-          credentials: "include",
-          body: JSON.stringify({ invoiceId }),
-        });
-
-        if (!emailResponse.ok) {
-          const errorText = await emailResponse.text();
-          let error: any;
-          try {
-            error = JSON.parse(errorText);
-          } catch {
-            error = { error: errorText || "Unknown error" };
-          }
-          
-          console.error("❌ Failed to send invoice email:");
-          console.error("❌ Response status:", emailResponse.status);
-          console.error("❌ Error object:", error);
-          console.error("❌ Error message:", error.message || error.error);
-          console.error("❌ Error details:", error.details);
-          
-          // Don't throw - email failure shouldn't prevent invoice creation
-          // But show a warning toast with the actual error message
-          const errorMessage = error.message || error.error || "Unknown error";
-          
-          // If the error is about status being "sent", show a more helpful message
-          if (errorMessage.includes('sent')) {
-            toast({
-              title: "Invoice already sent",
-              description: "This invoice has already been sent to the client. The email was not resent.",
-              variant: "default",
-            });
-          } else {
-            toast({
-              title: "Invoice created",
-              description: `Invoice created successfully, but email could not be sent: ${errorMessage}`,
-              variant: "destructive",
-            });
-          }
-        } else {
-          const result = await emailResponse.json();
-          console.log("✅ Email API response:", result);
-          
-          // Check if email was actually sent or just logged
-          if (result.emailService === "console" || result.sent === false) {
-            console.warn("⚠️ Email service is in console mode - email was NOT actually sent");
-            toast({
-              title: "Invoice created",
-              description: "Invoice created, but email service is in console mode. Email was logged to server console only.",
-              variant: "default",
-            });
-          } else {
-            console.log("✅ Email sent successfully");
-          }
-        }
-      } catch (emailError) {
-        console.error("❌ Error calling email API:", emailError);
-        // Don't throw - email failure shouldn't prevent invoice creation
-        toast({
-          title: "Invoice created",
-          description: "Invoice created successfully, but there was an error sending the email. Please check server logs.",
-          variant: "destructive",
-        });
-      }
-
-      return invoiceId;
-    },
-    onSuccess: async () => {
-      // Invalidate and refetch invoices to show the newly created invoice
-      await queryClient.invalidateQueries({ 
-        queryKey: ['/api/cfi/invoices'],
-      });
-      await queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === '/api/cfi/invoices',
-      });
-      await refetchInvoices();
-      toast({
-        title: "Invoice sent",
-        description: "Invoice has been created and sent to the client.",
-      });
-      // Reset form and close preview
-      setSelectedOwnerId("");
-      setSelectedAircraftId("");
-      setDescription("");
-      setFlightDate("");
-      setHours("");
-      setRatePerHour("150");
-      setShowPreview(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-
-  const handlePreview = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedOwnerId || !description || !flightDate || !hours || !ratePerHour) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all required fields (Client, Description, Flight Date, Hours, and Rate).",
-        variant: "destructive",
-      });
-      return;
-    }
-    setShowPreview(true);
-  };
-
-  const filteredAircraft = selectedOwnerId
-    ? aircraft.filter((a: any) => a.owner_id === selectedOwnerId)
-    : aircraft;
-
-  const totalAmount = hours && ratePerHour
-    ? (parseFloat(hours) * parseFloat(ratePerHour)).toFixed(2)
-    : "0.00";
-
-  // Get preview data
-  const selectedOwner = owners.find((o: any) => o.id === selectedOwnerId);
-  const selectedAircraft = aircraft.find((a: any) => a.id === selectedAircraftId);
 
   return (
     <div className="min-h-screen bg-background">
@@ -774,8 +321,9 @@ export default function StaffDashboard() {
             <p className="text-muted-foreground">Complete tools for managing all aspects of aviation operations</p>
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="space-y-6">
             <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-14 h-auto gap-1">
+              {/* <TabsTrigger value="ramp" data-testid="tab-ramp" className="text-xs sm:text-sm">Ramp Ops</TabsTrigger> */}
               <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
               <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>
               <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
@@ -791,6 +339,11 @@ export default function StaffDashboard() {
               <TabsTrigger value="staff" data-testid="tab-staff" className="text-xs sm:text-sm">Staff</TabsTrigger>
               <TabsTrigger value="pricing" data-testid="tab-pricing" className="text-xs sm:text-sm">Pricing</TabsTrigger>
             </TabsList>
+
+          {/* Ramp Operations Dashboard - Temporarily disabled */}
+          {/* <TabsContent value="ramp" className="space-y-6">
+            <RampDashboard />
+          </TabsContent> */}
 
           {/* Service Requests */}
           <TabsContent value="requests" className="space-y-6">
@@ -1163,413 +716,7 @@ export default function StaffDashboard() {
                 <p className="text-sm text-muted-foreground">Create and manage instruction invoices for clients</p>
               </div>
             </div>
-
-            {/* Create Invoice Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Create Instruction Invoice</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handlePreview} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="owner">Client *</Label>
-                      {ownersError ? (
-                        <div className="p-3 border border-destructive/50 bg-destructive/10 rounded-md">
-                          <p className="text-sm text-destructive">
-                            Error loading clients: {ownersError instanceof Error ? ownersError.message : 'Unknown error'}
-                          </p>
-                        </div>
-                      ) : (
-                        <Select 
-                          value={selectedOwnerId} 
-                          onValueChange={setSelectedOwnerId}
-                          disabled={isLoadingOwners}
-                        >
-                          <SelectTrigger id="owner" data-testid="select-owner">
-                            <SelectValue placeholder={
-                              isLoadingOwners ? "Loading clients..." : 
-                              owners.length === 0 ? "No clients found" : 
-                              "Select client"
-                            } />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {isLoadingOwners ? (
-                              <div className="p-4 text-center text-sm text-muted-foreground">
-                                Loading clients...
-                              </div>
-                            ) : owners.length === 0 ? (
-                              <div className="p-4 text-center text-sm text-muted-foreground">
-                                No clients found. Create a client first.
-                              </div>
-                            ) : (
-                              owners
-                                .filter((owner: any) => {
-                                  // Filter out invalid entries
-                                  if (!owner || !owner.id) return false;
-                                  const id = String(owner.id).trim();
-                                  return id !== '' && id !== 'undefined' && id !== 'null';
-                                })
-                                .map((owner: any) => {
-                                  const ownerId = String(owner.id).trim();
-                                  return (
-                                    <SelectItem key={ownerId} value={ownerId}>
-                                      {owner.full_name || owner.email || 'Unknown Client'}
-                                    </SelectItem>
-                                  );
-                                })
-                            )}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="aircraft">Aircraft (Optional)</Label>
-                      <Select 
-                        value={selectedAircraftId} 
-                        onValueChange={setSelectedAircraftId}
-                        disabled={!selectedOwnerId}
-                      >
-                        <SelectTrigger id="aircraft" data-testid="select-aircraft">
-                          <SelectValue placeholder="Select aircraft (optional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">None</SelectItem>
-                          {filteredAircraft
-                            .filter((ac: any) => {
-                              // Filter out invalid entries
-                              if (!ac || !ac.id) return false;
-                              const id = String(ac.id).trim();
-                              return id !== '' && id !== 'undefined' && id !== 'null';
-                            })
-                            .map((ac: any) => {
-                              const aircraftId = String(ac.id).trim();
-                              return (
-                                <SelectItem key={aircraftId} value={aircraftId}>
-                                  {ac.tail_number || 'Unknown Aircraft'}
-                                </SelectItem>
-                              );
-                            })}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description *</Label>
-                      <Input
-                        id="description"
-                        data-testid="input-description"
-                        placeholder="e.g., IPC training, BFR, Flight instruction"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="flight-date">Flight Date *</Label>
-                      <Input
-                        id="flight-date"
-                        data-testid="input-flight-date"
-                        type="date"
-                        max={new Date().toISOString().split('T')[0]}
-                        value={flightDate}
-                        onChange={(e) => setFlightDate(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="hours">Instruction Hours *</Label>
-                      <Input
-                        id="hours"
-                        data-testid="input-hours"
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="e.g., 2.5"
-                        value={hours}
-                        onChange={(e) => setHours(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="rate">Hourly Rate ($) *</Label>
-                      <Input
-                        id="rate"
-                        data-testid="input-rate"
-                        type="number"
-                        step="1"
-                        min="0"
-                        placeholder="e.g., 150"
-                        value={ratePerHour}
-                        onChange={(e) => setRatePerHour(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Amount</p>
-                      <p className="text-2xl font-bold">${totalAmount}</p>
-                    </div>
-                    <Button 
-                      type="submit" 
-                      data-testid="button-preview-invoice"
-                      size="lg"
-                    >
-                      Preview Invoice
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-
-            {/* Invoice Preview Dialog */}
-            <Dialog open={showPreview} onOpenChange={setShowPreview}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Invoice Preview</DialogTitle>
-                  <DialogDescription>
-                    Review the invoice details before sending to the client.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-6 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Client</p>
-                      <p className="text-base font-medium">{selectedOwner?.full_name || selectedOwner?.email || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Aircraft</p>
-                      <p className="text-base font-mono font-semibold">{selectedAircraft?.tail_number || 'Not specified'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Description</p>
-                      <p className="text-base">{description || 'N/A'}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">Flight Date</p>
-                      <p className="text-base">{flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : 'N/A'}</p>
-                    </div>
-                  </div>
-                  <div className="border-t pt-4">
-                    <p className="text-sm font-medium text-muted-foreground mb-3">Line Items</p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium mb-1">{description} - {flightDate ? format(new Date(flightDate), 'MMM d, yyyy') : ''}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {hours} {parseFloat(hours) === 1 ? 'hr' : 'hrs'} × ${parseFloat(ratePerHour).toFixed(2)}/hr
-                          </p>
-                        </div>
-                        <p className="text-lg font-bold ml-4">${totalAmount}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="border-t pt-4 flex justify-between items-center bg-muted/50 p-4 rounded-lg">
-                    <p className="text-lg font-semibold">Total Amount</p>
-                    <p className="text-2xl font-bold">${totalAmount}</p>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowPreview(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => createAndSendInvoiceMutation.mutate()}
-                    disabled={createAndSendInvoiceMutation.isPending}
-                    data-testid="button-send-to-client"
-                    size="lg"
-                  >
-                    {createAndSendInvoiceMutation.isPending ? "Sending..." : "Send to Client"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            {/* Invoice List */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold">Instruction Invoices</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {isAdmin ? 'All invoices' : 'Your invoices'}
-                  </p>
-                </div>
-                {invoices.length > 0 && (
-                  <Badge variant="secondary" className="text-sm">
-                    {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </div>
-              
-              {invoicesError ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-destructive font-medium mb-2">Error loading invoices</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {invoicesError instanceof Error ? invoicesError.message : 'Unknown error occurred'}
-                    </p>
-                    {!user && (
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Please log in to view invoices.
-                      </p>
-                    )}
-                    {user && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => refetchInvoices()}
-                      >
-                        Retry
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : isLoadingInvoices ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground">Loading invoices...</p>
-                  </CardContent>
-                </Card>
-              ) : !user ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground mb-2">Authentication required</p>
-                    <p className="text-sm text-muted-foreground">
-                      Please log in to view and manage invoices.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : invoices.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground mb-2">No instruction invoices yet.</p>
-                    <p className="text-sm text-muted-foreground">
-                      Create an invoice using the form above to get started.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {invoices
-                    .filter((invoice) => invoice && invoice.id)
-                    .map((invoice) => {
-                    // Calculate total from all invoice lines
-                    let calculatedTotal = invoice.amount;
-                    if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
-                      calculatedTotal = invoice.invoice_lines.reduce((sum, line) => {
-                        return sum + (line.quantity * line.unit_cents / 100);
-                      }, 0);
-                    }
-                    
-                    return (
-                      <Card key={invoice.id} data-testid={`invoice-${invoice.id}`} className="hover:shadow-md transition-shadow">
-                        <CardHeader>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <CardTitle className="text-lg font-mono">
-                                  {invoice.aircraft?.tail_number || 'N/A'}
-                                </CardTitle>
-                                <Badge 
-                                  variant={
-                                    invoice.status === 'paid' ? 'default' :
-                                    invoice.status === 'finalized' || invoice.status === 'sent' ? 'secondary' :
-                                    'outline'
-                                  }
-                                  data-testid={`badge-status-${invoice.id}`}
-                                  className="capitalize"
-                                >
-                                  {invoice.status}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {invoice.owner?.full_name || invoice.owner?.email || 'Unknown Client'}
-                              </p>
-                              <p className="text-xs text-muted-foreground font-mono mt-1">
-                                Invoice #{invoice.invoice_number}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm text-muted-foreground mb-1">Total</p>
-                              <p className="text-2xl font-bold">${calculatedTotal.toFixed(2)}</p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {invoice.invoice_lines && invoice.invoice_lines.length > 0 && (
-                              <div className="space-y-2">
-                                <p className="text-sm font-medium text-muted-foreground">Line Items</p>
-                                <div className="space-y-2">
-                                  {invoice.invoice_lines.map((line, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                                      <div className="flex-1">
-                                        <p className="text-sm font-medium">{line.description}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {line.quantity} {line.quantity === 1 ? 'hr' : 'hrs'} × ${(line.unit_cents / 100).toFixed(2)}/hr
-                                        </p>
-                                      </div>
-                                      <p className="text-sm font-semibold">
-                                        ${(line.quantity * line.unit_cents / 100).toFixed(2)}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center justify-between pt-3 border-t">
-                              <div className="flex items-center gap-4">
-                                {invoice.created_at && (
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Created</p>
-                                    <p className="text-sm">
-                                      {format(new Date(invoice.created_at), 'MMM d, yyyy')}
-                                    </p>
-                                  </div>
-                                )}
-                                {invoice.due_date && (
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Due Date</p>
-                                    <p className="text-sm">
-                                      {format(new Date(invoice.due_date), 'MMM d, yyyy')}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="text-right">
-                                {(invoice.status === 'finalized' || invoice.status === 'sent') && (
-                                  <p className="text-sm text-muted-foreground">
-                                    Sent to client
-                                  </p>
-                                )}
-                                
-                                {invoice.status === 'paid' && invoice.paid_date && (
-                                  <div>
-                                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                                      ✓ Paid
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {format(new Date(invoice.paid_date), 'MMM d, yyyy')}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <InvoicesTab />
           </TabsContent>
 
           {/* Fuel Tracking */}

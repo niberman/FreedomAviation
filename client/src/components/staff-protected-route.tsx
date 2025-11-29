@@ -124,6 +124,9 @@ export function StaffProtectedRoute({ children }: { children: React.ReactNode })
   // If we have a profile error, show a helpful message
   if (profileError) {
     const errorWithCode = profileError as any;
+    const is500Error = errorWithCode.code === '500' || 
+                       profileError.message?.includes('500') ||
+                       profileError.message?.includes('internal server error');
     const isPermissionError = profileError.message?.includes('permission') || 
                               profileError.message?.includes('RLS') ||
                               errorWithCode.code === 'PGRST301' ||
@@ -134,13 +137,21 @@ export function StaffProtectedRoute({ children }: { children: React.ReactNode })
         <div className="text-center max-w-md p-6">
           <h2 className="text-xl font-semibold mb-2">Unable to verify access</h2>
           <p className="text-muted-foreground mb-4">
-            {isPermissionError 
-              ? "There was an issue verifying your permissions. Please contact support if this persists."
-              : "There was an issue loading your profile. Please try refreshing the page."}
+            {is500Error 
+              ? "There's a temporary database issue. Please contact your administrator to check the RLS policies."
+              : isPermissionError 
+                ? "There was an issue verifying your permissions. Please contact support if this persists."
+                : "There was an issue loading your profile. Please try refreshing the page."}
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mb-4">
             Error: {profileError.message || 'Unknown error'}
           </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

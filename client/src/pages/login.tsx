@@ -36,7 +36,7 @@ export default function Login() {
   }, []);
 
   // Helper function to determine redirect based on user role
-  const getRedirectPath = async (userId: string): Promise<string> => {
+  const getRedirectPath = async (userId: string, userEmail?: string): Promise<string> => {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
@@ -53,11 +53,29 @@ export default function Login() {
           hint: error.hint,
         });
         
+        // Check if it's a 500 error (likely RLS recursion issue)
+        const is500Error = error.message?.includes('500') || 
+                          error.code === '500' ||
+                          error.message?.includes('internal server error');
+        
         // Check if it's a permission/RLS error
         const isPermissionError = error.message?.includes('permission') || 
                                   error.message?.includes('RLS') ||
                                   error.code === 'PGRST301' ||
                                   error.code === '42501';
+        
+        if (is500Error) {
+          console.error('Database 500 error - likely RLS policy recursion issue.');
+          console.error('The database RLS policies may need to be fixed. See migrations/fix_user_profiles_rls_final.sql');
+          // Show a user-friendly error toast
+          toast({
+            variant: "destructive",
+            title: "Database Configuration Issue",
+            description: "There's a temporary issue with the system. Please try again or contact support.",
+          });
+          // Don't redirect, stay on login
+          return "";
+        }
         
         if (isPermissionError) {
           console.error('Permission/RLS error when fetching profile. User may not have access to their own profile.');
@@ -105,8 +123,11 @@ export default function Login() {
       
       // Only redirect if NOT in an auth flow
       if (!isAuthFlow) {
-        getRedirectPath(user.id).then((path) => {
-          setLocation(path);
+        getRedirectPath(user.id, user.email || undefined).then((path) => {
+          // Only redirect if we got a valid path
+          if (path) {
+            setLocation(path);
+          }
         });
       }
     }
@@ -134,12 +155,17 @@ export default function Login() {
       
       if (currentUser) {
         // Determine redirect path based on user role
-        const redirectPath = await getRedirectPath(currentUser.id);
-        toast({
-          title: "Welcome back!",
-          description: "Successfully signed in to Freedom Aviation",
-        });
-        setLocation(redirectPath);
+        const redirectPath = await getRedirectPath(currentUser.id, currentUser.email || undefined);
+        
+        // Only redirect if we got a valid path (empty means stay on login due to error)
+        if (redirectPath) {
+          toast({
+            title: "Welcome back!",
+            description: "Successfully signed in to Freedom Aviation",
+          });
+          setLocation(redirectPath);
+        }
+        // If redirectPath is empty, error toast was already shown by getRedirectPath
       }
       // If user is not available, the useEffect will handle redirect when it becomes available
     } catch (error: any) {

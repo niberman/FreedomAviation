@@ -4,21 +4,33 @@ import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { QuickActions } from "@/features/owner/components/QuickActions";
+import { Progress } from "@/components/ui/progress";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT, DEMO_USER } from "@/lib/demo-data";
 import logoImage from "@assets/falogo.png";
 import { Link, useLocation } from "wouter";
-import { ArrowRight, Home } from "lucide-react";
+import { 
+  Home, 
+  Plus, 
+  Wrench, 
+  FileText, 
+  Fuel, 
+  MapPin,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react";
 import { EditableField } from "@/components/owner/EditableField";
 import { useAircraft } from "@/lib/hooks/useAircraft";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { isStaffRole } from "@/lib/roles";
 import { DashboardLayout } from "@/components/dashboard/layout";
 import { ownerDashboardNavItems } from "@/components/dashboard/nav-items";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { QuickActions } from "@/features/owner/components/QuickActions";
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
@@ -73,6 +85,47 @@ export default function OwnerDashboard() {
   
   const aircraft = aircraftList && aircraftList.length > 0 ? aircraftList[0] : null;
 
+  // Fetch service requests to find today's active reservation
+  const { data: serviceRequests = [] } = useQuery({
+    queryKey: ["service-requests", isDemo ? "demo" : user?.id, aircraft?.id],
+    enabled: isDemo || Boolean(user?.id && aircraft?.id),
+    queryFn: async () => {
+      if (isDemo) {
+        const { DEMO_SERVICE_REQUESTS } = await import("@/lib/demo-data");
+        return DEMO_SERVICE_REQUESTS;
+      }
+      if (!user?.id || !aircraft?.id) return [];
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const { data, error } = await supabase
+        .from("service_requests")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("aircraft_id", aircraft.id)
+        .gte("requested_departure", today.toISOString())
+        .lt("requested_departure", tomorrow.toISOString())
+        .order("requested_departure", { ascending: true });
+      
+      if (error) {
+        console.error("Error fetching service requests:", error);
+        return [];
+      }
+      
+      return data || [];
+    }
+  });
+
+  // Get the active flight for today
+  const activeFlight = serviceRequests.find(
+    (req) => 
+      req.service_type === "Pre-Flight Concierge" && 
+      req.status !== "completed" &&
+      req.status !== "cancelled"
+  );
 
   const { data: serviceTasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["service-tasks", aircraft?.id],
@@ -111,7 +164,6 @@ export default function OwnerDashboard() {
     },
   });
 
-
   const { data: membership = null } = useQuery({
     queryKey: ["membership", isDemo ? "demo" : user?.id],
     enabled: isDemo || Boolean(user?.id),
@@ -138,7 +190,6 @@ export default function OwnerDashboard() {
     },
   });
 
-
   const readinessTypes = [
     "readiness",
     "clean",
@@ -157,7 +208,7 @@ export default function OwnerDashboard() {
   );
 
   const readinessStatus = hasOpenTask ? "Needs Service" : "Ready";
-  const readinessVariant = hasOpenTask ? "destructive" : "default";
+  const isReady = !hasOpenTask;
 
   const queryClient = useQueryClient();
   
@@ -191,9 +242,27 @@ export default function OwnerDashboard() {
       throw error;
     }
   };
+
+  // Mission progress stages
+  const getMissionProgress = () => {
+    if (!activeFlight) return null;
+    
+    // Mock the progress based on status (in reality, you'd use is_staged, is_fueled, etc.)
+    const status = activeFlight.status;
+    
+    if (status === "completed") return { stage: "Ready", progress: 100, color: "emerald" };
+    if (status === "in_progress") return { stage: "Line Ops", progress: 66, color: "yellow" };
+    return { stage: "Received", progress: 33, color: "blue" };
+  };
+
+  const missionProgress = getMissionProgress();
+
+  // Mock fuel level (you'd fetch this from real data)
+  const fuelLevel = 85; // percentage
+
   return (
     <DashboardLayout
-      title="Owner Dashboard"
+      title="Aircraft Command Center"
       description="Welcome back"
       navItems={ownerDashboardNavItems}
       titleTestId="text-dashboard-title"
@@ -226,129 +295,203 @@ export default function OwnerDashboard() {
         </Link>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-col items-start gap-2 pb-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6">
-          <CardTitle className="text-base sm:text-lg font-medium">My Aircraft</CardTitle>
-          <Link href="/" data-testid="link-home-from-logo">
-            <img
-              src={logoImage}
-              alt="Freedom Aviation"
-              className="h-5 sm:h-6 w-auto opacity-50 transition-opacity hover:opacity-80"
-            />
-          </Link>
-        </CardHeader>
-        <CardContent className="px-4 sm:px-6">
-          {aircraft ? (
-            <div className="space-y-3 sm:space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="text-xs sm:text-sm text-muted-foreground">Tail Number</div>
-                  <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" data-testid="text-tail-number">
-                    {aircraft.tail_number}
-                  </div>
-                  {!isDemo && (
-                    <>
-                      <EditableField
-                        value={aircraft.make}
-                        onSave={(value) => handleAircraftUpdate("make", value)}
-                        label="Make"
-                        placeholder="e.g., Cirrus"
-                        className="text-sm"
-                      />
-                      <EditableField
-                        value={aircraft.model}
-                        onSave={(value) => handleAircraftUpdate("model", value)}
-                        label="Model"
-                        placeholder="e.g., SR22T"
-                        className="text-sm"
-                      />
-                      <EditableField
-                        value={aircraft.year}
-                        onSave={(value) => handleAircraftUpdate("year", value !== null && value !== "" ? Number(value) : null)}
-                        label="Year"
-                        type="number"
-                        format={(v) => v?.toString() || "N/A"}
-                        parse={(v) => v === "" || v === null ? null : Number(v)}
-                        placeholder="2024"
-                        className="text-sm"
-                      />
-                      <EditableField
-                        value={aircraft.base_location}
-                        onSave={(value) => handleAircraftUpdate("base_location", value)}
-                        label="Base Location"
-                        placeholder="e.g., KAPA"
-                        className="text-xs"
-                      />
-                    </>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <EditableField
-                    value={aircraft.hobbs_hours}
-                    onSave={(value) => handleAircraftUpdate("hobbs_hours", value !== null && value !== "" ? Number(value) : null)}
-                    label="Hobbs Time"
-                    type="number"
-                    format={(v) => v !== null && v !== undefined ? `${Number(v).toFixed(1)} hrs` : "N/A"}
-                    parse={(v) => v === "" || v === null ? null : Number(v)}
-                    placeholder="0.0"
-                    disabled={isDemo}
-                    className="text-xl font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <EditableField
-                    value={aircraft.tach_hours}
-                    onSave={(value) => handleAircraftUpdate("tach_hours", value !== null && value !== "" ? Number(value) : null)}
-                    label="Tach Time"
-                    type="number"
-                    format={(v) => v !== null && v !== undefined ? `${Number(v).toFixed(1)} hrs` : "N/A"}
-                    parse={(v) => v === "" || v === null ? null : Number(v)}
-                    placeholder="0.0"
-                    disabled={isDemo}
-                    className="text-xl font-semibold"
-                  />
+      {/* Hero Section - Aircraft Status Card */}
+      {aircraft ? (
+        <Card className="overflow-hidden bg-slate-900 text-white border-slate-700 mb-6">
+          <CardContent className="p-0">
+            <div className="grid md:grid-cols-2 gap-0">
+              {/* Left: Image */}
+              <div className="relative h-64 md:h-auto min-h-[300px]">
+                <img
+                  src="https://images.unsplash.com/photo-1559627755-6b22c7a3c3e8"
+                  alt="Aircraft"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/50 to-transparent" />
+                <div className="absolute bottom-4 left-4">
+                  <h2 className="text-3xl font-bold mb-1">{aircraft.tail_number}</h2>
+                  <p className="text-slate-300">
+                    {aircraft.year} {aircraft.make} {aircraft.model}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 pt-2 border-t">
+              {/* Right: Vitals */}
+              <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold">Aircraft Vitals</h3>
+                  <img
+                    src={logoImage}
+                    alt="Freedom Aviation"
+                    className="h-6 w-auto opacity-70"
+                  />
+                </div>
+
+                {/* Status */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-400">Status</span>
+                    <Badge 
+                      variant={isReady ? "default" : "destructive"}
+                      className={isReady ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/50 animate-pulse" : ""}
+                    >
+                      {isReady ? (
+                        <>
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Ready to Fly
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          {readinessStatus}
+                        </>
+                      )}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Fuel Level */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-400 flex items-center gap-2">
+                      <Fuel className="h-4 w-4" />
+                      Fuel Level (Est.)
+                    </span>
+                    <span className="text-sm font-semibold">{fuelLevel}%</span>
+                  </div>
+                  <Progress value={fuelLevel} className="h-2" />
+                </div>
+
+                {/* Hangar Location */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-400 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Hangar Location
+                    </span>
+                    <span className="text-sm font-semibold">
+                      {aircraft.base_location || "KAPA"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hobbs & Tach */}
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-700">
+                  <div>
+                    <div className="text-xs text-slate-400">Hobbs Time</div>
+                    <div className="text-lg font-semibold">
+                      {aircraft.hobbs_hours?.toFixed(1) || "N/A"} hrs
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">Tach Time</div>
+                    <div className="text-lg font-semibold">
+                      {aircraft.tach_hours?.toFixed(1) || "N/A"} hrs
+                    </div>
+                  </div>
+                </div>
+
+                {/* Membership Badge */}
                 {membership && (
-                  <Badge variant="secondary" data-testid="badge-membership">
-                    {membership.tier}
-                  </Badge>
+                  <div className="pt-2">
+                    <Badge variant="secondary" className="bg-slate-800 text-slate-200">
+                      {membership.tier} Member
+                    </Badge>
+                  </div>
                 )}
-                <Badge variant={readinessVariant as any} data-testid="badge-readiness">
-                  {readinessStatus}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="mb-6">
+          <CardContent className="p-6 text-center text-muted-foreground">
+            {aircraftLoading ? (
+              <div className="animate-pulse">Loading aircraft information...</div>
+            ) : (
+              <div>No aircraft assigned</div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Mission Tracker */}
+      {activeFlight && missionProgress && (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Today's Mission
+              </CardTitle>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                {activeFlight.requested_departure && (
+                  <span>
+                    Departure: {new Date(activeFlight.requested_departure).toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </span>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">{missionProgress.stage}</span>
+                <span className="text-muted-foreground">{missionProgress.progress}%</span>
+              </div>
+              <Progress value={missionProgress.progress} className="h-2" />
+            </div>
+            
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  Received
+                </Badge>
+                <span className="text-muted-foreground">→</span>
+                <Badge 
+                  variant={missionProgress.progress >= 66 ? "default" : "outline"}
+                  className="text-xs"
+                >
+                  Line Ops
+                </Badge>
+                <span className="text-muted-foreground">→</span>
+                <Badge 
+                  variant={missionProgress.progress === 100 ? "default" : "outline"}
+                  className={missionProgress.progress === 100 ? "bg-emerald-500 hover:bg-emerald-600" : "text-xs"}
+                >
+                  Ready
                 </Badge>
               </div>
             </div>
-          ) : (
-            <div className="text-sm text-muted-foreground">No aircraft assigned</div>
-          )}
-        </CardContent>
-      </Card>
-      {aircraft === null && aircraftLoading && (
-        <div className="p-4 animate-pulse text-muted-foreground text-sm">Loading aircraft information…</div>
+
+            {activeFlight.description && (
+              <div className="pt-2 border-t">
+                <p className="text-sm text-muted-foreground">{activeFlight.description}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      {aircraft && (user || isDemo) && (
-        <QuickActions 
-          aircraftId={aircraft.id} 
-          userId={isDemo ? DEMO_USER.id : user!.id}
-          aircraftData={aircraft}
-          isDemo={isDemo}
-        />
+      {/* Quick Actions */}
+      {aircraft && (
+        <div className="mb-6">
+          <QuickActions
+            aircraftId={aircraft.id}
+            userId={user?.id || ''}
+            aircraftData={{
+              id: aircraft.id,
+              tail_number: aircraft.tail_number,
+              base_location: aircraft.base_location,
+            }}
+            isDemo={isDemo}
+          />
+        </div>
       )}
-
-      <div className="flex justify-center pt-4">
-        <Link href="/dashboard/more">
-          <Button variant="outline" size="lg" data-testid="button-view-more">
-            View More Details
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
     </DashboardLayout>
   );
 }
