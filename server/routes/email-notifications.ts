@@ -12,7 +12,7 @@ const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error("⚠️ Missing Supabase configuration for email notifications");
+  console.error("Missing Supabase configuration for email notifications");
 }
 
 const supabase = supabaseUrl && supabaseServiceKey 
@@ -38,7 +38,7 @@ export async function processEmailNotifications(req: Request, res: Response) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    console.log("📧 Processing email notification queue...");
+    console.log("Processing email notification queue...");
 
     // Get pending notifications
     const { data: notifications, error: fetchError } = await supabase
@@ -181,7 +181,7 @@ async function sendServiceRequestEmails(
   for (const recipient of recipients) {
     try {
       await sendEmail(recipient.email, subject, html, text);
-      console.log(`✓ Sent service request email to ${recipient.email}`);
+      console.log(`Sent service request email to ${recipient.email}`);
     } catch (error) {
       console.error(`✗ Failed to send to ${recipient.email}:`, error);
       throw error; // Re-throw to mark notification as failed
@@ -217,7 +217,7 @@ async function sendInstructionRequestEmails(
   for (const recipient of recipients) {
     try {
       await sendEmail(recipient.email, subject, html, text);
-      console.log(`✓ Sent instruction request email to ${recipient.email}`);
+      console.log(`Sent instruction request email to ${recipient.email}`);
     } catch (error) {
       console.error(`✗ Failed to send to ${recipient.email}:`, error);
       throw error; // Re-throw to mark notification as failed
@@ -290,7 +290,7 @@ export async function webhookProcessNotification(req: Request, res: Response) {
       return res.json({ message: "No action needed" });
     }
 
-    console.log(`📧 Webhook: Processing notification ${record.id} immediately`);
+    console.log(`Webhook: Processing notification ${record.id} immediately`);
 
     await processNotification(record);
     

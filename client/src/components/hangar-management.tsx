@@ -279,7 +279,7 @@ export function HangarManagement() {
         `)
         .order("name");
       
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== "all") {
         query = query.eq("status", statusFilter);
       }
       
