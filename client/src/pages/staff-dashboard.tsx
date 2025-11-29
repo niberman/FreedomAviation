@@ -55,7 +55,8 @@ import { useAircraftTable } from "@/hooks/useAircraft";
 
 // Valid tab values for the management console
 const VALID_TABS = [
-  "ramp", "requests", "aircraft", "maintenance", "clients", "hangars",
+  // "ramp", // Temporarily disabled
+  "requests", "aircraft", "maintenance", "clients", "hangars",
   "documents", "credits", "fuel", "schedule", "logs", "invoices",
   "reports", "staff", "pricing"
 ] as const;
@@ -77,7 +78,7 @@ export default function StaffDashboard() {
   // Validate and set initial tab
   const initialTab: TabValue = tabFromUrl && VALID_TABS.includes(tabFromUrl as TabValue) 
     ? (tabFromUrl as TabValue) 
-    : "ramp";
+    : "requests";
   
   const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
   
@@ -321,8 +322,8 @@ export default function StaffDashboard() {
           </div>
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-15 h-auto gap-1">
-              <TabsTrigger value="ramp" data-testid="tab-ramp" className="text-xs sm:text-sm">Ramp Ops</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-14 h-auto gap-1">
+              {/* <TabsTrigger value="ramp" data-testid="tab-ramp" className="text-xs sm:text-sm">Ramp Ops</TabsTrigger> */}
               <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
               <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>
               <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
@@ -339,10 +340,10 @@ export default function StaffDashboard() {
               <TabsTrigger value="pricing" data-testid="tab-pricing" className="text-xs sm:text-sm">Pricing</TabsTrigger>
             </TabsList>
 
-          {/* Ramp Operations Dashboard */}
-          <TabsContent value="ramp" className="space-y-6">
+          {/* Ramp Operations Dashboard - Temporarily disabled */}
+          {/* <TabsContent value="ramp" className="space-y-6">
             <RampDashboard />
-          </TabsContent>
+          </TabsContent> */}
 
           {/* Service Requests */}
           <TabsContent value="requests" className="space-y-6">
