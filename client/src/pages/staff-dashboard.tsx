@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Calendar, FileText, DollarSign, Wrench, Plane, Settings2, Users, Fuel, BarChart3, Coins, Home, Files } from "lucide-react";
+import { Calendar, FileText, DollarSign, Wrench, Plane, Settings2, Users, Fuel, BarChart3, Home, Files } from "lucide-react";
 import logoImage from "@assets/falogo.png";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,7 +42,6 @@ import { StaffManagement } from "@/components/staff-management";
 import { MaintenanceCRUD } from "@/components/maintenance-crud";
 import { FuelTracking } from "@/components/fuel-tracking";
 import { NotificationCenter } from "@/components/notification-center";
-import { ServiceCreditManagement } from "@/components/service-credit-management";
 import { ReportsDashboard } from "@/components/reports-dashboard";
 import { DocumentManagement } from "@/components/document-management";
 import { HangarManagement } from "@/components/hangar-management";
@@ -57,7 +56,7 @@ import { useAircraftTable } from "@/hooks/useAircraft";
 const VALID_TABS = [
   // "ramp", // Temporarily disabled
   "requests", "aircraft", "maintenance", "clients", "hangars",
-  "documents", "credits", "fuel", "schedule", "logs", "invoices",
+  "documents", "fuel", "schedule", "logs", "invoices",
   "reports", "staff", "pricing"
 ] as const;
 
@@ -322,7 +321,7 @@ export default function StaffDashboard() {
           </div>
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-14 h-auto gap-1">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-13 h-auto gap-1">
               {/* <TabsTrigger value="ramp" data-testid="tab-ramp" className="text-xs sm:text-sm">Ramp Ops</TabsTrigger> */}
               <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
               <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>
@@ -330,7 +329,6 @@ export default function StaffDashboard() {
               <TabsTrigger value="clients" data-testid="tab-clients" className="text-xs sm:text-sm">Clients</TabsTrigger>
               <TabsTrigger value="hangars" data-testid="tab-hangars" className="text-xs sm:text-sm">Hangars</TabsTrigger>
               <TabsTrigger value="documents" data-testid="tab-documents" className="text-xs sm:text-sm">Documents</TabsTrigger>
-              <TabsTrigger value="credits" data-testid="tab-credits" className="text-xs sm:text-sm">Credits</TabsTrigger>
               <TabsTrigger value="fuel" data-testid="tab-fuel" className="text-xs sm:text-sm">Fuel</TabsTrigger>
               <TabsTrigger value="schedule" data-testid="tab-schedule" className="text-xs sm:text-sm">Schedule</TabsTrigger>
               <TabsTrigger value="logs" data-testid="tab-logs" className="text-xs sm:text-sm">Flight Logs</TabsTrigger>
@@ -548,11 +546,6 @@ export default function StaffDashboard() {
           {/* Documents */}
           <TabsContent value="documents" className="space-y-6">
             <DocumentManagement />
-          </TabsContent>
-
-          {/* Service Credits */}
-          <TabsContent value="credits" className="space-y-6">
-            <ServiceCreditManagement />
           </TabsContent>
 
           {/* CFI Schedule */}
