@@ -182,20 +182,6 @@ export interface ServiceTask {
   updated_at: string;
 }
 
-export interface ServiceCredit {
-  id: string;
-  owner_id: string; // FK to user_profiles
-  service_id: string; // FK to services
-  credits_allocated: number;
-  credits_used: number;
-  credits_remaining: number; // Computed
-  valid_from: string;
-  valid_until?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
 // ============================================
 // MAINTENANCE
 // ============================================

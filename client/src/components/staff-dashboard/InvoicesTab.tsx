@@ -45,7 +45,7 @@ export function InvoicesTab() {
   const [description, setDescription] = useState("");
   const [flightDate, setFlightDate] = useState("");
   const [hours, setHours] = useState("");
-  const [ratePerHour, setRatePerHour] = useState("150");
+  const [ratePerHour, setRatePerHour] = useState("100");
 
   // Maintenance specific fields
   const [maintenanceNotes, setMaintenanceNotes] = useState("");
@@ -571,7 +571,7 @@ export function InvoicesTab() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <CardTitle className="text-lg font-mono">
-                            {invoice.aircraft?.tail_number || 'N Number Not Assigned'}
+                            {'Invoice'}
                           </CardTitle>
                           <Badge 
                             variant={

@@ -5,7 +5,6 @@ import { useAuth } from "@/lib/auth-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useLocation } from "wouter";
 import { Plane, DollarSign } from "lucide-react";
-import { CreditsOverview } from "@/components/owner/CreditsOverview";
 import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
 import { DocsCard } from "@/features/owner/components/DocsCard";
@@ -276,7 +275,6 @@ export default function OwnerMore() {
         </div>
         <div className="grid grid-cols-1 gap-6">
           <BillingCard invoices={invoices} isLoading={invoicesLoading} />
-          <CreditsOverview />
         </div>
       </section>
 
