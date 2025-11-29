@@ -150,7 +150,7 @@ export default function StaffHome() {
           description: `${(req.aircraft as any)?.tail_number || 'N/A'} - ${req.requested_date ? format(new Date(req.requested_date), 'MMM d') : 'ASAP'}`,
           priority: 'high',
           actionLabel: 'Review',
-          actionPath: managePath
+          actionPath: `${managePath}?tab=requests`
         });
       });
 
@@ -175,7 +175,7 @@ export default function StaffHome() {
           description: `${(item.aircraft as any)?.tail_number || 'N/A'} - Due ${format(new Date(item.due_date), 'MMM d')}`,
           priority: 'critical',
           actionLabel: 'View',
-          actionPath: managePath
+          actionPath: `${managePath}?tab=maintenance`
         });
       });
 
@@ -191,7 +191,7 @@ export default function StaffHome() {
       icon: Wrench,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
-      path: managePath,
+      path: `${managePath}?tab=requests`,
       stats: {
         pending: stats?.pendingServiceRequests || 0,
         inProgress: stats?.inProgressServiceRequests || 0
@@ -203,7 +203,7 @@ export default function StaffHome() {
       icon: Plane,
       color: "text-green-600",
       bgColor: "bg-green-50",
-      path: managePath,
+      path: `${managePath}?tab=aircraft`,
       stats: {
         total: stats?.totalAircraft || 0
       }
@@ -214,7 +214,7 @@ export default function StaffHome() {
       icon: Settings2,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
-      path: managePath,
+      path: `${managePath}?tab=maintenance`,
       stats: {
         overdue: stats?.overdueMaintenanceCount || 0,
         dueSoon: stats?.dueSoonMaintenanceCount || 0
@@ -226,7 +226,7 @@ export default function StaffHome() {
       icon: Users,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
-      path: managePath,
+      path: `${managePath}?tab=clients`,
       stats: {
         total: stats?.totalOwners || 0
       }
@@ -237,7 +237,7 @@ export default function StaffHome() {
       icon: DollarSign,
       color: "text-emerald-600",
       bgColor: "bg-emerald-50",
-      path: managePath,
+      path: `${managePath}?tab=invoices`,
       stats: {
         unpaid: stats?.unpaidInvoicesCount || 0
       }
@@ -248,7 +248,7 @@ export default function StaffHome() {
       icon: BarChart3,
       color: "text-indigo-600",
       bgColor: "bg-indigo-50",
-      path: managePath,
+      path: `${managePath}?tab=reports`,
       stats: {}
     }
   ];
@@ -479,7 +479,7 @@ export default function StaffHome() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold">Recent Activity</h3>
-              <Button variant="outline" size="sm" onClick={() => setLocation(managePath)}>
+              <Button variant="outline" size="sm" onClick={() => setLocation(`${managePath}?tab=requests`)}>
                 View All
               </Button>
             </div>
