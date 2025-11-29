@@ -130,7 +130,7 @@ export function InvoicesTab() {
     setDescription("");
     setFlightDate("");
     setHours("");
-    setRatePerHour("150");
+    setRatePerHour("100");
     setMaintenanceNotes("");
     setLineItems([{ id: '1', type: 'labor', description: '', quantity: '', rate: '' }]);
   };
@@ -571,7 +571,7 @@ export function InvoicesTab() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <CardTitle className="text-lg font-mono">
-                            {invoice.aircraft?.tail_number || 'N/A'}
+                            {invoice.aircraft?.tail_number || 'N Number Not Assigned'}
                           </CardTitle>
                           <Badge 
                             variant={
