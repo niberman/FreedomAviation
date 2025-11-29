@@ -3,15 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Plane, DollarSign } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { CreditsOverview } from "@/components/owner/CreditsOverview";
 import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
 import { DocsCard } from "@/features/owner/components/DocsCard";
 import { PasswordChangeCard } from "@/features/owner/components/PasswordChangeCard";
-import { DocumentManagement } from "@/components/document-management";
 import { DemoBanner } from "@/components/DemoBanner";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT } from "@/lib/demo-data";
@@ -267,24 +265,9 @@ export default function OwnerMore() {
       title="Operations & Billing"
       description="Manage your account, billing, and service history."
       navItems={ownerDashboardNavItems}
-      showHeader={false}
       actions={<ThemeToggle />}
     >
       {isDemo && <DemoBanner />}
-
-      {/* Minimal Navigation */}
-      <div className="flex items-center gap-2 mb-6">
-        <Link href="/dashboard">
-          <Button variant="outline" size="sm">
-            Overview
-          </Button>
-        </Link>
-        <Link href="/dashboard/more">
-          <Button variant="default" size="sm">
-            More
-          </Button>
-        </Link>
-      </div>
 
       <section className="space-y-4">
         <div className="flex items-center gap-2">
@@ -309,11 +292,6 @@ export default function OwnerMore() {
             isLoading={tasksLoading} 
           />
         </div>
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="text-xl font-semibold">Documents & Compliance</h3>
-        <DocumentManagement />
       </section>
 
       <section className="space-y-4">

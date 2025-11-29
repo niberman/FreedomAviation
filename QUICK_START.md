@@ -95,3 +95,5 @@ cat ~/.cursor/projects/Users-noah-FreedomAviation-FreedomAviation-1/terminals/*.
 - 💡 **Developer Friendly**: Helpful messages guide you through setup
 
 
+
+

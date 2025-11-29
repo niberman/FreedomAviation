@@ -28,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { KanbanBoard } from "@/components/kanban-board";
 import { AircraftTable } from "@/components/aircraft-table";
 import { MaintenanceList } from "@/components/maintenance-list";
@@ -53,12 +53,40 @@ import { useClients } from "@/hooks/useClients";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAircraftTable } from "@/hooks/useAircraft";
 
+// Valid tab values for the management console
+const VALID_TABS = [
+  "ramp", "requests", "aircraft", "maintenance", "clients", "hangars",
+  "documents", "credits", "fuel", "schedule", "logs", "invoices",
+  "reports", "staff", "pricing"
+] as const;
+
+type TabValue = typeof VALID_TABS[number];
+
 export default function StaffDashboard() {
   const { toast } = useToast();
   const { user, session } = useAuth();
   const queryClient = useQueryClient();
   const [selectedServiceRequest, setSelectedServiceRequest] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Get tab from URL query parameter
+  const searchString = useSearch();
+  const urlParams = new URLSearchParams(searchString);
+  const tabFromUrl = urlParams.get("tab");
+  
+  // Validate and set initial tab
+  const initialTab: TabValue = tabFromUrl && VALID_TABS.includes(tabFromUrl as TabValue) 
+    ? (tabFromUrl as TabValue) 
+    : "ramp";
+  
+  const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
+  
+  // Sync tab state with URL parameter changes
+  useEffect(() => {
+    if (tabFromUrl && VALID_TABS.includes(tabFromUrl as TabValue)) {
+      setActiveTab(tabFromUrl as TabValue);
+    }
+  }, [tabFromUrl]);
 
   const { isAdmin } = useUserProfile();
 
@@ -292,7 +320,7 @@ export default function StaffDashboard() {
             <p className="text-muted-foreground">Complete tools for managing all aspects of aviation operations</p>
           </div>
 
-          <Tabs defaultValue="ramp" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="space-y-6">
             <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-15 h-auto gap-1">
               <TabsTrigger value="ramp" data-testid="tab-ramp" className="text-xs sm:text-sm">Ramp Ops</TabsTrigger>
               <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
