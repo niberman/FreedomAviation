@@ -704,9 +704,9 @@ export default function StaffDashboard() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-muted-foreground" />
-                  <h2 className="text-2xl font-semibold">Flight Instruction Invoices</h2>
+                  <h2 className="text-2xl font-semibold">Invoicing Tool</h2>
                 </div>
-                <p className="text-sm text-muted-foreground">Create and manage instruction invoices for clients</p>
+                <p className="text-sm text-muted-foreground">Create and manage invoices for clients</p>
               </div>
             </div>
             <InvoicesTab />
