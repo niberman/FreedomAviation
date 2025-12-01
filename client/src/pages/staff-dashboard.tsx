@@ -36,7 +36,6 @@ import { ClientsTable } from "@/components/clients-table";
 import { ServiceRequestEditDialog } from "@/components/service-request-edit-dialog";
 import { FlightLogsList } from "@/components/flight-logs-list";
 import { CFISchedule } from "@/components/cfi-schedule";
-import UnifiedPricingConfigurator from "./admin/UnifiedPricingConfigurator";
 import { authenticatedFetch } from "@/lib/auth-utils";
 import { StaffManagement } from "@/components/staff-management";
 import { MaintenanceCRUD } from "@/components/maintenance-crud";
@@ -57,7 +56,7 @@ const VALID_TABS = [
   // "ramp", // Temporarily disabled
   "requests", "aircraft", "maintenance", "clients", "hangars",
   "documents", "fuel", "schedule", "logs", "invoices",
-  "reports", "staff", "pricing"
+  "reports", "staff"
 ] as const;
 
 type TabValue = typeof VALID_TABS[number];
@@ -335,7 +334,6 @@ export default function StaffDashboard() {
               <TabsTrigger value="invoices" data-testid="tab-invoices" className="text-xs sm:text-sm">Invoices</TabsTrigger>
               <TabsTrigger value="reports" data-testid="tab-reports" className="text-xs sm:text-sm">Reports</TabsTrigger>
               <TabsTrigger value="staff" data-testid="tab-staff" className="text-xs sm:text-sm">Staff</TabsTrigger>
-              <TabsTrigger value="pricing" data-testid="tab-pricing" className="text-xs sm:text-sm">Pricing</TabsTrigger>
             </TabsList>
 
           {/* Ramp Operations Dashboard - Temporarily disabled */}
@@ -727,10 +725,6 @@ export default function StaffDashboard() {
             <StaffManagement />
           </TabsContent>
 
-          {/* Pricing Configurator */}
-          <TabsContent value="pricing" className="space-y-6">
-            <UnifiedPricingConfigurator />
-          </TabsContent>
         </Tabs>
         </div>
       </main>

@@ -30,13 +30,27 @@ END $$;
 -- ============================================
 
 -- Migrate data from old columns to new columns if needed
-UPDATE aircraft
-SET 
-  hobbs_hours = hobbs_time,
-  tach_hours = tach_time
-WHERE 
-  (hobbs_hours IS NULL AND hobbs_time IS NOT NULL)
-  OR (tach_hours IS NULL AND tach_time IS NOT NULL);
+DO $$
+BEGIN
+  -- Check if columns exist before trying to update/drop
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'aircraft' AND column_name = 'hobbs_time') 
+     AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'aircraft' AND column_name = 'hobbs_hours') THEN
+     
+    UPDATE aircraft
+    SET hobbs_hours = hobbs_time
+    WHERE hobbs_hours IS NULL AND hobbs_time IS NOT NULL;
+    
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'aircraft' AND column_name = 'tach_time') 
+     AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'aircraft' AND column_name = 'tach_hours') THEN
+     
+    UPDATE aircraft
+    SET tach_hours = tach_time
+    WHERE tach_hours IS NULL AND tach_time IS NOT NULL;
+    
+  END IF;
+END $$;
 
 -- Drop the old columns
 DO $$
