@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import type { InstructionInvoice } from "@/types/invoices";
+import { useToast } from "@/hooks/use-toast";
 
 const isDev = !import.meta.env.PROD;
 
@@ -104,3 +105,132 @@ export function useInvoices() {
   });
 }
 
+export function useDeleteInvoice() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (invoiceId: string) => {
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cfi/invoices'] });
+      toast({
+        title: "Invoice deleted",
+        description: "The invoice has been successfully deleted.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting invoice",
+        description: error.message || "An error occurred while deleting the invoice.",
+        variant: "destructive",
+      });
+    }
+  });
+}
+
+interface UpdateInvoiceParams {
+  invoiceId: string;
+  description?: string;
+  flightDate?: string;
+  hours?: number;
+  rateCents?: number;
+  notes?: string;
+  lineItems?: Array<{
+    description: string;
+    quantity: number;
+    unit_cents: number;
+    type?: 'labor' | 'part' | 'fee';
+  }>;
+}
+
+export function useUpdateInvoice() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (params: UpdateInvoiceParams) => {
+      if (!user) throw new Error('Not authenticated');
+      const { invoiceId, lineItems, ...invoiceUpdates } = params;
+
+      // 1. Update invoice details if provided
+      if (Object.keys(invoiceUpdates).length > 0) {
+        // Map local params to DB columns if needed, or handle logic here
+        // For instruction invoices, description/hours/rate might be stored in lines or description field
+        // But here we assume we update the invoice metadata or specific fields
+        // For simplicity in this hook, we might need to handle instruction vs maintenance differences
+        // But let's focus on the common fields first.
+        
+        // Special handling: if updating description for instruction invoice, we might need to update the invoice description
+        const updates: any = {};
+        if (invoiceUpdates.notes !== undefined) updates.notes = invoiceUpdates.notes;
+        // If we are updating amount, it usually comes from lines, so we might not update it directly unless it's a manual override
+        
+        if (Object.keys(updates).length > 0) {
+            const { error } = await supabase
+            .from('invoices')
+            .update(updates)
+            .eq('id', invoiceId);
+            if (error) throw error;
+        }
+      }
+
+      // 2. Update line items if provided
+      if (lineItems) {
+        // First delete existing lines (simplest approach for full update)
+        // Or we could try to diff them. Deleting and re-inserting is often safer for simple line items.
+        const { error: deleteError } = await supabase
+          .from('invoice_lines')
+          .delete()
+          .eq('invoice_id', invoiceId);
+        
+        if (deleteError) throw deleteError;
+
+        // Insert new lines
+        const { error: insertError } = await supabase
+          .from('invoice_lines')
+          .insert(lineItems.map(item => ({
+            invoice_id: invoiceId,
+            description: item.description,
+            quantity: item.quantity,
+            unit_cents: item.unit_cents
+          })));
+
+        if (insertError) throw insertError;
+
+        // Recalculate total
+        const totalCents = lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_cents), 0);
+        const { error: updateAmountError } = await supabase
+            .from('invoices')
+            .update({ amount: totalCents / 100.0 })
+            .eq('id', invoiceId);
+        
+        if (updateAmountError) throw updateAmountError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cfi/invoices'] });
+      toast({
+        title: "Invoice updated",
+        description: "The invoice has been successfully updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating invoice",
+        description: error.message || "An error occurred while updating the invoice.",
+        variant: "destructive",
+      });
+    }
+  });
+}

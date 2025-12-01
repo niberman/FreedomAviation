@@ -1,0 +1,383 @@
+
+> rest-express@1.0.0 test
+> vitest run src/tests/dashboard-integration.test.tsx
+
+
+[1m[46m RUN [49m[22m [36mv4.0.8 [39m[90m/Users/noah/FreedomAviation/FreedomAviation-1[39m
+
+[90mstdout[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mFetching service requests...
+
+[90mstderr[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mNo owners found in database
+
+[90mstdout[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mFetched service requests: [33m1[39m
+
+[90mstderr[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mNo owners found in database
+
+[90mstdout[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mFetching service requests...
+
+[90mstdout[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mFetched service requests: [33m1[39m
+
+[90mstdout[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mOwnerDashboard Debug: {
+  userId: [32m'owner-1'[39m,
+  aircraftId: [90mundefined[39m,
+  isDemo: [33mfalse[39m,
+  enabled: [33mfalse[39m
+}
+
+[90mstdout[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mOwnerDashboard Debug: {
+  userId: [32m'owner-1'[39m,
+  aircraftId: [32m'aircraft-1'[39m,
+  isDemo: [33mfalse[39m,
+  enabled: [33mtrue[39m
+}
+Fetching service requests for owner
+
+[90mstdout[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mOwnerDashboard Debug: {
+  userId: [32m'owner-1'[39m,
+  aircraftId: [32m'aircraft-1'[39m,
+  isDemo: [33mfalse[39m,
+  enabled: [33mtrue[39m
+}
+
+[90mstdout[2m | client/src/tests/dashboard-integration.test.tsx[2m > [22m[2mDashboard Integration Workflows[2m > [22m[2mshould reflect service request status changes from Staff to Owner
+[22m[39mOwnerDashboard Debug: {
+  userId: [32m'owner-1'[39m,
+  aircraftId: [32m'aircraft-1'[39m,
+  isDemo: [33mfalse[39m,
+  enabled: [33mtrue[39m
+}
+
+ [31m❯[39m client/src/tests/dashboard-integration.test.tsx [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1229[2mms[22m[39m
+[31m     [31m×[31m should reflect service request status changes from Staff to Owner[39m[33m 1228[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m client/src/tests/dashboard-integration.test.tsx[2m > [22mDashboard Integration Workflows[2m > [22mshould reflect service request status changes from Staff to Owner
+[31m[1mTestingLibraryElementError[22m[39m: Found multiple elements with the text: /Line Ops/i
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<span[39m
+  [33mclass[39m=[32m"font-medium"[39m
+[36m>[39m
+  [0mLine Ops[0m
+[36m</span>[39m
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33mclass[39m=[32m"whitespace-nowrap inline-flex items-center rounded-md border px-2.5 py-0.5 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent bg-primary text-primary-foreground shadow-xs text-xs"[39m
+[36m>[39m
+  [0mLine Ops[0m
+[36m</div>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div />[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mdata-testid[39m=[32m"dashboard-layout"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex items-center gap-2 mb-4 sm:mb-6"[39m
+      [36m>[39m
+        [36m<a[39m
+          [33mhref[39m=[32m"/dashboard"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 bg-primary text-primary-foreground border border-primary-border min-h-8 rounded-md text-xs h-10 px-4"[39m
+          [36m>[39m
+            [0mOverview[0m
+          [36m</button>[39m
+        [36m</a>[39m
+        [36m<a[39m
+          [33mhref[39m=[32m"/dashboard/more"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 border [border-color:var(--button-outline)] shadow-xs active:shadow-none min-h-8 rounded-md text-xs h-10 px-4"[39m
+          [36m>[39m
+            [0mMore[0m
+          [36m</button>[39m
+        [36m</a>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"shadcn-card rounded-xl border shadow-sm overflow-hidden bg-slate-900 text-white border-slate-700 mb-6"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"p-0"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"grid md:grid-cols-2 gap-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"relative h-64 md:h-auto min-h-[300px]"[39m
+            [36m>[39m
+              [36m<img[39m
+                [33malt[39m=[32m"Aircraft"[39m
+                [33mclass[39m=[32m"w-full h-full object-cover"[39m
+                [33msrc[39m=[32m"https://images.unsplash.com/photo-1559627755-6b22c7a3c3e8"[39m
+              [36m/>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/50 to-transparent"[39m
+              [36m/>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"absolute bottom-4 left-4"[39m
+              [36m>[39m
+                [36m<h2[39m
+                  [33mclass[39m=[32m"text-3xl font-bold mb-1"[39m
+                [36m>[39m
+                  [0mN123FA[0m
+                [36m</h2>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text-slate-300"[39m
+                [36m>[39m
+                  [0m2023[0m
+                  [0m [0m
+                  [0mCirrus[0m
+                  [0m [0m
+                  [0mSR22[0m
+                [36m</p>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"p-6 space-y-6"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"flex items-center justify-between"[39m
+              [36m>[39m
+                [36m<h3[39m
+                  [33mclass[39m=[32m"text-xl font-semibold"[39m
+                [36m>[39m
+                  [0mAircraft Vitals[0m
+                [36m</h3>[39m
+                [36m<img[39m
+                  [33malt[39m=[32m"Freedom Aviation"[39m
+                  [33mclass[39m=[32m"h-6 w-auto opacity-70"[39m
+                  [33msrc[39m=[32m"/attached_assets/falogo.png"[39m
+                [36m/>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"space-y-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex items-center justify-between"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"text-sm text-slate-400"[39m
+                  [36m>[39m
+                    [0mStatus[0m
+                  [36m</span>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"whitespace-nowrap inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-primary-foreground bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/50 animate-pulse"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33mclass[39m=[32m"lucide lucide-circle-check h-3 w-3 mr-1"[39m
+                      [33mfill[39m=[32m"none"[39m
+                      [33mheight[39m=[32m"24"[39m
+                      [33mstroke[39m=[32m"currentColor"[39m
+                      [33mstroke-linecap[39m=[32m"round"[39m
+                      [33mstroke-linejoin[39m=[32m"round"[39m
+                      [33mstroke-width[39m=[32m"2"[39m
+                      [33mviewBox[39m=[32m"0 0 24 24"[39m
+                      [33mwidth[39m=[32m"24"[39m
+                      [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                    [36m>[39m
+                      [36m<circle[39m
+                        [33mcx[39m=[32m"12"[39m
+                        [33mcy[39m=[32m"12"[39m
+                        [33mr[39m=[32m"10"[39m
+                      [36m/>[39m
+                      [36m<path[39m
+                        [33md[39m=[32m"m9 12 2 2 4-4"[39m
+                      [36m/>[39m
+                    [36m</svg>[39m
+                    [0mReady to Fly[0m
+                  [36m</div>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"space-y-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex items-center justify-between"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"text-sm text-slate-400 flex items-center gap-2"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33mclass[39m=[32m"lucide lucide-fuel h-4 w-4"[39m
+                      [33mfill[39m=[32m"none"[39m
+                      [33mheight[39m=[32m"24"[39m
+                      [33mstroke[39m=[32m"currentColor"[39m
+                      [33mstroke-linecap[39m=[32m"round"[39m
+                      [33mstroke-linejoin[39m=[32m"round"[39m
+                      [33mstroke-width[39m=[32m"2"[39m
+          ...
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div />[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mdata-testid[39m=[32m"dashboard-layout"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center gap-2 mb-4 sm:mb-6"[39m
+        [36m>[39m
+          [36m<a[39m
+            [33mhref[39m=[32m"/dashboard"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 bg-primary text-primary-foreground border border-primary-border min-h-8 rounded-md text-xs h-10 px-4"[39m
+            [36m>[39m
+              [0mOverview[0m
+            [36m</button>[39m
+          [36m</a>[39m
+          [36m<a[39m
+            [33mhref[39m=[32m"/dashboard/more"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-elevate active-elevate-2 border [border-color:var(--button-outline)] shadow-xs active:shadow-none min-h-8 rounded-md text-xs h-10 px-4"[39m
+            [36m>[39m
+              [0mMore[0m
+            [36m</button>[39m
+          [36m</a>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"shadcn-card rounded-xl border shadow-sm overflow-hidden bg-slate-900 text-white border-slate-700 mb-6"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"p-0"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid md:grid-cols-2 gap-0"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"relative h-64 md:h-auto min-h-[300px]"[39m
+              [36m>[39m
+                [36m<img[39m
+                  [33malt[39m=[32m"Aircraft"[39m
+                  [33mclass[39m=[32m"w-full h-full object-cover"[39m
+                  [33msrc[39m=[32m"https://images.unsplash.com/photo-1559627755-6b22c7a3c3e8"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/50 to-transparent"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"absolute bottom-4 left-4"[39m
+                [36m>[39m
+                  [36m<h2[39m
+                    [33mclass[39m=[32m"text-3xl font-bold mb-1"[39m
+                  [36m>[39m
+                    [0mN123FA[0m
+                  [36m</h2>[39m
+                  [36m<p[39m
+                    [33mclass[39m=[32m"text-slate-300"[39m
+                  [36m>[39m
+                    [0m2023[0m
+                    [0m [0m
+                    [0mCirrus[0m
+                    [0m [0m
+                    [0mSR22[0m
+                  [36m</p>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"p-6 space-y-6"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex items-center justify-between"[39m
+                [36m>[39m
+                  [36m<h3[39m
+                    [33mclass[39m=[32m"text-xl font-semibold"[39m
+                  [36m>[39m
+                    [0mAircraft Vitals[0m
+                  [36m</h3>[39m
+                  [36m<img[39m
+                    [33malt[39m=[32m"Freedom Aviation"[39m
+                    [33mclass[39m=[32m"h-6 w-auto opacity-70"[39m
+                    [33msrc[39m=[32m"/attached_assets/falogo.png"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"space-y-2"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"flex items-center justify-between"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"text-sm text-slate-400"[39m
+                    [36m>[39m
+                      [0mStatus[0m
+                    [36m</span>[39m
+                    [36m<div[39m
+                      [33mclass[39m=[32m"whitespace-nowrap inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover-elevate border-transparent text-primary-foreground bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/50 animate-pulse"[39m
+                    [36m>[39m
+                      [36m<svg[39m
+                        [33mclass[39m=[32m"lucide lucide-circle-check h-3 w-3 mr-1"[39m
+                        [33mfill[39m=[32m"none"[39m
+                        [33mheight[39m=[32m"24"[39m
+                        [33mstroke[39m=[32m"currentColor"[39m
+                        [33mstroke-linecap[39m=[32m"round"[39m
+                        [33mstroke-linejoin[39m=[32m"round"[39m
+                        [33mstroke-width[39m=[32m"2"[39m
+                        [33mviewBox[39m=[32m"0 0 24 24"[39m
+                        [33mwidth[39m=[32m"24"[39m
+                        [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                      [36m>[39m
+                        [36m<circle[39m
+                          [33mcx[39m=[32m"12"[39m
+                          [33mcy[39m=[32m"12"[39m
+                          [33mr[39m=[32m"10"[39m
+                        [36m/>[39m
+                        [36m<path[39m
+                          [33md[39m=[32m"m9 12 2 2 4-4"[39m
+                        [36m/>[39m
+                      [36m</svg>[39m
+                      [0mReady to Fly[0m
+                    [36m</div>[39m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"space-y-2"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"flex items-center justify-between"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"text-sm text-slate-400 flex items-center gap-2"[39m
+                    [36m>[39m
+                      [36m<svg[39m
+                        [33mclass[39m=[32m"lucide lucide-fuel h-4 w-4"[39m
+                        [33mfill[39m=[32m"none"[39m
+          ...
+[90m [2m❯[22m Proxy.waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:[2m163:27[22m[39m
+[36m [2m❯[22m client/src/tests/dashboard-integration.test.tsx:[2m262:15[22m[39m
+    [90m260| [39m        [34mrenderWithProviders[39m([33m<[39m[33mOwnerDashboard[39m [33m/[39m[33m>[39m)[33m;[39m
+    [90m261| [39m
+    [90m262| [39m        [35mawait[39m [34mwaitFor[39m(() [33m=>[39m {
+    [90m   | [39m              [31m^[39m
+    [90m263| [39m            [90m// Owner dashboard shows "Line Ops" for in_progress status[39m
+    [90m264| [39m            [34mexpect[39m(requestsChain[33m.[39morder)[33m.[39m[34mtoHaveBeenCalled[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m   Start at [22m 13:42:50
+[2m   Duration [22m 2.69s[2m (transform 503ms, setup 130ms, collect 851ms, tests 1.23s, environment 260ms, prepare 4ms)[22m
+

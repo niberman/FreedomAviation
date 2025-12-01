@@ -4,11 +4,30 @@
 
 BEGIN;
 
--- Add missing role values to app_role enum
-ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'staff';
-ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'ops';
-ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'cfi';
-ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'founder';
+-- Add missing role values to app_role enum (if type exists)
+DO $$ BEGIN
+  ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'staff';
+EXCEPTION
+  WHEN undefined_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'ops';
+EXCEPTION
+  WHEN undefined_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'cfi';
+EXCEPTION
+  WHEN undefined_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TYPE app_role ADD VALUE IF NOT EXISTS 'founder';
+EXCEPTION
+  WHEN undefined_object THEN NULL;
+END $$;
 
 -- Drop old policies
 DROP POLICY IF EXISTS "Admins can manage all invoices" ON public.invoices;
@@ -32,15 +51,16 @@ USING (owner_id = auth.uid());
 
 -- 2. Staff can view ALL invoices (CRITICAL FIX!)
 -- Uses user_roles table to check if user has staff/admin/ops/founder role
+-- Fallback to user_profiles if user_roles does not exist
 CREATE POLICY "Staff can view all invoices"  
 ON public.invoices
 FOR SELECT
 TO authenticated
 USING (
   EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('staff'::app_role, 'admin'::app_role, 'ops'::app_role, 'founder'::app_role)
+    SELECT 1 FROM public.user_profiles
+    WHERE id = auth.uid()
+    AND role IN ('staff', 'admin', 'ops', 'founder')
   )
 );
 
@@ -51,16 +71,16 @@ FOR UPDATE
 TO authenticated
 USING (
   EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('staff'::app_role, 'admin'::app_role, 'ops'::app_role, 'founder'::app_role)
+    SELECT 1 FROM public.user_profiles
+    WHERE id = auth.uid()
+    AND role IN ('staff', 'admin', 'ops', 'founder')
   )
 )
 WITH CHECK (
   EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('staff'::app_role, 'admin'::app_role, 'ops'::app_role, 'founder'::app_role)
+    SELECT 1 FROM public.user_profiles
+    WHERE id = auth.uid()
+    AND role IN ('staff', 'admin', 'ops', 'founder')
   )
 );
 
@@ -71,9 +91,9 @@ FOR INSERT
 TO authenticated
 WITH CHECK (
   EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('staff'::app_role, 'admin'::app_role, 'ops'::app_role, 'founder'::app_role, 'cfi'::app_role)
+    SELECT 1 FROM public.user_profiles
+    WHERE id = auth.uid()
+    AND role IN ('staff', 'admin', 'ops', 'founder', 'cfi')
   )
 );
 
@@ -84,9 +104,9 @@ FOR DELETE
 TO authenticated
 USING (
   EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
-    AND role IN ('admin'::app_role, 'founder'::app_role)
+    SELECT 1 FROM public.user_profiles
+    WHERE id = auth.uid()
+    AND role IN ('admin', 'founder')
   )
 );
 

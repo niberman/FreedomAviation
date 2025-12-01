@@ -10,12 +10,12 @@ import { useDemoMode } from "@/hooks/use-demo-mode";
 import { DEMO_AIRCRAFT, DEMO_USER } from "@/lib/demo-data";
 import logoImage from "@assets/falogo.png";
 import { Link, useLocation } from "wouter";
-import { 
-  Home, 
-  Plus, 
-  Wrench, 
-  FileText, 
-  Fuel, 
+import {
+  Home,
+  Plus,
+  Wrench,
+  FileText,
+  Fuel,
   MapPin,
   Calendar,
   Clock,
@@ -37,7 +37,7 @@ export default function OwnerDashboard() {
   const { isDemo } = useDemoMode();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  
+
   // Check if user is staff and redirect them
   const { data: userProfile } = useQuery({
     queryKey: ['user-profile', user?.id],
@@ -63,10 +63,10 @@ export default function OwnerDashboard() {
       setLocation('/staff');
     }
   }, [user, userProfile, isStaff, isDemo, setLocation]);
-  
+
   // Use hooks for editing
   const { aircraftList: hookAircraftList, updateAircraft } = useAircraft();
-  
+
   const { data: aircraftList, isLoading: aircraftLoading } = useQuery({
     queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }],
     enabled: isDemo || Boolean(user?.id),
@@ -77,13 +77,13 @@ export default function OwnerDashboard() {
         .from("aircraft")
         .select("*")
         .eq("owner_id", user.id);
-      
+
       if (error) throw error;
       return data || [];
     }
   });
-  
-  const aircraft = aircraftList && aircraftList.length > 0 ? aircraftList[0] : null;
+
+  const aircraft = aircraftList?.[0];
 
   // Fetch service requests to find today's active reservation
   const { data: serviceRequests = [] } = useQuery({
@@ -95,12 +95,12 @@ export default function OwnerDashboard() {
         return DEMO_SERVICE_REQUESTS;
       }
       if (!user?.id || !aircraft?.id) return [];
-      
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       const { data, error } = await supabase
         .from("service_requests")
         .select("*")
@@ -109,20 +109,20 @@ export default function OwnerDashboard() {
         .gte("requested_departure", today.toISOString())
         .lt("requested_departure", tomorrow.toISOString())
         .order("requested_departure", { ascending: true });
-      
+
       if (error) {
         console.error("Error fetching service requests:", error);
         return [];
       }
-      
+
       return data || [];
     }
   });
 
   // Get the active flight for today
   const activeFlight = serviceRequests.find(
-    (req) => 
-      req.service_type === "Pre-Flight Concierge" && 
+    (req) =>
+      req.service_type === "Pre-Flight Concierge" &&
       req.status !== "completed" &&
       req.status !== "cancelled"
   );
@@ -136,19 +136,19 @@ export default function OwnerDashboard() {
         return DEMO_SERVICE_TASKS;
       }
       if (!aircraft?.id) return [];
-      
+
       const { data, error } = await supabase
         .from("service_tasks")
         .select("*")
         .eq("aircraft_id", aircraft.id)
         .order("created_at", { ascending: false })
         .limit(10);
-      
+
       if (error) {
         console.error("Error fetching service tasks:", error);
         return [];
       }
-      
+
       return data.map((task) => ({
         id: task.id,
         aircraft_id: task.aircraft_id,
@@ -173,19 +173,19 @@ export default function OwnerDashboard() {
         return DEMO_MEMBERSHIP;
       }
       if (!user?.id) return null;
-      
+
       const { data, error } = await supabase
         .from("memberships")
         .select("*")
         .eq("owner_id", user.id)
         .eq("is_active", true)
         .maybeSingle();
-      
+
       if (error) {
         console.error("Error fetching membership:", error);
         return null;
       }
-      
+
       return data;
     },
   });
@@ -199,7 +199,7 @@ export default function OwnerDashboard() {
     "tks",
     "db_update",
   ];
-  
+
   const hasOpenTask = serviceTasks.some(
     (task) =>
       task.status !== "completed" &&
@@ -211,21 +211,21 @@ export default function OwnerDashboard() {
   const isReady = !hasOpenTask;
 
   const queryClient = useQueryClient();
-  
+
   const handleAircraftUpdate = async (field: string, value: string | number | null) => {
     if (!aircraft?.id || isDemo) return;
-    
+
     try {
       await updateAircraft.mutateAsync({
         id: aircraft.id,
         data: { [field]: value },
       });
-      
+
       // Explicitly invalidate the owner dashboard's aircraft query
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }] 
+      queryClient.invalidateQueries({
+        queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }]
       });
-      
+
       toast({
         title: "Aircraft updated",
         description: "Your aircraft information has been updated successfully.",
@@ -246,10 +246,10 @@ export default function OwnerDashboard() {
   // Mission progress stages
   const getMissionProgress = () => {
     if (!activeFlight) return null;
-    
+
     // Mock the progress based on status (in reality, you'd use is_staged, is_fueled, etc.)
     const status = activeFlight.status;
-    
+
     if (status === "completed") return { stage: "Ready", progress: 100, color: "emerald" };
     if (status === "in_progress") return { stage: "Line Ops", progress: 66, color: "yellow" };
     return { stage: "Received", progress: 33, color: "blue" };
@@ -280,7 +280,7 @@ export default function OwnerDashboard() {
       }
     >
       {isDemo && <DemoBanner />}
-      
+
       {/* Minimal Navigation */}
       <div className="flex items-center gap-2 mb-4 sm:mb-6">
         <Link href="/dashboard">
@@ -331,7 +331,7 @@ export default function OwnerDashboard() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-400">Status</span>
-                    <Badge 
+                    <Badge
                       variant={isReady ? "default" : "destructive"}
                       className={isReady ? "bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/50 animate-pulse" : ""}
                     >
@@ -428,9 +428,9 @@ export default function OwnerDashboard() {
                 <Clock className="h-4 w-4" />
                 {activeFlight.requested_departure && (
                   <span>
-                    Departure: {new Date(activeFlight.requested_departure).toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
+                    Departure: {new Date(activeFlight.requested_departure).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
                     })}
                   </span>
                 )}
@@ -445,21 +445,21 @@ export default function OwnerDashboard() {
               </div>
               <Progress value={missionProgress.progress} className="h-2" />
             </div>
-            
+
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">
                   Received
                 </Badge>
                 <span className="text-muted-foreground">→</span>
-                <Badge 
+                <Badge
                   variant={missionProgress.progress >= 66 ? "default" : "outline"}
                   className="text-xs"
                 >
                   Line Ops
                 </Badge>
                 <span className="text-muted-foreground">→</span>
-                <Badge 
+                <Badge
                   variant={missionProgress.progress === 100 ? "default" : "outline"}
                   className={missionProgress.progress === 100 ? "bg-emerald-500 hover:bg-emerald-600" : "text-xs"}
                 >

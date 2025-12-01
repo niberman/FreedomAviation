@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import { Plus, Trash2, Wrench, Plane } from "lucide-react";
+import { Plus, Trash2, Wrench, Plane, MoreVertical, Pencil } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useClients } from "@/hooks/useClients";
 import { useAircraft } from "@/hooks/useAircraft";
-import { useInvoices } from "@/hooks/useInvoices";
+import { useInvoices, useDeleteInvoice, useUpdateInvoice } from "@/hooks/useInvoices";
 import { useCreateInvoice, useCreateMaintenanceInvoice } from "@/hooks/useCreateInvoice";
 
 interface MaintenanceLineItem {
@@ -24,6 +25,8 @@ interface MaintenanceLineItem {
   rate: string;
 }
 
+type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc' | 'client';
+
 export function InvoicesTab() {
   const { user } = useAuth();
   const { isAdmin } = useUserProfile();
@@ -32,6 +35,8 @@ export function InvoicesTab() {
   const { data: invoices = [], isLoading: isLoadingInvoices, error: invoicesError, refetch: refetchInvoices } = useInvoices();
   const createInvoiceMutation = useCreateInvoice();
   const createMaintenanceMutation = useCreateMaintenanceInvoice();
+  const deleteInvoiceMutation = useDeleteInvoice();
+  const updateInvoiceMutation = useUpdateInvoice();
 
   // Invoice type toggle
   const [invoiceType, setInvoiceType] = useState<'instruction' | 'maintenance'>('instruction');
@@ -52,6 +57,13 @@ export function InvoicesTab() {
   const [lineItems, setLineItems] = useState<MaintenanceLineItem[]>([
     { id: '1', type: 'labor', description: '', quantity: '', rate: '' }
   ]);
+
+  // Sorting
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+
+  // Edit/Delete State
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null);
 
   const selectedOwner = clients.find((o: any) => o.id === selectedOwnerId);
   const selectedAircraft = aircraft.find((a: any) => a.id === selectedAircraftId);
@@ -88,43 +100,139 @@ export function InvoicesTab() {
     ));
   };
 
-  const handleCreateInvoice = () => {
-    if (invoiceType === 'instruction') {
-      createInvoiceMutation.mutate({
-        ownerId: selectedOwnerId,
-        aircraftId: selectedAircraftId,
-        description,
-        flightDate,
-        hours,
-        ratePerHour
-      }, {
-        onSuccess: () => {
-          setShowPreview(false);
-          resetForm();
-        }
-      });
-    } else {
-      // Maintenance invoice
-      createMaintenanceMutation.mutate({
-        ownerId: selectedOwnerId,
-        aircraftId: selectedAircraftId,
-        notes: maintenanceNotes,
-        lineItems: lineItems.map(item => ({
+  const handleCreateOrUpdateInvoice = () => {
+    if (editingInvoiceId) {
+      // Update Logic
+      const updateParams: any = {
+        invoiceId: editingInvoiceId,
+      };
+
+      if (invoiceType === 'instruction') {
+        updateParams.description = `${description} - ${flightDate}`; // Simple merge back, ideally separate
+        // Note: Updating instruction invoice is tricky because original creation merged fields. 
+        // We will reconstruct line items for instruction invoice update as well.
+        updateParams.lineItems = [{
+            description: `${description} - ${flightDate}`,
+            quantity: parseFloat(hours),
+            unit_cents: Math.round(parseFloat(ratePerHour) * 100),
+            type: 'labor' // Assuming labor for instruction
+        }];
+      } else {
+        updateParams.notes = maintenanceNotes;
+        updateParams.lineItems = lineItems.map(item => ({
           type: item.type,
           description: item.description,
           quantity: parseFloat(item.quantity || "0"),
-          rateCents: Math.round(parseFloat(item.rate || "0") * 100)
-        }))
-      }, {
+          unit_cents: Math.round(parseFloat(item.rate || "0") * 100)
+        }));
+      }
+
+      updateInvoiceMutation.mutate(updateParams, {
         onSuccess: () => {
           setShowPreview(false);
           resetForm();
+          setEditingInvoiceId(null);
+        }
+      });
+
+    } else {
+      // Create Logic
+      if (invoiceType === 'instruction') {
+        createInvoiceMutation.mutate({
+          ownerId: selectedOwnerId,
+          aircraftId: selectedAircraftId,
+          description,
+          flightDate,
+          hours,
+          ratePerHour
+        }, {
+          onSuccess: () => {
+            setShowPreview(false);
+            resetForm();
+          }
+        });
+      } else {
+        // Maintenance invoice
+        createMaintenanceMutation.mutate({
+          ownerId: selectedOwnerId,
+          aircraftId: selectedAircraftId,
+          notes: maintenanceNotes,
+          lineItems: lineItems.map(item => ({
+            type: item.type,
+            description: item.description,
+            quantity: parseFloat(item.quantity || "0"),
+            rateCents: Math.round(parseFloat(item.rate || "0") * 100)
+          }))
+        }, {
+          onSuccess: () => {
+            setShowPreview(false);
+            resetForm();
+          }
+        });
+      }
+    }
+  };
+
+  const handleDeleteInvoice = () => {
+    if (deleteInvoiceId) {
+      deleteInvoiceMutation.mutate(deleteInvoiceId, {
+        onSuccess: () => {
+          setDeleteInvoiceId(null);
         }
       });
     }
   };
 
+  const startEdit = (invoice: any) => {
+    setEditingInvoiceId(invoice.id);
+    setInvoiceType(invoice.category === 'instruction' ? 'instruction' : 'maintenance');
+    setSelectedOwnerId(invoice.owner_id);
+    setSelectedAircraftId(invoice.aircraft_id || "__none__");
+
+    if (invoice.category === 'instruction') {
+      // Try to parse out description/date/hours from line items if available
+      const line = invoice.invoice_lines?.[0];
+      if (line) {
+          // Heuristic parsing if stored as "Desc - Date"
+          const parts = line.description.split(' - ');
+          const datePart = parts.pop(); // Last part might be date
+          const descPart = parts.join(' - ');
+          
+          // Check if datePart is valid date
+          let validDate = "";
+          if (datePart && !isNaN(Date.parse(datePart))) {
+             validDate = new Date(datePart).toISOString().split('T')[0];
+             setDescription(descPart);
+          } else {
+             setDescription(line.description);
+          }
+          
+          setFlightDate(validDate);
+          setHours(line.quantity.toString());
+          setRatePerHour((line.unit_cents / 100).toString());
+      }
+    } else {
+      // Maintenance
+      setMaintenanceNotes(invoice.notes || "");
+      if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
+        setLineItems(invoice.invoice_lines.map((line: any, idx: number) => ({
+          id: idx.toString(),
+          type: 'labor', // Default or infer if you stored type somewhere (schema didn't show explicit type column on line items, maybe add it later or infer)
+          description: line.description,
+          quantity: line.quantity.toString(),
+          rate: (line.unit_cents / 100).toString()
+        })));
+      } else {
+        setLineItems([{ id: '1', type: 'labor', description: '', quantity: '', rate: '' }]);
+      }
+    }
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const resetForm = () => {
+    setEditingInvoiceId(null);
     setSelectedOwnerId("");
     setSelectedAircraftId("");
     setDescription("");
@@ -144,15 +252,46 @@ export function InvoicesTab() {
     ? selectedOwnerId && description && flightDate && hours && ratePerHour
     : selectedOwnerId && lineItems.every(item => item.description && item.quantity && item.rate);
 
+  // Sorting Logic
+  const sortedInvoices = useMemo(() => {
+    if (!invoices) return [];
+    
+    return [...invoices].sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'date-asc':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'amount-desc':
+          return (b.amount || 0) - (a.amount || 0);
+        case 'amount-asc':
+          return (a.amount || 0) - (b.amount || 0);
+        case 'client':
+          const nameA = a.owner?.full_name || a.owner?.email || '';
+          const nameB = b.owner?.full_name || b.owner?.email || '';
+          return nameA.localeCompare(nameB);
+        default:
+          return 0;
+      }
+    });
+  }, [invoices, sortBy]);
+
   return (
     <div className="space-y-6">
-      {/* Invoice Creation Form */}
-      <Card>
+      {/* Invoice Creation/Edit Form */}
+      <Card className={editingInvoiceId ? "border-primary border-2" : ""}>
         <CardHeader>
-          <CardTitle>Create New Invoice</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Create flight instruction or maintenance invoices for clients
-          </p>
+          <div className="flex justify-between items-center">
+            <div>
+                <CardTitle>{editingInvoiceId ? "Edit Invoice" : "Create New Invoice"}</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                    {editingInvoiceId ? "Update existing invoice details" : "Create flight instruction or maintenance invoices for clients"}
+                </p>
+            </div>
+            {editingInvoiceId && (
+                <Button variant="ghost" size="sm" onClick={resetForm}>Cancel Edit</Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {/* Invoice Type Toggle */}
@@ -378,7 +517,7 @@ export function InvoicesTab() {
                 size="lg"
                 disabled={!isFormValid}
               >
-                Preview Invoice
+                {editingInvoiceId ? "Preview Updates" : "Preview Invoice"}
               </Button>
             </div>
           </form>
@@ -390,10 +529,10 @@ export function InvoicesTab() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {invoiceType === 'instruction' ? 'Flight Instruction' : 'Maintenance'} Invoice Preview
+              {editingInvoiceId ? 'Update' : 'Create'} {invoiceType === 'instruction' ? 'Flight Instruction' : 'Maintenance'} Invoice
             </DialogTitle>
             <DialogDescription>
-              Review the invoice details before sending to the client.
+              Review the invoice details before {editingInvoiceId ? 'updating' : 'sending to the client'}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
@@ -477,12 +616,30 @@ export function InvoicesTab() {
               Cancel
             </Button>
             <Button
-              onClick={handleCreateInvoice}
-              disabled={createInvoiceMutation.isPending || createMaintenanceMutation.isPending}
+              onClick={handleCreateOrUpdateInvoice}
+              disabled={createInvoiceMutation.isPending || createMaintenanceMutation.isPending || updateInvoiceMutation.isPending}
               data-testid="button-send-to-client"
               size="lg"
             >
-              {(createInvoiceMutation.isPending || createMaintenanceMutation.isPending) ? "Sending..." : "Send to Client"}
+              {(createInvoiceMutation.isPending || createMaintenanceMutation.isPending || updateInvoiceMutation.isPending) ? "Processing..." : (editingInvoiceId ? "Update Invoice" : "Send to Client")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteInvoiceId} onOpenChange={(open) => !open && setDeleteInvoiceId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Invoice</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this invoice? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteInvoiceId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteInvoice} disabled={deleteInvoiceMutation.isPending}>
+              {deleteInvoiceMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -497,11 +654,25 @@ export function InvoicesTab() {
               {isAdmin ? 'All invoices' : 'Your invoices'}
             </p>
           </div>
-          {invoices.length > 0 && (
-            <Badge variant="secondary" className="text-sm">
-              {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+             <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+               <SelectTrigger className="w-[180px]">
+                 <SelectValue placeholder="Sort by" />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="date-desc">Newest First</SelectItem>
+                 <SelectItem value="date-asc">Oldest First</SelectItem>
+                 <SelectItem value="amount-desc">Amount: High to Low</SelectItem>
+                 <SelectItem value="amount-asc">Amount: Low to High</SelectItem>
+                 <SelectItem value="client">Client Name</SelectItem>
+               </SelectContent>
+             </Select>
+             {invoices.length > 0 && (
+                <Badge variant="secondary" className="text-sm">
+                  {invoices.length} invoice{invoices.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
+          </div>
         </div>
         
         {invoicesError ? (
@@ -542,7 +713,7 @@ export function InvoicesTab() {
               </p>
             </CardContent>
           </Card>
-        ) : invoices.length === 0 ? (
+        ) : sortedInvoices.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center">
               <p className="text-muted-foreground mb-2">No invoices yet.</p>
@@ -553,19 +724,19 @@ export function InvoicesTab() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {invoices
+            {sortedInvoices
               .filter((invoice) => invoice && invoice.id)
               .map((invoice) => {
               // Calculate total from all invoice lines
               let calculatedTotal = invoice.amount;
               if (invoice.invoice_lines && invoice.invoice_lines.length > 0) {
-                calculatedTotal = invoice.invoice_lines.reduce((sum, line) => {
+                calculatedTotal = invoice.invoice_lines.reduce((sum: number, line: any) => {
                   return sum + (line.quantity * line.unit_cents / 100);
                 }, 0);
               }
               
               return (
-                <Card key={invoice.id} data-testid={`invoice-${invoice.id}`} className="hover:shadow-md transition-shadow">
+                <Card key={invoice.id} data-testid={`invoice-${invoice.id}`} className="hover:shadow-md transition-shadow relative">
                   <CardHeader>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -600,9 +771,28 @@ export function InvoicesTab() {
                           Invoice #{invoice.invoice_number}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground mb-1">Total</p>
-                        <p className="text-2xl font-bold">${calculatedTotal.toFixed(2)}</p>
+                      <div className="text-right flex flex-col items-end">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 absolute top-4 right-4">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => startEdit(invoice)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setDeleteInvoiceId(invoice.id)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <div className="mt-8">
+                            <p className="text-sm text-muted-foreground mb-1">Total</p>
+                            <p className="text-2xl font-bold">${calculatedTotal.toFixed(2)}</p>
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
@@ -612,7 +802,7 @@ export function InvoicesTab() {
                         <div className="space-y-2">
                           <p className="text-sm font-medium text-muted-foreground">Line Items</p>
                           <div className="space-y-2">
-                            {invoice.invoice_lines.map((line, idx) => (
+                            {invoice.invoice_lines.map((line: any, idx: number) => (
                               <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                                 <div className="flex-1">
                                   <p className="text-sm font-medium">{line.description}</p>
@@ -679,4 +869,3 @@ export function InvoicesTab() {
     </div>
   );
 }
-
