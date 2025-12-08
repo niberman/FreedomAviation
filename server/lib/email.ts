@@ -246,6 +246,7 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
       },
       body: JSON.stringify({
         from: fromEmail,
+        reply_to: "info@freedomaviationco.com",
         to: [to],
         subject,
         html,

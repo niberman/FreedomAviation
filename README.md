@@ -484,7 +484,6 @@ FreedomAviation-1/
 │   │   ├── verify-env-config.mjs
 │   │   └── ...
 │   └── Shell scripts (6 .sh)
-│       ├── apply-onboarding-rls-fix.sh
 │       ├── connect-to-supabase.sh
 │       └── ...
 ├── migrations/                # Database migrations (19 files)
