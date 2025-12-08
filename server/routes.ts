@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { sendInvoiceEmail } from "./lib/email.js";
+import { sendInvoiceEmail, sendInviteEmail } from "./lib/email.js";
 import { processEmailNotifications, webhookProcessNotification } from "./routes/email-notifications.js";
 
 // Initialize Stripe
@@ -73,21 +73,21 @@ if (!supabaseAnonKey && (supabaseUrl && supabaseServiceKey)) {
 // Service role client for admin operations (bypasses RLS)
 const supabase = supabaseUrl && supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
   : null;
 
 // Anon key client for verifying user tokens (respects RLS)
 const supabaseAnon = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
   : null;
 
 // 🧮 Utility: Normalize Stripe line items - fold fractional quantities into price
@@ -107,11 +107,11 @@ function normalizeLineItem(item: {
   quantity: number;
 } {
   const qty = parseFloat(String(item.quantity));
-  
+
   if (!Number.isFinite(qty) || qty <= 0) {
     throw new Error(`Invalid quantity: ${item.quantity}`);
   }
-  
+
   // If quantity is fractional, fold it into the price
   if (!Number.isInteger(qty)) {
     const adjustedPrice = Math.round(item.price_data.unit_amount * qty);
@@ -124,7 +124,7 @@ function normalizeLineItem(item: {
       quantity: 1,
     };
   }
-  
+
   // Already integer, return as-is
   return {
     ...item,
@@ -149,7 +149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5000",
       "http://localhost:5173",
     ];
-    
+
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -419,7 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { toEmail } = req.body;
       const testEmail = toEmail || process.env.TEST_EMAIL || "test@example.com";
-      
+
       // Send test email with sample invoice data
       await sendInvoiceEmail({
         invoiceNumber: "TEST-001",
@@ -446,8 +446,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         aircraftTailNumber: "N123FA",
         paymentUrl: null, // Test email doesn't include payment link
       });
-      
-      res.json({ 
+
+      res.json({
         success: true,
         message: "Test email sent successfully",
         to: testEmail,
@@ -455,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error sending test email:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to send test email",
         message: error.message,
       });
@@ -466,8 +466,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/stripe/create-checkout-session", async (req: Request, res: Response) => {
     try {
       if (!stripe || !supabase) {
-        return res.status(503).json({ 
-          error: "Stripe or Supabase not configured. Please set STRIPE_SECRET_KEY and Supabase credentials." 
+        return res.status(503).json({
+          error: "Stripe or Supabase not configured. Please set STRIPE_SECRET_KEY and Supabase credentials."
         });
       }
 
@@ -497,8 +497,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Only allow payment for finalized invoices
       if (invoice.status !== "finalized") {
-        return res.status(400).json({ 
-          error: `Invoice must be finalized before payment. Current status: ${invoice.status}` 
+        return res.status(400).json({
+          error: `Invoice must be finalized before payment. Current status: ${invoice.status}`
         });
       }
 
@@ -514,9 +514,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const existingSession = await stripe.checkout.sessions.retrieve(invoice.stripe_checkout_session_id);
           if (existingSession.status === "open" || existingSession.status === "complete") {
             // Return existing session URL if it's still valid
-            return res.json({ 
+            return res.json({
               checkoutUrl: existingSession.url,
-              sessionId: existingSession.id 
+              sessionId: existingSession.id
             });
           }
         } catch (err) {
@@ -555,13 +555,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (isNaN(quantity) || quantity <= 0) {
             throw new Error(`Invalid quantity: ${line.quantity}`);
           }
-          
+
           // Ensure unit_amount is valid
           const unitAmount = Number(line.unit_cents);
           if (isNaN(unitAmount) || unitAmount <= 0) {
             throw new Error(`Invalid unit amount: ${line.unit_cents}`);
           }
-          
+
           // Create line item (will be normalized to handle decimals)
           const lineItem = {
             price_data: {
@@ -573,21 +573,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
             quantity: quantity,
           };
-          
+
           // Normalize: fold fractional quantities into price
           return normalizeLineItem(lineItem);
         }) || [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: `Invoice ${invoice.invoice_number}`,
+            {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: `Invoice ${invoice.invoice_number}`,
+                },
+                unit_amount: totalCents,
               },
-              unit_amount: totalCents,
+              quantity: 1,
             },
-            quantity: 1,
-          },
-        ],
+          ],
         mode: "payment",
         success_url: `${req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5000"}/dashboard/more?payment=success&invoice_id=${invoiceId}`,
         cancel_url: `${req.headers.origin || process.env.FRONTEND_URL || "http://localhost:5000"}/dashboard/more?payment=cancelled&invoice_id=${invoiceId}`,
@@ -605,15 +605,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .update({ stripe_checkout_session_id: session.id })
         .eq("id", invoiceId);
 
-      res.json({ 
+      res.json({
         checkoutUrl: session.url,
-        sessionId: session.id 
+        sessionId: session.id
       });
     } catch (error: any) {
       console.error("Error creating checkout session:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to create checkout session",
-        message: error.message 
+        message: error.message
       });
     }
   });
@@ -623,8 +623,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/stripe/webhook", async (req: Request, res: Response) => {
     try {
       if (!stripe || !supabase) {
-        return res.status(503).json({ 
-          error: "Stripe or Supabase not configured" 
+        return res.status(503).json({
+          error: "Stripe or Supabase not configured"
         });
       }
 
@@ -653,10 +653,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (event.type) {
         case "checkout.session.completed": {
           const session = event.data.object as Stripe.Checkout.Session;
-          
+
           // Update invoice status to paid
           const invoiceId = session.metadata?.invoice_id;
-          
+
           if (invoiceId) {
             // First, verify the invoice exists and is not already paid
             const { data: invoice, error: fetchError } = await supabase
@@ -664,28 +664,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .select("id, status, paid_date")
               .eq("id", invoiceId)
               .single();
-            
+
             if (fetchError || !invoice) {
               console.error(`Invoice ${invoiceId} not found:`, fetchError);
               break;
             }
-            
+
             // Only update if not already paid
             if (invoice.status !== "paid" && !invoice.paid_date) {
               const updateData: any = {
                 status: "paid",
                 paid_date: new Date().toISOString().split("T")[0],
               };
-              
+
               if (session.payment_intent) {
                 updateData.stripe_payment_intent_id = session.payment_intent as string;
               }
-              
+
               const { error: updateError } = await supabase
                 .from("invoices")
                 .update(updateData)
                 .eq("id", invoiceId);
-              
+
               if (updateError) {
                 console.error(`Failed to update invoice ${invoiceId}:`, updateError);
               }
@@ -698,7 +698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case "payment_intent.succeeded": {
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
-          
+
           // If payment_intent.succeeded fires before checkout.session.completed,
           // try to find and update the invoice by payment_intent_id
           if (paymentIntent.id) {
@@ -707,7 +707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .select("id, status, paid_date")
               .eq("stripe_payment_intent_id", paymentIntent.id)
               .limit(1);
-            
+
             // Also check by checkout session metadata if available
             if (!invoices || invoices.length === 0) {
               // Try to find by checkout session
@@ -715,18 +715,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 payment_intent: paymentIntent.id,
                 limit: 1,
               });
-              
+
               if (sessions.data.length > 0) {
                 const session = sessions.data[0];
                 const invoiceId = session.metadata?.invoice_id;
-                
+
                 if (invoiceId) {
                   const { data: invoice } = await supabase
                     .from("invoices")
                     .select("id, status, paid_date")
                     .eq("id", invoiceId)
                     .single();
-                  
+
                   if (invoice && invoice.status !== "paid" && !invoice.paid_date) {
                     await supabase
                       .from("invoices")
@@ -747,7 +747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case "payment_intent.payment_failed": {
           const paymentIntent = event.data.object as Stripe.PaymentIntent;
           console.error(`Payment failed: ${paymentIntent.id}`);
-          
+
           // Optionally, you could update invoice status or send notification
           // For now, we'll just log it
           break;
@@ -761,9 +761,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ received: true });
     } catch (error: any) {
       console.error("Webhook error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Webhook handler failed",
-        message: error.message 
+        message: error.message
       });
     }
   });
@@ -773,7 +773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/invoices/send-email/test", (_req: Request, res: Response) => {
     res.json({ message: "Email endpoint is accessible", method: "GET test" });
   });
-  
+
   // Handle OPTIONS preflight for email endpoint specifically
   app.options("/api/invoices/send-email", (req: Request, res: Response) => {
     const origin = req.headers.origin;
@@ -783,7 +783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5000",
       "http://localhost:5173",
     ];
-    
+
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -793,7 +793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     res.status(204).end();
   });
-  
+
   app.post("/api/invoices/send-email", async (req: Request, res: Response) => {
     // Set CORS headers manually as backup
     const origin = req.headers.origin;
@@ -803,16 +803,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5000",
       "http://localhost:5173",
     ];
-    
+
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
     }
-    
+
     try {
       if (!supabase) {
-        return res.status(503).json({ 
-          error: "Supabase not configured" 
+        return res.status(503).json({
+          error: "Supabase not configured"
         });
       }
 
@@ -836,7 +836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const { data: { user }, error: authError } = await clientToUse.auth.getUser(token);
             if (!authError && user) {
               currentUserId = user.id;
-              
+
               // Get user role using service role client (needed to bypass RLS for role check)
               if (supabase) {
                 const { data: profile } = await supabase
@@ -844,7 +844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   .select("role")
                   .eq("id", user.id)
                   .single();
-                
+
                 userRole = profile?.role || null;
               }
             }
@@ -866,7 +866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try nested query first, fallback to separate queries if needed
       let invoice: any;
       let invoiceError: any;
-      
+
       // First attempt: nested query using column-based foreign key references
       // Try the pattern used in staff-dashboard.tsx
       const invoiceQuery = await supabase
@@ -887,29 +887,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .select("*")
           .eq("id", invoiceId)
           .single();
-        
+
         if (invError || !invoiceData) {
           console.error("❌ Error fetching invoice:", invError);
           return res.status(404).json({ error: "Invoice not found", details: invError?.message });
         }
-        
+
         // Fetch owner
         const { data: ownerData, error: ownerError } = await supabase
           .from("user_profiles")
           .select("id, email, full_name")
           .eq("id", invoiceData.owner_id)
           .single();
-        
+
         if (ownerError || !ownerData) {
           console.error("❌ Error fetching owner:", ownerError);
           console.error("Owner ID:", invoiceData.owner_id);
-          return res.status(500).json({ 
+          return res.status(500).json({
             error: "Failed to fetch owner information",
             details: ownerError?.message || "Owner not found",
             ownerId: invoiceData.owner_id
           });
         }
-        
+
         // Fetch aircraft
         let aircraftData = null;
         if (invoiceData.aircraft_id) {
@@ -923,24 +923,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           aircraftData = acData;
         }
-        
+
         // Fetch invoice lines
         const { data: linesData, error: linesError } = await supabase
           .from("invoice_lines")
           .select("*")
           .eq("invoice_id", invoiceId);
-        
+
         if (linesError) {
           console.warn("⚠️ Error fetching invoice lines:", linesError);
         }
-        
+
         invoice = {
           ...invoiceData,
           owner: ownerData,
           aircraft: aircraftData,
           invoice_lines: linesData || [],
         };
-        } else {
+      } else {
         invoice = invoiceQuery.data;
         // Ensure owner is properly structured
         if (!invoice.owner) {
@@ -949,10 +949,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .select("id, email, full_name")
             .eq("id", invoice.owner_id)
             .single();
-          
+
           if (ownerError || !ownerData) {
             console.error("❌ Error fetching owner:", ownerError);
-            return res.status(500).json({ 
+            return res.status(500).json({
               error: "Failed to fetch owner information",
               details: ownerError?.message || "Owner not found"
             });
@@ -976,7 +976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Admins and founders can send any invoice
         // Staff and CFIs can send invoices they created
         if (!isAdmin && !isFounder && !(isStaff && isInvoiceCreator) && !(isCFI && isInvoiceCreator)) {
-          return res.status(403).json({ 
+          return res.status(403).json({
             error: "Unauthorized",
             message: "Only admins, founders, or the CFI/staff who created the invoice can send it"
           });
@@ -985,7 +985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // In development, allow without auth but log warning
         // In production, you should require authentication
         if (process.env.NODE_ENV === "production") {
-          return res.status(401).json({ 
+          return res.status(401).json({
             error: "Unauthorized",
             message: "Authentication required"
           });
@@ -995,8 +995,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Allow sending email for finalized or sent invoices (to enable resending)
       if (invoice.status !== "finalized" && invoice.status !== "sent") {
-        return res.status(400).json({ 
-          error: `Can only send email for finalized or sent invoices. Current status: ${invoice.status}` 
+        return res.status(400).json({
+          error: `Can only send email for finalized or sent invoices. Current status: ${invoice.status}`
         });
       }
 
@@ -1005,7 +1005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!owner || !owner.email) {
         console.error("Owner data:", owner);
         console.error("Invoice owner_id:", invoice.owner_id);
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Owner email not found",
           details: owner ? "Owner found but email is missing" : "Owner not found"
         });
@@ -1020,7 +1020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // Calculate total - handle case where invoiceLines might be empty
-      const totalAmount = invoiceLines.length > 0 
+      const totalAmount = invoiceLines.length > 0
         ? invoiceLines.reduce((sum: number, line: { total: number }) => sum + line.total, 0)
         : Number(invoice.amount) || 0;
 
@@ -1039,17 +1039,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Session doesn't exist or is expired, continue to create new one
             }
           }
-          
+
           // Create new session if we don't have a valid one
           if (!paymentUrl) {
             // Calculate total amount in cents
             const totalCents = invoiceLines.length > 0
               ? Math.round(totalAmount * 100)
               : Math.round(Number(invoice.amount) * 100);
-            
+
             if (totalCents > 0) {
               const frontendUrl = process.env.FRONTEND_URL || "https://www.freedomaviationco.com";
-              
+
               // Prepare line items with proper decimal handling
               let lineItems: any[];
               if (invoiceLines.length > 0) {
@@ -1060,13 +1060,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     console.error(`Invalid quantity for line ${idx}:`, line.quantity);
                     throw new Error(`Invalid quantity: ${line.quantity}`);
                   }
-                  
+
                   const unitAmount = Math.round(line.unitPrice * 100);
                   if (unitAmount <= 0) {
                     console.error(`Invalid unit amount for line ${idx}:`, line.unitPrice);
                     throw new Error(`Invalid unit price: ${line.unitPrice}`);
                   }
-                  
+
                   // Create line item (will be normalized to handle decimals)
                   const lineItem = {
                     price_data: {
@@ -1078,7 +1078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     },
                     quantity: quantity,
                   };
-                  
+
                   // Normalize: fold fractional quantities into price
                   return normalizeLineItem(lineItem);
                 });
@@ -1097,7 +1097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   },
                 ];
               }
-              
+
               const session = await stripe.checkout.sessions.create({
                 payment_method_types: ["card"],
                 line_items: lineItems,
@@ -1111,9 +1111,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   invoice_number: invoice.invoice_number,
                 },
               });
-              
+
               paymentUrl = session.url;
-              
+
               // Save checkout session ID to invoice
               await supabase
                 .from("invoices")
@@ -1141,22 +1141,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           aircraftTailNumber: (invoice.aircraft as any)?.tail_number,
           paymentUrl,
         });
-        
+
         // Return more detailed response
         const emailService = process.env.EMAIL_SERVICE || "console";
-        res.json({ 
+        res.json({
           success: true,
-          message: emailService === "console" 
-            ? "Email logged to console (EMAIL_SERVICE=console mode)" 
+          message: emailService === "console"
+            ? "Email logged to console (EMAIL_SERVICE=console mode)"
             : "Invoice email sent successfully",
           emailService,
           sent: emailService !== "console",
         });
       } catch (emailError: any) {
         console.error("Error in sendInvoiceEmail:", emailError);
-        
+
         // Return error response instead of throwing
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: "Failed to send invoice email",
           message: emailError?.message || "Unknown error",
           details: {
@@ -1168,8 +1168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error: any) {
       console.error("Error in /api/invoices/send-email endpoint:", error);
-      
-      res.status(500).json({ 
+
+      res.status(500).json({
         error: "Failed to send invoice email",
         message: error?.message || "Unknown error occurred",
         details: {
@@ -1189,7 +1189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5000",
       "http://localhost:5173",
     ];
-    
+
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -1320,7 +1320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5000",
       "http://localhost:5173",
     ];
-    
+
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -1369,7 +1369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5000",
       "http://localhost:5173",
     ];
-    
+
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -1397,12 +1397,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Import and call sendWelcomeEmail function
-      const { sendWelcomeEmail } = await import('./lib/email.js');
-      
+      // Get membership details
+      const { data: membership } = await supabase
+        .from('memberships')
+        .select('tier, aircraft_id, tier_id')
+        .eq('owner_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Get monthly rate from tier if available
+      let monthlyRate = 0;
+      let membershipTier = membership?.tier || "Standard";
+
+      if (membership?.tier_id) {
+        const { data: tierData } = await supabase
+          .from('membership_tiers')
+          .select('name, base_price')
+          .eq('id', membership.tier_id)
+          .single();
+
+        if (tierData) {
+          membershipTier = tierData.name;
+          monthlyRate = Number(tierData.base_price) || 0;
+        }
+      }
+
+      // Get aircraft details if available
+      let aircraftTailNumber = undefined;
+      let aircraftDetails = undefined;
+
+      if (membership?.aircraft_id) {
+        const { data: aircraft } = await supabase
+          .from('aircraft')
+          .select('tail_number, make, model, year')
+          .eq('id', membership.aircraft_id)
+          .single();
+
+        if (aircraft) {
+          aircraftTailNumber = aircraft.tail_number;
+          aircraftDetails = `${aircraft.year || ''} ${aircraft.make || ''} ${aircraft.model || ''}`.trim();
+        }
+      }
+
+      // Get hangar location if available
+      let hangarLocation = undefined;
+      // Check for active hangar reservation
+      const { data: hangarRes } = await supabase
+        .from('hangar_reservations')
+        .select('hangar_id, hangar_spaces(name, location)')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (hangarRes?.hangar_spaces) {
+        // Handle joined data which might be an array or object depending on Supabase client version
+        const space = Array.isArray(hangarRes.hangar_spaces) ? hangarRes.hangar_spaces[0] : hangarRes.hangar_spaces;
+        if (space) {
+          hangarLocation = `${space.location} - ${space.name}`;
+        }
+      }
+
+      // Import and call sendWelcomeEmail function from the dedicated service
+      const { sendWelcomeEmail } = await import('./lib/welcome-email.js');
+
       await sendWelcomeEmail({
-        userName: userProfile.full_name || userProfile.email,
-        userEmail: userProfile.email,
+        memberName: userProfile.full_name || userProfile.email.split('@')[0],
+        memberEmail: userProfile.email,
+        membershipTier,
+        monthlyRate,
+        aircraftTailNumber,
+        aircraftDetails,
+        hangarLocation
       });
 
       res.json({ success: true });
@@ -1424,7 +1491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5000",
       "http://localhost:5173",
     ];
-    
+
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("https://freedom-aviation.vercel.app") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -1445,7 +1512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5000",
       "http://localhost:5173",
     ];
-    
+
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("https://freedom-aviation.vercel.app") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -1453,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       if (!supabase || !supabaseAnon) {
-        return res.status(503).json({ 
+        return res.status(503).json({
           error: "Supabase not configured",
           message: "Server is missing Supabase credentials"
         });
@@ -1515,42 +1582,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!email || !full_name) {
         console.error('❌ Missing required fields:', { email: !!email, full_name: !!full_name });
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Missing required fields",
           message: "Email and full name are required"
         });
       }
 
-      // Invite user using admin API - they'll set their own password via email
+      // Generate invite link using admin API - prevents Supabase from sending the email directly
       const baseUrl = process.env.SITE_URL || process.env.FRONTEND_URL || "https://www.freedomaviationco.com";
-      
-      const inviteOptions = sendInvite ? {
-        emailRedirectTo: `${baseUrl}/dashboard`,
-        data: {
-          full_name,
-          phone: phone || null,
-        }
-      } : {
-        data: {
-          full_name,
-          phone: phone || null,
-        }
-      };
 
-      console.log('📤 Sending invite with options:', inviteOptions);
+      console.log('🔗 Generating invite link for:', email);
 
-      const { data: authUser, error: createError } = await supabase.auth.admin.inviteUserByEmail(
+      const { data: inviteData, error: createError } = await supabase.auth.admin.generateLink({
+        type: 'invite',
         email,
-        inviteOptions
-      );
+        options: {
+          redirectTo: `${baseUrl}/dashboard`,
+          data: {
+            full_name,
+            phone: phone || null,
+          }
+        }
+      });
 
       if (createError) {
-        console.error("❌ Error inviting user:", createError);
+        console.error("❌ Error generating invite link:", createError);
         console.error("Error details:", JSON.stringify(createError, null, 2));
-        console.error("Error code:", createError.code);
-        console.error("Error status:", createError.status);
-        return res.status(400).json({ 
-          error: "Failed to invite user",
+        return res.status(400).json({
+          error: "Failed to create user",
           message: createError.message,
           code: createError.code,
           status: createError.status,
@@ -1558,23 +1617,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (!authUser?.user) {
-        console.error("❌ No user data returned from invite");
-        return res.status(500).json({ 
-          error: "User invitation failed",
+      const authUser = inviteData.user;
+      const actionLink = inviteData.properties?.action_link;
+
+      if (!authUser) {
+        console.error("❌ No user data returned from generateLink");
+        return res.status(500).json({
+          error: "User creation failed",
           message: "No user data returned"
         });
       }
 
-      console.log('✅ User invited successfully:', authUser.user.id);
+      console.log('✅ User created successfully:', authUser.id);
 
-      // The trigger should have created the user_profile automatically, but we need to update it
-      // with full_name, phone, and role. Use upsert in case the trigger hasn't fired yet.
+      // Update user profile
       const { error: updateError } = await supabase
         .from("user_profiles")
         .upsert({
-          id: authUser.user.id,
-          email: authUser.user.email || email,
+          id: authUser.id,
+          email: authUser.email || email,
           full_name,
           phone: phone || null,
           role: "owner",
@@ -1584,31 +1645,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (updateError) {
         console.error("Error updating user profile:", updateError);
-        // User was created but profile update failed - try to clean up
-        // Note: We can't delete the auth user easily, so we'll just log the error
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: "User created but profile update failed",
           message: updateError.message,
-          userId: authUser.user.id
+          userId: authUser.id
         });
       }
 
-      res.json({ 
+      // Send invite email manually if requested
+      if (sendInvite && actionLink) {
+        try {
+          console.log('📧 Sending custom invite email...');
+          await sendInviteEmail({
+            email,
+            fullName: full_name,
+            inviteUrl: actionLink,
+            inviterName: profile.role !== 'admin' ? 'Freedom Aviation' : undefined // Could add actual inviter name if available in profile
+          });
+          console.log('✅ Custom invite email sent');
+        } catch (emailError: any) {
+          console.error("❌ Error sending custom invite email:", emailError);
+          // Don't fail the request if email fails, but warn the user
+          // We return success but with a warning message
+          return res.json({
+            success: true,
+            message: "Client created but email failed to send. Please send the invite link manually.",
+            user: {
+              id: authUser.id,
+              email: authUser.email,
+              full_name,
+              phone: phone || null,
+            },
+            inviteLink: actionLink, // Return link so admin can send it manually
+            inviteSent: false
+          });
+        }
+      }
+
+      res.json({
         success: true,
-        message: sendInvite 
-          ? "Invitation sent! The user will receive an email to set their password and access the dashboard."
+        message: sendInvite
+          ? "Invitation sent! The user will receive an email to set their password."
           : "Client created successfully",
         user: {
-          id: authUser.user.id,
-          email: authUser.user.email,
+          id: authUser.id,
+          email: authUser.email,
           full_name,
           phone: phone || null,
         },
-        inviteSent: sendInvite
+        inviteSent: sendInvite,
+        // Only include link in response for debugging or if email wasn't sent
+        // inviteLink: actionLink 
       });
     } catch (error: any) {
       console.error("Error in /api/clients/create endpoint:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to create client",
         message: error?.message || "Unknown error occurred"
       });
@@ -1625,7 +1716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5000",
       "http://localhost:5173",
     ];
-    
+
     if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -1633,7 +1724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       if (!supabase || !supabaseAnon) {
-        return res.status(503).json({ 
+        return res.status(503).json({
           error: "Supabase not configured",
           message: "Server is missing Supabase credentials"
         });
@@ -1692,7 +1783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, full_name, role = "staff", sendInvite = true } = req.body;
 
       if (!email || !full_name || !role) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Missing required fields",
           message: "Email, full name, and role are required"
         });
@@ -1722,14 +1813,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (createError) {
         console.error("❌ Error creating staff member:", createError);
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: "Failed to create staff member",
           message: createError.message
         });
       }
 
       if (!createdUser || !createdUser.user) {
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: "Failed to create staff member",
           message: "No user returned from Supabase"
         });
@@ -1765,14 +1856,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log("✅ Staff member created successfully:", JSON.stringify({ userId: createdUser.user.id, email: createdUser.user.email, role }));
-      res.status(201).json({ 
+      res.status(201).json({
         success: true,
         user: createdUser.user,
         message: sendInvite ? "Staff member created and invite email sent" : "Staff member created"
       });
     } catch (error: any) {
       console.error("❌ Error in /api/staff/create:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to create staff member",
         message: error.message || "An unexpected error occurred"
       });
@@ -1795,7 +1886,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     try {
       console.log("📋 /api/service-requests - Request received");
-      
+
       // Check Supabase configuration with detailed logging
       if (!supabase || !supabaseAnon) {
         console.error("Supabase not configured:");
@@ -1804,7 +1895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("  - supabaseAnonKey:", supabaseAnonKey ? "Set" : "Missing");
         console.error("  - supabase client:", supabase ? "Initialized" : "Not initialized");
         console.error("  - supabaseAnon client:", supabaseAnon ? "Initialized" : "Not initialized");
-        return res.status(503).json({ 
+        return res.status(503).json({
           error: "Supabase not configured",
           message: "Server is missing required Supabase environment variables. Check SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SUPABASE_ANON_KEY.",
           details: {
@@ -1814,76 +1905,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       }
-      
+
       // Require staff or admin role
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-      
+
       if (!token) {
         console.warn("No authorization token provided");
-        return res.status(401).json({ 
+        return res.status(401).json({
           error: "Unauthorized",
           message: "Missing authorization token. Please log in."
         });
       }
-      
+
       console.log("🔐 Verifying user token...");
       const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
-      
+
       if (authError || !user) {
         console.error("Auth verification failed:", authError?.message);
-        return res.status(401).json({ 
+        return res.status(401).json({
           error: "Unauthorized",
           message: "Invalid or expired token. Please log in again."
         });
       }
-      
+
       console.log("User authenticated:", user.id);
-      
+
       // Check user role
       const { data: profile, error: profileError } = await supabase
         .from("user_profiles")
         .select("role")
         .eq("id", user.id)
         .single();
-      
+
       if (profileError) {
         console.error("❌ Error fetching user profile:", profileError);
-        return res.status(500).json({ 
+        return res.status(500).json({
           error: "Failed to verify permissions",
           message: profileError.message
         });
       }
-      
+
       if (!profile || !["admin", "cfi", "staff", "founder", "ops"].includes(profile.role)) {
         console.warn("User lacks required role. User role:", profile?.role);
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: "Forbidden",
           message: "You don't have permission to access this resource. Required role: admin, cfi, staff, founder, or ops."
         });
       }
-      
+
       console.log("User has required role:", profile.role);
       console.log("📊 Fetching service requests...");
-      
+
       // Fetch recent service requests, join owner & aircraft
       const { data: requests, error } = await supabase
         .from("service_requests")
-        .select(`*, owner:user_id(full_name,email), aircraft:aircraft_id(tail_number)`)   
+        .select(`*, owner:user_id(full_name,email), aircraft:aircraft_id(tail_number)`)
         .order("created_at", { ascending: false })
         .limit(200);
-      
+
       if (error) {
         console.error("❌ Error fetching service requests:", error);
         throw error;
       }
-      
+
       console.log(`Successfully fetched ${requests?.length || 0} service requests`);
       res.json({ serviceRequests: requests || [] });
     } catch (err: any) {
       console.error("❌ Unexpected error in /api/service-requests:", err);
-      res.status(500).json({ 
-        error: "Failed to load service requests", 
+      res.status(500).json({
+        error: "Failed to load service requests",
         message: err.message,
         details: err.code ? `Error code: ${err.code}` : undefined
       });
@@ -1930,7 +2021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========================================
   // Google Calendar Integration Routes
   // ========================================
-  
+
   /**
    * GET /api/google-calendar/auth-url
    * Get Google Calendar OAuth authorization URL
@@ -1954,18 +2045,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select("role")
         .eq("id", user.id)
         .single();
-      
+
       if (!profile || !["admin", "cfi", "founder"].includes(profile.role)) {
         return res.status(403).json({ error: "Only CFIs can connect Google Calendar" });
       }
 
       const { getAuthorizationUrl } = await import("./lib/google-calendar.js");
       const authUrl = getAuthorizationUrl();
-      
+
       // Store user ID in state parameter (you might want to encrypt this)
       const stateParam = Buffer.from(JSON.stringify({ userId: user.id })).toString('base64');
       const urlWithState = `${authUrl}&state=${stateParam}`;
-      
+
       res.json({ authUrl: urlWithState });
     } catch (err: any) {
       console.error("❌ Error generating auth URL:", err);
@@ -1980,7 +2071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/google-calendar/callback", async (req: Request, res: Response) => {
     try {
       const { code, state } = req.query;
-      
+
       if (!code || typeof code !== 'string') {
         return res.status(400).send("Missing authorization code");
       }
@@ -2028,8 +2119,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Return graceful response if Supabase not configured
       if (!supabase || !supabaseAnon) {
-        return res.json({ 
-          connected: false, 
+        return res.json({
+          connected: false,
           syncEnabled: false,
           featureAvailable: false,
           message: "Supabase not configured"
@@ -2038,11 +2129,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-      
+
       // Return graceful response if not authenticated
       if (!token) {
-        return res.json({ 
-          connected: false, 
+        return res.json({
+          connected: false,
           syncEnabled: false,
           featureAvailable: false,
           message: "Not authenticated"
@@ -2051,8 +2142,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
       if (authError || !user) {
-        return res.json({ 
-          connected: false, 
+        return res.json({
+          connected: false,
           syncEnabled: false,
           featureAvailable: false,
           message: "Not authenticated"
@@ -2062,8 +2153,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if Google Calendar feature is configured
       if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
         // Feature not configured, return gracefully
-        return res.json({ 
-          connected: false, 
+        return res.json({
+          connected: false,
           syncEnabled: false,
           featureAvailable: false,
           message: "Google Calendar integration not configured"
@@ -2080,8 +2171,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If table doesn't exist or other error, return gracefully
       if (tokenError) {
         console.warn("Google Calendar tokens table not accessible:", tokenError.message);
-        return res.json({ 
-          connected: false, 
+        return res.json({
+          connected: false,
           syncEnabled: false,
           featureAvailable: false,
           message: "Google Calendar feature not set up. Run the SQL migration script."
@@ -2095,8 +2186,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       console.error("❌ Error checking calendar status:", err);
       // Return a graceful error instead of 500
-      res.json({ 
-        connected: false, 
+      res.json({
+        connected: false,
         syncEnabled: false,
         featureAvailable: false,
         message: "Google Calendar feature unavailable"
@@ -2153,7 +2244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
 
       const { enabled } = req.body;
-      
+
       const { error } = await supabase
         .from("google_calendar_tokens")
         .update({ sync_enabled: enabled })
@@ -2186,7 +2277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
 
       const { slotId } = req.body;
-      
+
       if (!slotId) {
         return res.status(400).json({ error: "Missing slotId" });
       }
@@ -2243,7 +2334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (slotsError) throw slotsError;
 
       const { syncSlotToCalendar } = await import("./lib/google-calendar.js");
-      
+
       let synced = 0;
       let errors = 0;
 
@@ -2317,7 +2408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (authError || !user) return res.status(401).json({ error: "Unauthorized" });
 
       const { calendarId } = req.body;
-      
+
       if (!calendarId) {
         return res.status(400).json({ error: "Missing calendarId" });
       }
@@ -2339,7 +2430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /**
    * Email Notification Routes
    */
-  
+
   /**
    * POST /api/email-notifications/process
    * Process pending email notifications from the queue
@@ -2366,7 +2457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { generateSitemap } = await import("./lib/sitemap.js");
       const sitemap = generateSitemap();
-      
+
       res.setHeader("Content-Type", "application/xml");
       res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600"); // Cache for 1 hour
       res.send(sitemap);
@@ -2415,7 +2506,7 @@ Allow: /
 User-agent: Slurp
 Allow: /
 `;
-    
+
     res.setHeader("Content-Type", "text/plain");
     res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 24 hours
     res.send(robotsTxt);
