@@ -154,6 +154,12 @@ export function ClientsTable() {
         throw new Error('Not authenticated. Please sign in again.');
       }
 
+      console.log('Creating client with:', {
+        email: newClientEmail,
+        full_name: newClientName,
+        phone: newClientPhone || null,
+      });
+
       const response = await fetch('/api/clients/create', {
         method: 'POST',
         headers: {
@@ -169,6 +175,8 @@ export function ClientsTable() {
       });
 
       const data = await response.json();
+      console.log('Server response:', { status: response.status, data });
+      
       if (!response.ok) {
         throw new Error(data.message || data.error || 'Failed to create client');
       }
