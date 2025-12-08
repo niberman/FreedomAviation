@@ -1425,7 +1425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5173",
     ];
     
-    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("https://freedom-aviation.vercel.app") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
       res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
@@ -1446,7 +1446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       "http://localhost:5173",
     ];
     
-    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("http://localhost:"))) {
+    if (origin && (allowedOrigins.includes(origin) || origin.startsWith("https://freedomaviationco.com") || origin.startsWith("https://freedom-aviation.vercel.app") || origin.startsWith("http://localhost:"))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
     }
@@ -1547,9 +1547,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (createError) {
         console.error("❌ Error inviting user:", createError);
         console.error("Error details:", JSON.stringify(createError, null, 2));
+        console.error("Error code:", createError.code);
+        console.error("Error status:", createError.status);
         return res.status(400).json({ 
           error: "Failed to invite user",
           message: createError.message,
+          code: createError.code,
+          status: createError.status,
           details: createError
         });
       }

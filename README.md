@@ -781,7 +781,6 @@ See `env.local.example` for complete template with descriptions.
 | `/staff/aircraft` | Aircraft oversight | staff, ops, admin, founder | All aircraft, maintenance tracking, owner assignments |
 | `/staff/operations` | Operations dashboard | ops, admin, founder | Metrics, analytics, service stats, revenue tracking |
 | `/staff/settings` | Staff settings | All staff | Staff-specific configuration |
-| `/staff/pricing` or `/admin/pricing` | Unified pricing configurator | admin, founder | Tier management, hangar pricing, feature configuration |
 
 *Note*: Staff routes work with both `/staff/*` and `/admin/*` prefixes
 
