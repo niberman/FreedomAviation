@@ -32,7 +32,7 @@ function generateInvoiceEmailHTML(data: InvoiceEmailData): string {
     phone: "(970) 618-2094",
     address: "7565 S Peoria St, Englewood, CO 80112",
   };
-  
+
   const linesHTML = data.invoiceLines
     .map(
       (line) => `
@@ -166,7 +166,7 @@ export function escapeHtml(text: string): string {
  */
 export async function sendInvoiceEmail(data: InvoiceEmailData): Promise<void> {
   const emailService = process.env.EMAIL_SERVICE || "console"; // 'console', 'smtp', 'resend'
-  
+
   const html = generateInvoiceEmailHTML(data);
   const text = `
 Invoice ${data.invoiceNumber}
@@ -231,7 +231,7 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
   // Use Resend test domain if custom domain not verified
   // Default to test domain to avoid verification errors
   const fromEmail = process.env.EMAIL_FROM || "Freedom Aviation <onboarding@resend.dev>";
-  
+
   // Check if using custom domain and provide helpful error if domain not verified
   if (fromEmail.includes("@freedomaviationco.com") && !fromEmail.includes("onboarding@resend.dev")) {
     console.warn("Using custom domain. Make sure freedomaviationco.com is verified in Resend.");
@@ -254,7 +254,7 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
     });
 
     const responseText = await response.text();
-    
+
     if (!response.ok) {
       // Try to parse error for better message
       let errorMessage = `Resend API error (${response.status}): ${responseText}`;
@@ -267,7 +267,7 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
       } catch (e) {
         // Keep original error message
       }
-      
+
       // Check if it's a domain verification error
       if (errorJson?.name === "validation_error" && errorJson?.message?.includes("domain is not verified")) {
         const helpfulMessage = `Domain not verified in Resend. The email address "${fromEmail}" uses a domain that hasn't been verified. 
@@ -277,11 +277,11 @@ To fix this:
 2. Set EMAIL_FROM to use the test domain: "Freedom Aviation <onboarding@resend.dev>"
 
 For now, update your Vercel environment variable EMAIL_FROM to: Freedom Aviation <onboarding@resend.dev>`;
-        
+
         console.error("Domain verification error:", helpfulMessage);
         throw new Error(helpfulMessage);
       }
-      
+
       throw new Error(errorMessage);
     }
 
@@ -292,19 +292,142 @@ For now, update your Vercel environment variable EMAIL_FROM to: Freedom Aviation
       console.error("Failed to parse Resend response:", responseText);
       throw new Error(`Invalid JSON response from Resend: ${responseText}`);
     }
-    
+
     if (!result.id) {
       console.warn("Warning: Resend response missing email ID");
     }
   } catch (error: any) {
     console.error("Failed to send invoice email via Resend:", error);
-    
+
     // Provide helpful error message
     if (error.message?.includes("RESEND_API_KEY")) {
       throw new Error("Email service not configured. Please set RESEND_API_KEY environment variable. See EMAIL_SETUP.md for instructions.");
     }
-    
+
     throw error;
+  }
+}
+
+/**
+ * Invite email data
+ */
+interface InviteEmailData {
+  email: string;
+  fullName: string;
+  inviteUrl: string;
+  inviterName?: string;
+}
+
+/**
+ * Generate HTML email template for invitation
+ */
+function generateInviteEmailHTML(data: InviteEmailData): string {
+  const BRAND = {
+    name: "Freedom Aviation",
+    email: "info@freedomaviationco.com",
+    phone: "(970) 618-2094",
+    address: "7565 S Peoria St, Englewood, CO 80112",
+  };
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You've been invited to Freedom Aviation</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; background-color: #1f2937; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Freedom Aviation</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 24px; color: #111827; font-size: 20px; font-weight: 600;">Welcome, ${escapeHtml(data.fullName)}!</h2>
+              
+              <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.5;">
+                You have been invited to join the Freedom Aviation owner portal.${data.inviterName ? ` ${escapeHtml(data.inviterName)} has created an account for you.` : ""}
+              </p>
+              
+              <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.5;">
+                Click the button below to accept your invitation and set up your password.
+              </p>
+              
+              <!-- CTA Button -->
+              <div style="margin: 32px 0; text-align: center;">
+                <a href="${data.inviteUrl}" style="display: inline-block; padding: 14px 32px; background-color: #1f2937; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                  Accept Invitation
+                </a>
+              </div>
+              
+              <p style="margin: 16px 0 0; color: #6b7280; font-size: 14px; text-align: center;">
+                Or copy and paste this link into your browser:<br>
+                <a href="${data.inviteUrl}" style="color: #3b82f6; word-break: break-all;">${data.inviteUrl}</a>
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0 0 8px; color: #6b7280; font-size: 12px; text-align: center;">
+                ${BRAND.email} | ${BRAND.phone}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+/**
+ * Send invite email
+ */
+export async function sendInviteEmail(data: InviteEmailData): Promise<void> {
+  const emailService = process.env.EMAIL_SERVICE || "console";
+
+  const html = generateInviteEmailHTML(data);
+  const text = `
+You have been invited to Freedom Aviation.
+
+Welcome, ${data.fullName}!
+
+You have been invited to join the Freedom Aviation owner portal.
+
+Click the link below to accept your invitation and set up your password:
+${data.inviteUrl}
+
+Freedom Aviation
+  `;
+
+  switch (emailService) {
+    case "console":
+      console.log(`[CONSOLE MODE] INVITE EMAIL would be sent to ${data.email}`);
+      console.log(`Invite Link: ${data.inviteUrl}`);
+      return;
+
+    case "smtp":
+      return sendViaSMTP(data.email, "You've been invited to Freedom Aviation", html, text);
+
+    case "resend":
+      return sendViaResend(data.email, "You've been invited to Freedom Aviation", html, text);
+
+    default:
+      console.warn(`Unknown email service: ${emailService}, using console mode`);
+      return;
   }
 }
 
@@ -435,7 +558,7 @@ function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
  */
 export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
   const emailService = process.env.EMAIL_SERVICE || "console";
-  
+
   const html = generateWelcomeEmailHTML(data);
   const text = `
 Welcome to Freedom Aviation, ${data.userName}!

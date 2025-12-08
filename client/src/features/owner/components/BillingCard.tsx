@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink, DollarSign, Loader2 } from "lucide-react";
+import { ExternalLink, DollarSign, Loader2, ArrowUpDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth-context";
 import { createCheckoutSession } from "@/lib/stripe";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +38,7 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
 
   const formatAmount = (amount: number) => {
     return `$${amount.toFixed(2)}`;
@@ -85,7 +87,7 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
 
     try {
       const { checkoutUrl } = await createCheckoutSession(invoice.id, user.id);
-      
+
       // Redirect to Stripe checkout
       window.location.href = checkoutUrl;
     } catch (error: any) {
@@ -127,8 +129,22 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
     const orderA = statusOrder[a.status.toLowerCase()] || 999;
     const orderB = statusOrder[b.status.toLowerCase()] || 999;
     if (orderA !== orderB) return orderA - orderB;
-    // If same status, sort by date (newest first)
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    // If same status, sort based on selection
+    if (sortBy === 'date-desc') {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    } else if (sortBy === 'date-asc') {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    } else {
+      // Amount sorting
+      const amountA = calculateInvoiceTotal(a);
+      const amountB = calculateInvoiceTotal(b);
+
+      if (sortBy === 'amount-desc') {
+        return amountB - amountA;
+      } else {
+        return amountA - amountB;
+      }
+    }
   });
 
   // Separate invoices by status
@@ -141,8 +157,23 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-        <CardTitle>Invoices & Billing</CardTitle>
-        <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          <CardTitle>Invoices & Billing</CardTitle>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+            <SelectTrigger className="w-[180px] h-8">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-desc">Newest First</SelectItem>
+              <SelectItem value="date-asc">Oldest First</SelectItem>
+              <SelectItem value="amount-desc">Amount: High to Low</SelectItem>
+              <SelectItem value="amount-asc">Amount: Low to High</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -177,11 +208,11 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
                         {invoice.status}
                       </Badge>
                     </div>
-                    
+
                     <div className="text-2xl font-bold">
                       {formatAmount(calculateInvoiceTotal(invoice))}
                     </div>
-                    
+
                     {invoice.invoice_lines && invoice.invoice_lines.length > 0 && (
                       <div className="space-y-1">
                         {invoice.invoice_lines.length === 1 ? (
@@ -199,7 +230,7 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
                         )}
                       </div>
                     )}
-                    
+
                     <Button
                       variant="default"
                       size="sm"

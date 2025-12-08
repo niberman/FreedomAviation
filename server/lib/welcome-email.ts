@@ -24,7 +24,7 @@ function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
     phone: "(970) 618-2094",
     address: "7565 S Peoria St, Englewood, CO 80112",
   };
-  
+
   return `
 <!DOCTYPE html>
 <html>
@@ -145,7 +145,7 @@ function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
               <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
                 <a href="https://www.freedomaviationco.com/dashboard" style="color: #3b82f6;">Dashboard</a> | 
                 <a href="https://www.freedomaviationco.com/contact" style="color: #3b82f6;">Contact</a> | 
-                <a href="https://www.freedomaviationco.com/about" style="color: #3b82f6;">About</a>
+                <a href="https://www.freedomaviationco.com/dashboard/profile" style="color: #3b82f6;">Manage Preferences</a>
               </p>
             </td>
           </tr>
@@ -174,7 +174,7 @@ function escapeHtml(text: string): string {
  */
 export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
   const emailService = process.env.EMAIL_SERVICE || "console";
-  
+
   const html = generateWelcomeEmailHTML(data);
   const text = `
 Welcome to Freedom Aviation!
@@ -211,6 +211,8 @@ The Freedom Aviation Team
 Freedom Aviation
 ${process.env.EMAIL_FROM || 'info@freedomaviationco.com'} | (970) 618-2094
 7565 S Peoria St, Englewood, CO 80112
+
+Manage Preferences: https://www.freedomaviationco.com/dashboard/profile
   `;
 
   switch (emailService) {
@@ -222,9 +224,9 @@ ${process.env.EMAIL_FROM || 'info@freedomaviationco.com'} | (970) 618-2094
 
     case "resend":
       return sendViaResend(
-        data.memberEmail, 
-        "Welcome to Freedom Aviation - Your Premium Aircraft Management Journey Begins!", 
-        html, 
+        data.memberEmail,
+        "Welcome to Freedom Aviation - Your Premium Aircraft Management Journey Begins!",
+        html,
         text
       );
 
@@ -252,6 +254,7 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
       },
       body: JSON.stringify({
         from: fromEmail,
+        reply_to: "info@freedomaviationco.com",
         to: [to],
         subject,
         html,
@@ -260,7 +263,7 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
     });
 
     const responseText = await response.text();
-    
+
     if (!response.ok) {
       let errorMessage = `Resend API error (${response.status}): ${responseText}`;
       try {
@@ -271,7 +274,7 @@ async function sendViaResend(to: string, subject: string, html: string, text: st
       } catch (e) {
         // Keep original error message
       }
-      
+
       throw new Error(errorMessage);
     }
 
