@@ -3,8 +3,7 @@ import { staffDashboardNavItems } from "@/components/dashboard/nav-items";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, CreditCard, Users, DollarSign } from "lucide-react";
-import { Link } from "wouter";
+import { Settings, CreditCard, Users } from "lucide-react";
 
 export default function StaffSettings() {
   return (
@@ -25,25 +24,6 @@ export default function StaffSettings() {
       </div>
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="space-y-1">
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Pricing Configuration
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Configure membership pricing, service rates, and location-specific costs
-            </p>
-            <Button asChild className="w-full">
-              <Link href="/admin/pricing">
-                Manage Pricing
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-        
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="space-y-1">
             <CardTitle className="flex items-center gap-2">

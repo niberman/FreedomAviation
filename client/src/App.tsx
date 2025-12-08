@@ -36,7 +36,6 @@ import StaffAircraft from "./pages/staff/aircraft";
 import StaffOperations from "./pages/staff/operations";
 import StaffRamp from "./pages/staff/ramp";
 import StaffSettings from "./pages/staff/settings";
-import UnifiedPricingConfigurator from "./pages/admin/UnifiedPricingConfigurator";
 import PricingConfiguratorPage from "./pages/pricing-configurator";
 import NotFound from "./pages/not-found";
 import Hangars from "./pages/Hangars";
@@ -124,11 +123,6 @@ function Router() {
           <StaffDashboard />
         </StaffProtectedRoute>
       </Route>
-      <Route path="/admin/pricing">
-        <StaffProtectedRoute>
-          <UnifiedPricingConfigurator />
-        </StaffProtectedRoute>
-      </Route>
       <Route path="/staff">
         <StaffProtectedRoute>
           <StaffHome />
@@ -162,11 +156,6 @@ function Router() {
       <Route path="/staff/settings">
         <StaffProtectedRoute>
           <StaffSettings />
-        </StaffProtectedRoute>
-      </Route>
-      <Route path="/staff/pricing">
-        <StaffProtectedRoute>
-          <UnifiedPricingConfigurator />
         </StaffProtectedRoute>
       </Route>
       {/* Individual hangar pages removed - use /hangars instead */}

@@ -176,6 +176,7 @@ export function ClientsTable() {
 
       const data = await response.json();
       console.log('Server response:', { status: response.status, data });
+      console.log('Error details:', JSON.stringify(data, null, 2));
       
       if (!response.ok) {
         throw new Error(data.message || data.error || 'Failed to create client');
