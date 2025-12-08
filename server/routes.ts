@@ -1511,7 +1511,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { email, full_name, phone, sendInvite = true } = req.body;
 
+      console.log('📧 Creating client:', { email, full_name, phone, sendInvite });
+
       if (!email || !full_name) {
+        console.error('❌ Missing required fields:', { email: !!email, full_name: !!full_name });
         return res.status(400).json({ 
           error: "Missing required fields",
           message: "Email and full name are required"
@@ -1519,45 +1522,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Invite user using admin API - they'll set their own password via email
-      const inviteOptions: any = {
-        email,
+      const baseUrl = process.env.SITE_URL || process.env.FRONTEND_URL || "https://www.freedomaviationco.com";
+      
+      const inviteOptions = sendInvite ? {
+        emailRedirectTo: `${baseUrl}/dashboard`,
         data: {
           full_name,
           phone: phone || null,
-        },
+        }
+      } : {
+        data: {
+          full_name,
+          phone: phone || null,
+        }
       };
 
-      // Add redirect URL to take them to dashboard after password setup
-      if (sendInvite) {
-        const baseUrl = process.env.SITE_URL || process.env.FRONTEND_URL || "https://www.freedomaviationco.com";
-        inviteOptions.options = {
-          emailRedirectTo: `${baseUrl}/dashboard`,
-          data: {
-            full_name,
-            phone: phone || null,
-          }
-        };
-      }
+      console.log('📤 Sending invite with options:', inviteOptions);
 
       const { data: authUser, error: createError } = await supabase.auth.admin.inviteUserByEmail(
         email,
-        inviteOptions.options
+        inviteOptions
       );
 
       if (createError) {
-        console.error("Error inviting user:", createError);
+        console.error("❌ Error inviting user:", createError);
+        console.error("Error details:", JSON.stringify(createError, null, 2));
         return res.status(400).json({ 
           error: "Failed to invite user",
-          message: createError.message 
+          message: createError.message,
+          details: createError
         });
       }
 
       if (!authUser?.user) {
+        console.error("❌ No user data returned from invite");
         return res.status(500).json({ 
           error: "User invitation failed",
           message: "No user data returned"
         });
       }
+
+      console.log('✅ User invited successfully:', authUser.user.id);
 
       // The trigger should have created the user_profile automatically, but we need to update it
       // with full_name, phone, and role. Use upsert in case the trigger hasn't fired yet.
