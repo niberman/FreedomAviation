@@ -12,8 +12,8 @@ afterEach(() => {
 
 // Mock environment variables
 process.env.NODE_ENV = 'test';
-process.env.VITE_SUPABASE_URL = 'https://test.supabase.co';
-process.env.VITE_SUPABASE_ANON_KEY = 'test-key';
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-key';
 process.env.SUPABASE_URL = 'https://test.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
 process.env.STRIPE_SECRET_KEY = 'sk_test_test';
