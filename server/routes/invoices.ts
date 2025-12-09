@@ -166,6 +166,10 @@ router.post('/send-email', corsMiddleware, optionalAuth, asyncHandler(async (req
   } else {
     invoice = invoiceQuery.data;
 
+    if (!invoice) {
+      throw new NotFoundError('Invoice');
+    }
+
     // Ensure owner is properly structured
     if (!invoice.owner) {
       const { data: ownerData, error: ownerError } = await supabase

@@ -16,6 +16,8 @@ import {
   generateServiceRequestEmailText,
   generateFlightInstructionEmailHTML,
   generateFlightInstructionEmailText,
+  type ServiceRequestEmailData,
+  type FlightInstructionRequestEmailData,
 } from '../lib/service-request-email.js';
 
 const router = Router();
@@ -100,12 +102,34 @@ async function processNotification(notification: Record<string, unknown>): Promi
   console.log(`Sending ${type} notification to ${recipients.length} ${recipient_role} users`);
 
   const notificationData = data as Record<string, unknown>;
+  const dashboardUrl = (notificationData.dashboard_url as string) || 'https://freedomaviationco.com/staff/manage';
 
   // Send email based on type
   if (type === 'service_request') {
-    await sendServiceRequestEmails(recipients, notificationData);
+    const emailData: ServiceRequestEmailData = {
+      requestId: String(notificationData.request_id || ''),
+      requestType: String(notificationData.request_type || notificationData.service_type || ''),
+      aircraftTailNumber: String(notificationData.aircraft_tail_number || ''),
+      ownerName: String(notificationData.owner_name || ''),
+      priority: String(notificationData.priority || 'normal'),
+      description: String(notificationData.description || ''),
+      airport: notificationData.airport as string | null,
+      requestedDeparture: notificationData.requested_departure as string | null,
+      dashboardUrl,
+    };
+    await sendServiceRequestEmails(recipients, emailData);
   } else if (type === 'instruction_request') {
-    await sendInstructionRequestEmails(recipients, notificationData);
+    const emailData: FlightInstructionRequestEmailData = {
+      requestId: String(notificationData.request_id || ''),
+      studentName: String(notificationData.student_name || notificationData.owner_name || ''),
+      aircraftTailNumber: String(notificationData.aircraft_tail_number || ''),
+      requestedDate: String(notificationData.requested_date || ''),
+      requestedTime: notificationData.requested_time as string | undefined,
+      instructionType: String(notificationData.instruction_type || 'Flight Instruction'),
+      notes: notificationData.notes as string | undefined,
+      dashboardUrl,
+    };
+    await sendInstructionRequestEmails(recipients, emailData);
   } else {
     throw new Error(`Unknown notification type: ${type}`);
   }
@@ -126,7 +150,7 @@ async function processNotification(notification: Record<string, unknown>): Promi
  */
 async function sendServiceRequestEmails(
   recipients: { email: string; full_name: string }[],
-  data: Record<string, unknown>
+  data: ServiceRequestEmailData
 ): Promise<void> {
   const emailService = config.email.service;
 
@@ -142,8 +166,8 @@ async function sendServiceRequestEmails(
 
   const html = generateServiceRequestEmailHTML(data);
   const text = generateServiceRequestEmailText(data);
-  const priority = (data.priority as string) || 'normal';
-  const tailNumber = (data.aircraft_tail_number as string) || 'Unknown';
+  const priority = data.priority || 'normal';
+  const tailNumber = data.aircraftTailNumber || 'Unknown';
   const subject = `[${priority.toUpperCase()}] New Service Request - ${tailNumber}`;
 
   for (const recipient of recipients) {
@@ -162,7 +186,7 @@ async function sendServiceRequestEmails(
  */
 async function sendInstructionRequestEmails(
   recipients: { email: string; full_name: string }[],
-  data: Record<string, unknown>
+  data: FlightInstructionRequestEmailData
 ): Promise<void> {
   const emailService = config.email.service;
 
@@ -178,7 +202,7 @@ async function sendInstructionRequestEmails(
 
   const html = generateFlightInstructionEmailHTML(data);
   const text = generateFlightInstructionEmailText(data);
-  const studentName = (data.student_name as string) || 'Unknown Student';
+  const studentName = data.studentName || 'Unknown Student';
   const subject = `New Flight Instruction Request - ${studentName}`;
 
   for (const recipient of recipients) {
@@ -294,5 +318,112 @@ router.post('/email-notification', corsMiddleware, asyncHandler(async (req: Requ
     id: record.id,
   });
 }));
+
+// =============================================================================
+// Named Exports for backward compatibility with server/routes.ts
+// =============================================================================
+
+/**
+ * Process pending email notifications (for direct route handler use)
+ */
+export async function processEmailNotifications(req: Request, res: Response): Promise<void> {
+  if (!isSupabaseAvailable()) {
+    res.status(503).json({ error: 'Service unavailable', message: 'Supabase not configured' });
+    return;
+  }
+
+  // API key authentication
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== config.app.apiKeyEmailNotifications) {
+    res.status(401).json({ error: 'Unauthorized', message: 'Invalid API key' });
+    return;
+  }
+
+  const supabase = getAdminClient();
+
+  console.log('Processing email notification queue...');
+
+  // Get pending notifications
+  const { data: notifications, error: fetchError } = await supabase
+    .from('email_notifications')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(50);
+
+  if (fetchError) {
+    console.error('Error fetching notifications:', fetchError);
+    res.status(500).json({ error: 'Database error', message: fetchError.message });
+    return;
+  }
+
+  if (!notifications || notifications.length === 0) {
+    res.json({
+      message: 'No pending notifications to process',
+      processed: 0,
+    });
+    return;
+  }
+
+  console.log(`Found ${notifications.length} pending notifications`);
+
+  let processedCount = 0;
+  let failedCount = 0;
+
+  for (const notification of notifications) {
+    try {
+      await processNotification(notification);
+      processedCount++;
+    } catch (error) {
+      console.error(`Failed to process notification ${notification.id}:`, error);
+      failedCount++;
+
+      // Mark as failed
+      await supabase
+        .from('email_notifications')
+        .update({
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', notification.id);
+    }
+  }
+
+  res.json({
+    message: 'Email notifications processed',
+    processed: processedCount,
+    failed: failedCount,
+    total: notifications.length,
+  });
+}
+
+/**
+ * Webhook handler for immediate notification processing
+ */
+export async function webhookProcessNotification(req: Request, res: Response): Promise<void> {
+  const { record } = req.body;
+
+  if (!record || record.status !== 'pending') {
+    res.json({ message: 'No action needed' });
+    return;
+  }
+
+  console.log(`Webhook: Processing notification ${record.id} immediately`);
+
+  try {
+    await processNotification(record);
+    res.json({
+      message: 'Notification processed',
+      id: record.id,
+    });
+  } catch (error) {
+    console.error(`Webhook: Failed to process notification ${record.id}:`, error);
+    res.status(500).json({
+      error: 'Processing failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
 
 export default router;

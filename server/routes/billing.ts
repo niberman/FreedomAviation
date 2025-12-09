@@ -438,8 +438,8 @@ router.post('/onboarding/create-subscription', corsMiddleware, asyncHandler(asyn
     },
   });
 
-  const invoice = subscription.latest_invoice as Stripe.Invoice;
-  const paymentIntent = invoice?.payment_intent as Stripe.PaymentIntent;
+  const invoice = subscription.latest_invoice as Stripe.Invoice & { payment_intent?: Stripe.PaymentIntent };
+  const paymentIntent = invoice?.payment_intent;
 
   // Save customer and subscription IDs
   await supabase
