@@ -7,3 +7,7 @@ export default function AdminManage() {
   redirect('/admin');
 }
 
+
+
+
+

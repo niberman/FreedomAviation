@@ -46,9 +46,9 @@ export function AuthRedirectHandler() {
             if (error) {
               console.error('[AuthRedirectHandler] Error setting invite session:', error);
             } else {
-              console.log('[AuthRedirectHandler] Invite token processed, redirecting to /onboarding');
-              // Redirect to onboarding without the hash
-              window.location.href = '/onboarding';
+              console.log('[AuthRedirectHandler] Invite token processed, redirecting to /dashboard');
+              // Redirect directly to dashboard - invited users skip onboarding
+              window.location.href = '/dashboard';
             }
           });
         } else {

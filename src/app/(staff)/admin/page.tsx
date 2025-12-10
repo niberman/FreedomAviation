@@ -4,3 +4,7 @@ export default function AdminPage() {
   redirect('/staff');
 }
 
+
+
+
+
