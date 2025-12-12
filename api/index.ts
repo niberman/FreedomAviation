@@ -2,7 +2,6 @@
 // This wraps the Express app for Vercel's serverless environment
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "../server/routes.js";
-import { serveStatic } from "../server/vite.js";
 import path from "path";
 import fs from "fs";
 
