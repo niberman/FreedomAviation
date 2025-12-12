@@ -81,7 +81,7 @@ export function AboutPage() {
         <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-muted/30">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12">
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-8 sm:mb-10 md:mb-12 text-center">What We Do</h2>
-            
+
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {/* Aircraft Management */}
               <Card>

@@ -228,7 +228,7 @@ export function HangarsPage() {
                       Pricing varies by location and is transparently shown in our pricing calculator.
                     </p>
                     <Link href="/pricing">
-                      <Button variant="link" className="mt-4">
+                      <Button variant="ghost" className="mt-4 text-primary hover:text-primary/80">
                         Compare pricing for both locations →
                       </Button>
                     </Link>
