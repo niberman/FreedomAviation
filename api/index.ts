@@ -123,10 +123,10 @@ async function initializeApp(): Promise<express.Express> {
       console.log("🔍 Current working directory:", cwd);
       
       const possiblePaths = [
-        path.resolve(cwd, "dist", "public"),
-        path.resolve(cwd, "..", "dist", "public"),
-        path.resolve(cwd, "..", "..", "dist", "public"),
-        path.resolve(cwd, "..", "..", "..", "dist", "public"),
+        path.resolve(cwd, "dist"),
+        path.resolve(cwd, "..", "dist"),
+        path.resolve(cwd, "..", "..", "dist"),
+        path.resolve(cwd, "..", "..", "..", "dist"),
       ];
       
       let distPath: string | null = null;
@@ -199,7 +199,7 @@ async function initializeApp(): Promise<express.Express> {
         
         console.log("✅ Static files configured");
       } else {
-        console.warn("⚠️ Could not find dist/public directory");
+        console.warn("⚠️ Could not find dist directory");
         // Set up fallback handlers for service worker and manifest
         app.get("/sw.js", (req, res) => {
           res.setHeader("Content-Type", "application/javascript");

@@ -35,5 +35,5 @@
     "src/**/*.tsx",
     "shared/**/*.ts"
   ],
-  "exclude": ["node_modules", "client", "**/*.test.ts", "**/*.test.tsx", "vitest.config.ts", "vitest.setup.ts"]
+  "exclude": ["node_modules", "client", "server", "**/*.test.ts", "**/*.test.tsx", "vitest.config.ts", "vitest.setup.ts"]
 }
