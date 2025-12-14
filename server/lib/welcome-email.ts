@@ -99,17 +99,17 @@ function generateWelcomeEmailHTML(data: WelcomeEmailData): string {
               
               <div style="margin: 0 0 24px;">
                 <div style="margin: 0 0 16px; padding-left: 24px;">
-                  <p style="margin: 0 0 4px; color: #111827; font-weight: 600;">📅 Schedule Your First Service</p>
+                  <p style="margin: 0 0 4px; color: #111827; font-weight: 600;">Schedule Your First Service</p>
                   <p style="margin: 0; color: #6b7280; font-size: 14px;">Log in to your dashboard to request maintenance or aircraft preparation services.</p>
                 </div>
                 
                 <div style="margin: 0 0 16px; padding-left: 24px;">
-                  <p style="margin: 0 0 4px; color: #111827; font-weight: 600;">✈️ Track Maintenance</p>
+                  <p style="margin: 0 0 4px; color: #111827; font-weight: 600;">Track Maintenance</p>
                   <p style="margin: 0; color: #6b7280; font-size: 14px;">We'll help you stay on top of all required maintenance items and compliance.</p>
                 </div>
                 
                 <div style="margin: 0 0 16px; padding-left: 24px;">
-                  <p style="margin: 0 0 4px; color: #111827; font-weight: 600;">📞 24/7 Support</p>
+                  <p style="margin: 0 0 4px; color: #111827; font-weight: 600;">24/7 Support</p>
                   <p style="margin: 0; color: #6b7280; font-size: 14px;">${data.membershipTier === 'Class III' ? 'Your concierge team is ready to assist you anytime.' : 'Our team is here whenever you need assistance.'}</p>
                 </div>
               </div>
