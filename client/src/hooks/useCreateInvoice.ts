@@ -171,7 +171,7 @@ export function useCreateMaintenanceInvoice() {
         p_owner_id: ownerId,
         p_aircraft_id: finalAircraftId,
         p_notes: notes || '',
-        p_line_items: JSON.stringify(formattedLineItems),
+        p_line_items: formattedLineItems,
         p_created_by: user.id,
       });
 
