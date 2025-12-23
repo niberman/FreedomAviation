@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.freedomaviation.app',
   appName: 'FreedomAviation',
   webDir: 'dist',
-  bundledWebRuntime: false,
   server: {
     androidScheme: 'https',
     iosScheme: 'https',

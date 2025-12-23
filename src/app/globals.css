@@ -1,0 +1,388 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LIGHT MODE */
+:root {
+  --button-outline: rgba(0,0,0, .09);
+  --badge-outline: rgba(0,0,0, .04);
+
+  /* Automatic computation of border around primary / danger buttons */
+  --opaque-button-border-intensity: -8; /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(0,0,0, .025);
+  --elevate-2: rgba(0,0,0, .07);
+
+  --background: 212 18% 98%;
+
+  --foreground: 217 22% 16%;
+
+  --border: 212 17% 87%;
+
+  --card: 0 0% 100%;
+
+  --card-foreground: 217 22% 16%;
+
+  --card-border: 212 14% 91%;
+
+  --sidebar: 212 18% 96%;
+
+  --sidebar-foreground: 217 23% 21%;
+
+  --sidebar-border: 212 16% 89%;
+
+  --sidebar-primary: 217 82% 26%;
+
+  --sidebar-primary-foreground: 212 18% 98%;
+
+  --sidebar-accent: 212 14% 91%;
+
+  --sidebar-accent-foreground: 217 23% 21%;
+
+  --sidebar-ring: 217 82% 26%;
+
+  --popover: 0 0% 100%;
+
+  --popover-foreground: 217 22% 16%;
+
+  --popover-border: 212 14% 91%;
+
+  --primary: 217 82% 26%;
+
+  --primary-foreground: 212 18% 98%;
+
+  --secondary: 212 14% 87%;
+
+  --secondary-foreground: 217 23% 21%;
+
+  --muted: 212 13% 93%;
+
+  --muted-foreground: 217 18% 36%;
+
+  --accent: 202 18% 91%;
+
+  --accent-foreground: 202 82% 22%;
+
+  --destructive: 2 72% 36%;
+
+  --destructive-foreground: 0 0% 98%;
+
+  --input: 212 23% 74%;
+  --ring: 217 82% 26%;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Geist Sans', 'Inter', system-ui, sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
+  --radius: 0.42rem;
+  --shadow-2xs: 0px 1px 0px 0px hsl(217 14% 24% / 0.015);
+  --shadow-xs: 0px 1px 0px 0px hsl(217 14% 24% / 0.022);
+  --shadow-sm: 0px 1px 0px 0px hsl(217 14% 24% / 0.028), 0px 1px 2px -1px hsl(217 14% 24% / 0.035);
+  --shadow: 0px 1px 0px 0px hsl(217 14% 24% / 0.035), 0px 1px 2px -1px hsl(217 14% 24% / 0.042);
+  --shadow-md: 0px 1px 0px 0px hsl(217 14% 24% / 0.042), 0px 2px 4px -1px hsl(217 14% 24% / 0.052);
+  --shadow-lg: 0px 1px 0px 0px hsl(217 14% 24% / 0.052), 0px 4px 6px -1px hsl(217 14% 24% / 0.062);
+  --shadow-xl: 0px 1px 0px 0px hsl(217 14% 24% / 0.062), 0px 8px 10px -1px hsl(217 14% 24% / 0.072);
+  --shadow-2xl: 0px 1px 0px 0px hsl(217 14% 24% / 0.078);
+  --tracking-normal: -0.006em;
+  --spacing: 0.25rem;
+
+  /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
+
+  /* Fallback for older browsers */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+.dark {
+  --button-outline: rgba(255,255,255, .09);
+  --badge-outline: rgba(255,255,255, .04);
+
+  --opaque-button-border-intensity: 9;  /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(255,255,255, .035);
+  --elevate-2: rgba(255,255,255, .08);
+
+  --background: 217 28% 9%;
+
+  --foreground: 212 18% 89%;
+
+  --border: 217 23% 19%;
+
+  --card: 217 23% 13%;
+
+  --card-foreground: 212 18% 89%;
+
+  --card-border: 217 23% 17%;
+
+  --sidebar: 217 26% 11%;
+
+  --sidebar-foreground: 212 18% 84%;
+
+  --sidebar-border: 217 23% 15%;
+
+  --sidebar-primary: 217 77% 54%;
+
+  --sidebar-primary-foreground: 217 28% 9%;
+
+  --sidebar-accent: 217 23% 17%;
+
+  --sidebar-accent-foreground: 212 14% 84%;
+
+  --sidebar-ring: 217 77% 54%;
+
+  --popover: 217 23% 15%;
+
+  --popover-foreground: 212 18% 87%;
+
+  --popover-border: 217 23% 19%;
+
+  --primary: 217 77% 31%;
+
+  --primary-foreground: 212 18% 94%;
+
+  --secondary: 217 18% 19%;
+
+  --secondary-foreground: 212 14% 84%;
+
+  --muted: 217 16% 16%;
+
+  --muted-foreground: 212 14% 68%;
+
+  --accent: 202 14% 17%;
+
+  --accent-foreground: 202 82% 84%;
+
+  --destructive: 2 72% 31%;
+
+  --destructive-foreground: 0 0% 94%;
+
+  --input: 217 23% 26%;
+  --ring: 217 77% 54%;
+
+  --shadow-2xs: 0px 1px 0px 0px hsl(217 28% 6% / 0.18);
+  --shadow-xs: 0px 1px 0px 0px hsl(217 28% 6% / 0.22);
+  --shadow-sm: 0px 1px 0px 0px hsl(217 28% 6% / 0.27), 0px 1px 2px -1px hsl(217 28% 6% / 0.32);
+  --shadow: 0px 1px 0px 0px hsl(217 28% 6% / 0.32), 0px 1px 2px -1px hsl(217 28% 6% / 0.37);
+  --shadow-md: 0px 1px 0px 0px hsl(217 28% 6% / 0.37), 0px 2px 4px -1px hsl(217 28% 6% / 0.42);
+  --shadow-lg: 0px 1px 0px 0px hsl(217 28% 6% / 0.42), 0px 4px 6px -1px hsl(217 28% 6% / 0.47);
+  --shadow-xl: 0px 1px 0px 0px hsl(217 28% 6% / 0.47), 0px 8px 10px -1px hsl(217 28% 6% / 0.52);
+  --shadow-2xl: 0px 1px 0px 0px hsl(217 28% 6% / 0.56);
+
+  /* Fallback for older browsers */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/**
+ * Using the elevate system.
+ * Automatic contrast adjustment.
+ */
+@layer utilities {
+
+  /* Hide ugly search cancel button in Chrome until we can style it properly */
+  input[type="search"]::-webkit-search-cancel-button {
+    @apply hidden;
+  }
+
+  /* Placeholder styling for contentEditable div */
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  .no-default-hover-elevate {}
+
+  .no-default-active-elevate {}
+
+  .toggle-elevate::before,
+  .toggle-elevate-2::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    border-radius: inherit;
+    z-index: -1;
+  }
+
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
+  }
+
+  .border.toggle-elevate::before {
+    inset: -1px;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    border-radius: inherit;
+    z-index: 999;
+  }
+
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
+    inset: -1px;
+  }
+}
+
+/* Mobile Optimization */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  .overflow-x-auto,
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+  }
+
+  @media (max-width: 768px) {
+    button,
+    a,
+    input,
+    select,
+    textarea {
+      min-height: 44px;
+    }
+
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  @media (max-width: 640px) {
+    .container {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+}
+
+@layer utilities {
+  .scroll-smooth-touch {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    .gap-mobile-sm {
+      gap: 0.5rem;
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+

@@ -24,3 +24,4 @@ ios/App/Podfile.lock
 
 # Capacitor
 .capacitor/
+.next

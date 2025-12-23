@@ -2,7 +2,6 @@
 // This wraps the Express app for Vercel's serverless environment
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "../server/routes.js";
-import { serveStatic } from "../server/vite.js";
 import path from "path";
 import fs from "fs";
 
@@ -123,10 +122,10 @@ async function initializeApp(): Promise<express.Express> {
       console.log("🔍 Current working directory:", cwd);
       
       const possiblePaths = [
-        path.resolve(cwd, "dist", "public"),
-        path.resolve(cwd, "..", "dist", "public"),
-        path.resolve(cwd, "..", "..", "dist", "public"),
-        path.resolve(cwd, "..", "..", "..", "dist", "public"),
+        path.resolve(cwd, "dist"),
+        path.resolve(cwd, "..", "dist"),
+        path.resolve(cwd, "..", "..", "dist"),
+        path.resolve(cwd, "..", "..", "..", "dist"),
       ];
       
       let distPath: string | null = null;
@@ -199,7 +198,7 @@ async function initializeApp(): Promise<express.Express> {
         
         console.log("✅ Static files configured");
       } else {
-        console.warn("⚠️ Could not find dist/public directory");
+        console.warn("⚠️ Could not find dist directory");
         // Set up fallback handlers for service worker and manifest
         app.get("/sw.js", (req, res) => {
           res.setHeader("Content-Type", "application/javascript");

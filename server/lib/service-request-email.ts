@@ -3,7 +3,7 @@
  */
 import { escapeHtml } from './email.js';
 
-interface ServiceRequestEmailData {
+export interface ServiceRequestEmailData {
   requestId: string;
   requestType: string;
   aircraftTailNumber: string;
@@ -15,7 +15,7 @@ interface ServiceRequestEmailData {
   dashboardUrl: string;
 }
 
-interface FlightInstructionRequestEmailData {
+export interface FlightInstructionRequestEmailData {
   requestId: string;
   studentName: string;
   aircraftTailNumber: string;
