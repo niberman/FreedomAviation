@@ -289,7 +289,7 @@ export function OwnerDashboardPage() {
             <div className="grid md:grid-cols-2 gap-0">
               <div className="relative h-64 md:h-auto min-h-[300px]">
                 <Image
-                  src="https://images.unsplash.com/photo-1559627755-6b22c7a3c3e8"
+                  src="/images/premium_cirrus_sr22t_b2f4f8b8.jpg"
                   alt="Aircraft"
                   fill
                   priority
