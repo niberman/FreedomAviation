@@ -127,7 +127,7 @@ Located in the footer section:
 <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">
   <strong>Freedom Aviation</strong><br>
   7565 S Peoria St, Englewood, CO 80112<br>
-  <a href="tel:+19706182094">(970) 618-2094</a> | 
+  <a href="tel:+17203100443">(720) 310-0443</a> | 
   <a href="mailto:info@freedomaviationco.com">info@freedomaviationco.com</a>
 </p>
 ```

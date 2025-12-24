@@ -207,7 +207,7 @@ export function ContactPage() {
                         <div>
                           <div className="font-medium">Phone</div>
                           <a
-                            href="tel:+19706182094"
+                            href="tel:+17203100443"
                             className="text-muted-foreground hover:text-primary transition-colors"
                             data-testid="link-phone"
                           >

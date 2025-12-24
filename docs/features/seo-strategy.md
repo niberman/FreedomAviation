@@ -86,7 +86,7 @@ Configured to:
 All instances use:
 - **Name**: Freedom Aviation
 - **Address**: 7565 S Peoria St, Englewood, CO 80112
-- **Phone**: (970) 618-2094 / +1-970-618-2094
+- **Phone**: (720) 310-0443 / +1-720-310-0443
 - **Email**: info@freedomaviationco.com
 - **Website**: https://www.freedomaviationco.com
 

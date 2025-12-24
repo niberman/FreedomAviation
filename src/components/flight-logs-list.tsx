@@ -36,7 +36,7 @@ interface FlightLog {
   arrival_airport: string;
   departure_time?: string;
   arrival_time?: string;
-  flight_hours: number;
+  flight_time_hours: number;
   hobbs_start?: number;
   hobbs_end?: number;
   tach_start?: number;
@@ -146,7 +146,7 @@ export function FlightLogsList({ aircraftId }: FlightLogsListProps) {
           arrival_airport: formData.arrival_airport.toUpperCase(),
           departure_time: formData.departure_time || null,
           arrival_time: formData.arrival_time || null,
-          flight_hours: flightHours,
+          flight_time_hours: flightHours,
           hobbs_start: formData.hobbs_start ? parseFloat(formData.hobbs_start) : null,
           hobbs_end: formData.hobbs_end ? parseFloat(formData.hobbs_end) : null,
           tach_start: formData.tach_start ? parseFloat(formData.tach_start) : null,
@@ -309,7 +309,7 @@ export function FlightLogsList({ aircraftId }: FlightLogsListProps) {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold">{log.flight_hours.toFixed(1)} hrs</p>
+                      <p className="text-2xl font-bold">{log.flight_time_hours.toFixed(1)} hrs</p>
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(log.date), "MMM d, yyyy")}
                       </p>
@@ -548,7 +548,7 @@ export function FlightLogsList({ aircraftId }: FlightLogsListProps) {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Flight Hours</p>
-                  <p className="text-lg font-semibold">{selectedLog.flight_hours.toFixed(1)} hours</p>
+                  <p className="text-lg font-semibold">{selectedLog.flight_time_hours.toFixed(1)} hours</p>
                 </div>
               </div>
 

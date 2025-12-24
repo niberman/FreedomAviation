@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.flight_logs (
   arrival_time TIME,
   departure_airport TEXT,
   arrival_airport TEXT,
-  flight_time_hours DECIMAL(10, 2),
+  flight_hours DECIMAL(10, 2),
   hobbs_start DECIMAL(10, 2),
   hobbs_end DECIMAL(10, 2),
   tach_start DECIMAL(10, 2),

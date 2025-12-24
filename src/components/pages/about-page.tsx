@@ -49,7 +49,7 @@ export function AboutPage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <a href="tel:+19706182094" className="w-full sm:w-auto">
+              <a href="tel:+17203100443" className="w-full sm:w-auto">
                 <Button 
                   size="lg"
                   variant="outline"
@@ -278,7 +278,7 @@ export function AboutPage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <a href="tel:+19706182094" className="w-full sm:w-auto">
+              <a href="tel:+17203100443" className="w-full sm:w-auto">
                 <Button 
                   size="lg"
                   variant="outline"

@@ -64,7 +64,7 @@ export function PricingPage() {
                     Get Your Custom Quote
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
-                  <a href="tel:+19706182094" className="w-full sm:w-auto">
+                  <a href="tel:+17203100443" className="w-full sm:w-auto">
                     <Button 
                       size="lg" 
                       variant="outline"
@@ -164,7 +164,7 @@ export function PricingPage() {
                     Our team is ready to answer your questions.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
-                    <a href="tel:+19706182094" className="w-full sm:w-auto">
+                    <a href="tel:+17203100443" className="w-full sm:w-auto">
                       <Button size="lg" className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto">
                         <Phone className="mr-2 h-5 w-5" />
                         Call (970) 618-2094
@@ -216,7 +216,7 @@ export function PricingPage() {
                       Get Started Now
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
-                    <a href="tel:+19706182094" className="w-full sm:w-auto">
+                    <a href="tel:+17203100443" className="w-full sm:w-auto">
                       <Button 
                         size="lg" 
                         variant="outline"

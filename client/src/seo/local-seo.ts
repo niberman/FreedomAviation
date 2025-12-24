@@ -182,8 +182,8 @@ export function getNAPData() {
     stateCode: "CO",
     zip: "80112",
     phone: BRAND.phone,
-    phoneFormatted: "(970) 618-2094",
-    phoneE164: "+19706182094",
+    phoneFormatted: "(720) 310-0443",
+    phoneE164: "+17203100443",
     email: BRAND.email,
     website: BRAND.website,
     coordinates: {

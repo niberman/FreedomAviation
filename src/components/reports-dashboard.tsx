@@ -107,7 +107,7 @@ export function ReportsDashboard() {
     queryFn: async () => {
       const { data: logs, error } = await supabase
         .from("flight_logs")
-        .select("id, flight_hours, aircraft_id, date")
+        .select("id, flight_time_hours, aircraft_id, date")
         .gte("date", start.toISOString().split('T')[0])
         .lte("date", end.toISOString().split('T')[0]);
       
@@ -117,7 +117,7 @@ export function ReportsDashboard() {
       }
       if (error) throw error;
       
-      const totalHours = logs?.reduce((sum, log) => sum + (log.flight_hours || 0), 0) || 0;
+      const totalHours = logs?.reduce((sum, log) => sum + (log.flight_time_hours || 0), 0) || 0;
       const flightCount = logs?.length || 0;
       const uniqueAircraft = new Set(logs?.map(l => l.aircraft_id)).size;
       
