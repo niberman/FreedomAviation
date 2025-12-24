@@ -49,9 +49,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       } else if (event === 'PASSWORD_RECOVERY') {
         // Handle password recovery - Supabase automatically processes tokens from URL hash
+        console.log('[AuthContext] PASSWORD_RECOVERY event detected, redirecting to /reset-password');
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        // Redirect to reset password page if not already there
+        if (window.location.pathname !== '/reset-password') {
+          window.location.href = '/reset-password';
+        }
       } else if (event === 'SIGNED_IN') {
         // User signed in
         setSession(session);

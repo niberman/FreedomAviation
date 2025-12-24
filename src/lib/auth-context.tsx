@@ -31,10 +31,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthContext] Auth event:', event);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // Handle PASSWORD_RECOVERY event - redirect to reset password page
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('[AuthContext] PASSWORD_RECOVERY event detected, redirecting to /reset-password');
+        window.location.href = '/reset-password';
+      }
     });
 
     return () => subscription.unsubscribe();
