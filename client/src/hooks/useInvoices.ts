@@ -18,6 +18,7 @@ export function useInvoices() {
       if (!user) throw new Error('Not authenticated');
 
       // Build the query - try nested query first
+      // Include both instruction and maintenance invoices (exclude membership which is handled separately)
       let query = supabase
         .from('invoices')
         .select(`
@@ -26,7 +27,7 @@ export function useInvoices() {
           owner:owner_id(full_name, email),
           invoice_lines(description, quantity, unit_cents)
         `)
-        .eq('category', 'instruction');
+        .in('category', ['instruction', 'maintenance']);
 
       // Staff/Admin see all invoices, CFIs see only their own
       if (!canSeeAllInvoices) {
@@ -40,7 +41,7 @@ export function useInvoices() {
         let baseQuery = supabase
           .from('invoices')
           .select('*')
-          .eq('category', 'instruction');
+          .in('category', ['instruction', 'maintenance']);
 
         if (!canSeeAllInvoices) {
           baseQuery = baseQuery.eq('created_by_cfi_id', user.id);
