@@ -6,7 +6,7 @@
 export const BRAND = {
   name: "Freedom Aviation",
   tagline: "Colorado-Based. Front Range Focused.",
-  phone: "(970) 618-2094",
+  phone: "(720) 310-0443",
   email: "info@freedomaviationco.com",
   address: "7565 S Peoria St, Englewood, CO 80112",
   mailing: "2500 Meadow Ave, Boulder, CO 80304",

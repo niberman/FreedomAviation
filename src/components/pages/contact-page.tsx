@@ -148,7 +148,7 @@ export function ContactPage() {
                           id="phone"
                           name="phone"
                           type="tel"
-                          placeholder="(970) 618-2094"
+                          placeholder="(720)-310-0443"
                           data-testid="input-phone"
                           className="h-11 sm:h-10"
                         />
@@ -211,7 +211,7 @@ export function ContactPage() {
                             className="text-muted-foreground hover:text-primary transition-colors"
                             data-testid="link-phone"
                           >
-                            (970) 618-2094
+                            (720) 310-0443
                           </a>
                         </div>
                       </div>

@@ -45,7 +45,7 @@ export default function Contact() {
     <div className="min-h-screen bg-background">
       <Seo
         title="Contact Freedom Aviation - Centennial Airport Colorado Aircraft Management"
-        description="Contact Freedom Aviation for premium aircraft management and flight instruction at Centennial Airport (KAPA) Colorado. Call (970) 618-2094 or email. Serving Denver and the Front Range."
+        description="Contact Freedom Aviation for premium aircraft management and flight instruction at Centennial Airport (KAPA) Colorado. Call (720)-310-0443 or email. Serving Denver and the Front Range."
         keywords={brandKeywords()}
         canonical="/contact"
       />
@@ -156,7 +156,7 @@ export default function Contact() {
                         id="phone"
                         name="phone"
                         type="tel"
-                        placeholder="(970) 618-2094"
+                        placeholder="(720)-310-0443"
                         data-testid="input-phone"
                         className="h-11 sm:h-10"
                       />

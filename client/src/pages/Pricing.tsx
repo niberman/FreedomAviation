@@ -92,7 +92,7 @@ export default function Pricing() {
                     className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto"
                   >
                     <Phone className="mr-2 h-5 w-5" />
-                    Call (970) 618-2094
+                    Call (720) 310-0443
                   </Button>
                 </a>
               </div>
@@ -193,7 +193,7 @@ export default function Pricing() {
                   <a href="tel:+17203100443" className="w-full sm:w-auto">
                     <Button size="lg" className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto">
                       <Phone className="mr-2 h-5 w-5" />
-                      Call (970) 618-2094
+                      Call (720) 310-0443
                     </Button>
                   </a>
                   <Button 
@@ -249,7 +249,7 @@ export default function Pricing() {
                       className="w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 h-auto bg-white/10 hover:bg-white/20 border-white/30 text-white"
                     >
                       <Phone className="mr-2 h-5 w-5" />
-                      Call (970) 618-2094
+                      Call (720) 310-0443
                     </Button>
                   </a>
                 </>
