@@ -17,8 +17,6 @@ import {
   FileText,
   Fuel,
   MapPin,
-  Calendar,
-  Clock,
   CheckCircle2,
   AlertCircle
 } from "lucide-react";
@@ -84,48 +82,6 @@ export default function OwnerDashboard() {
   });
 
   const aircraft = aircraftList?.[0];
-
-  // Fetch service requests to find today's active reservation
-  const { data: serviceRequests = [] } = useQuery({
-    queryKey: ["service-requests", isDemo ? "demo" : user?.id, aircraft?.id],
-    enabled: isDemo || Boolean(user?.id && aircraft?.id),
-    queryFn: async () => {
-      if (isDemo) {
-        const { DEMO_SERVICE_REQUESTS } = await import("@/lib/demo-data");
-        return DEMO_SERVICE_REQUESTS;
-      }
-      if (!user?.id || !aircraft?.id) return [];
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const { data, error } = await supabase
-        .from("service_requests")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("aircraft_id", aircraft.id)
-        .gte("requested_departure", today.toISOString())
-        .lt("requested_departure", tomorrow.toISOString())
-        .order("requested_departure", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching service requests:", error);
-        return [];
-      }
-
-      return data || [];
-    }
-  });
-
-  // Get the active flight for today
-  const activeFlight = serviceRequests.find(
-    (req) =>
-      req.service_type === "Pre-Flight Concierge" &&
-      req.status !== "completed" &&
-      req.status !== "cancelled"
-  );
 
   const { data: serviceTasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["service-tasks", aircraft?.id],
@@ -242,20 +198,6 @@ export default function OwnerDashboard() {
       throw error;
     }
   };
-
-  // Mission progress stages
-  const getMissionProgress = () => {
-    if (!activeFlight) return null;
-
-    // Mock the progress based on status (in reality, you'd use is_staged, is_fueled, etc.)
-    const status = activeFlight.status;
-
-    if (status === "completed") return { stage: "Ready", progress: 100, color: "emerald" };
-    if (status === "in_progress") return { stage: "Line Ops", progress: 66, color: "yellow" };
-    return { stage: "Received", progress: 33, color: "blue" };
-  };
-
-  const missionProgress = getMissionProgress();
 
   // Mock fuel level (you'd fetch this from real data)
   const fuelLevel = 85; // percentage
@@ -410,68 +352,6 @@ export default function OwnerDashboard() {
               <div className="animate-pulse">Loading aircraft information...</div>
             ) : (
               <div>No aircraft assigned</div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Mission Tracker */}
-      {activeFlight && missionProgress && (
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Today's Mission
-              </CardTitle>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                {activeFlight.requested_departure && (
-                  <span>
-                    Departure: {new Date(activeFlight.requested_departure).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">{missionProgress.stage}</span>
-                <span className="text-muted-foreground">{missionProgress.progress}%</span>
-              </div>
-              <Progress value={missionProgress.progress} className="h-2" />
-            </div>
-
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  Received
-                </Badge>
-                <span className="text-muted-foreground">→</span>
-                <Badge
-                  variant={missionProgress.progress >= 66 ? "default" : "outline"}
-                  className="text-xs"
-                >
-                  Line Ops
-                </Badge>
-                <span className="text-muted-foreground">→</span>
-                <Badge
-                  variant={missionProgress.progress === 100 ? "default" : "outline"}
-                  className={missionProgress.progress === 100 ? "bg-emerald-500 hover:bg-emerald-600" : "text-xs"}
-                >
-                  Ready
-                </Badge>
-              </div>
-            </div>
-
-            {activeFlight.description && (
-              <div className="pt-2 border-t">
-                <p className="text-sm text-muted-foreground">{activeFlight.description}</p>
-              </div>
             )}
           </CardContent>
         </Card>

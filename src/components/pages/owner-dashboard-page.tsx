@@ -79,39 +79,6 @@ export function OwnerDashboardPage() {
 
   const aircraft = aircraftList?.[0];
 
-  const { data: serviceRequests = [] } = useQuery({
-    queryKey: ['service-requests', isDemo ? 'demo' : user?.id, aircraft?.id],
-    enabled: isDemo || Boolean(user?.id && aircraft?.id),
-    queryFn: async () => {
-      if (isDemo) {
-        const { DEMO_SERVICE_REQUESTS } = await import('@/lib/demo-data');
-        return DEMO_SERVICE_REQUESTS;
-      }
-      if (!user?.id || !aircraft?.id) return [];
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const { data, error } = await supabase
-        .from('service_requests')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('aircraft_id', aircraft.id)
-        .gte('requested_departure', today.toISOString())
-        .lt('requested_departure', tomorrow.toISOString())
-        .order('requested_departure', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching service requests:', error);
-        return [];
-      }
-
-      return data || [];
-    }
-  });
-
   const { data: serviceTasks = [] } = useQuery({
     queryKey: ['service-tasks', aircraft?.id],
     enabled: isDemo || Boolean(aircraft?.id && user?.id),
