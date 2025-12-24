@@ -132,12 +132,14 @@ export const SEO_KEYWORDS = {
  * Generate combined keywords for meta tags
  */
 export function allKeywords(): string {
-  const { brand, services, locations, modifiers, longTail } = SEO_KEYWORDS;
+  const { brand, services, locations, modifiers, longTail, airports, partners } = SEO_KEYWORDS;
   return [
     ...brand,
     ...services,
     ...locations,
     ...modifiers,
+    ...airports,
+    ...partners,
     ...longTail
   ].join(", ");
 }
@@ -181,7 +183,8 @@ export function locationKeywords(location?: string): string {
   
   if (location) {
     const partner = SEO_KEYWORDS.partners.find(p => 
-      p.toLowerCase().includes(location.toLowerCase())
+      p.toLowerCase().includes(location.toLowerCase()) || 
+      location.toLowerCase().includes(p.toLowerCase())
     );
     if (partner) {
       return [...base, partner, `${partner} aircraft management`].join(", ");

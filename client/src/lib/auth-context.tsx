@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event, session ? 'session present' : 'no session');
+      // console.log('Auth state change:', event, session ? 'session present' : 'no session');
       
       // Handle different auth events
       if (event === 'SIGNED_OUT') {
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       } else if (event === 'PASSWORD_RECOVERY') {
         // Handle password recovery - Supabase automatically processes tokens from URL hash
-        console.log('[AuthContext] PASSWORD_RECOVERY event detected, redirecting to /reset-password');
+        // console.log('[AuthContext] PASSWORD_RECOVERY event detected, redirecting to /reset-password');
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);

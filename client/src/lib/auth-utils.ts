@@ -17,10 +17,10 @@ export async function getValidAuthToken(): Promise<string | null> {
       // Check if token is expired (with 5 minute buffer)
       const expiresAt = session.expires_at;
       if (expiresAt && expiresAt * 1000 - Date.now() < 5 * 60 * 1000) {
-        console.log('Token expiring soon, refreshing...');
+        // console.log('Token expiring soon, refreshing...');
         const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
         if (!refreshError && refreshedSession?.access_token) {
-          console.log('Session refreshed successfully');
+          // console.log('Session refreshed successfully');
           return refreshedSession.access_token;
         }
       }
@@ -28,7 +28,7 @@ export async function getValidAuthToken(): Promise<string | null> {
     }
     
     // No session, try to refresh
-    console.log('No session found, attempting to refresh...');
+    // console.log('No session found, attempting to refresh...');
     const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
     
     if (refreshError || !refreshedSession?.access_token) {
@@ -36,7 +36,7 @@ export async function getValidAuthToken(): Promise<string | null> {
       return null;
     }
     
-    console.log('Session refreshed successfully');
+    // console.log('Session refreshed successfully');
     return refreshedSession.access_token;
   } catch (error) {
     console.error('Error getting auth token:', error);
@@ -86,7 +86,7 @@ export async function authenticatedFetch(
       });
       
       if (retryResponse.ok) {
-        console.log('Request succeeded after token refresh');
+        // console.log('Request succeeded after token refresh');
         return retryResponse;
       }
     }

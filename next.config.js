@@ -6,9 +6,6 @@ const nextConfig = {
   // Fix workspace root detection when multiple lockfiles exist
   outputFileTracingRoot: path.join(__dirname, './'),
   experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb',
-    },
   },
   images: {
     remotePatterns: [
@@ -52,15 +49,15 @@ const nextConfig = {
     ];
   },
   // Webpack config for handling path aliases
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, './shared'),
-      '@assets': path.resolve(__dirname, './attached_assets'),
-    };
-    return config;
-  },
+  // webpack: (config) => {
+  //   config.resolve.alias = {
+  //     ...config.resolve.alias,
+  //     '@': path.resolve(__dirname, './src'),
+  //     '@shared': path.resolve(__dirname, './shared'),
+  //     '@assets': path.resolve(__dirname, './attached_assets'),
+  //   };
+  //   return config;
+  // },
 };
 
 module.exports = nextConfig;

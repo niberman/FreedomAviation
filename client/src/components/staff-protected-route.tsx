@@ -55,7 +55,7 @@ export function StaffProtectedRoute({ children }: { children: React.ReactNode })
     if (!isLoading) {
       if (!user) {
         // Not logged in, redirect to login
-        console.log('StaffProtectedRoute: No user, redirecting to login');
+        // console.log('StaffProtectedRoute: No user, redirecting to login');
         setLocation('/login');
       } else if (profileError) {
         // Error fetching profile - log details but don't immediately redirect
@@ -84,10 +84,10 @@ export function StaffProtectedRoute({ children }: { children: React.ReactNode })
       } else if (userProfile) {
         // Check role
         if (!isStaffRole(userProfile.role)) {
-          console.log('StaffProtectedRoute: User is not staff (role:', userProfile.role, '), redirecting to home');
+          // console.log('StaffProtectedRoute: User is not staff (role:', userProfile.role, '), redirecting to home');
           setLocation('/');
         } else {
-          console.log('StaffProtectedRoute: User is staff (role:', userProfile.role, '), allowing access');
+          // console.log('StaffProtectedRoute: User is staff (role:', userProfile.role, '), allowing access');
         }
       } else if (!userProfile && !profileError) {
         // Profile doesn't exist and no error (shouldn't happen, but handle it)

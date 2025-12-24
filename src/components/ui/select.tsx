@@ -81,6 +81,7 @@ function getNodeText(node: React.ReactNode): string {
   }
 
   if (React.isValidElement(node)) {
+    // @ts-ignore
     return getNodeText(node.props.children)
   }
 
@@ -101,7 +102,9 @@ function filterSelectChildren(
         ?.displayName
 
       if (displayName === SELECT_ITEM_DISPLAY_NAME) {
+        // @ts-ignore
         const value = child.props?.value
+        // @ts-ignore
         const label = getNodeText(child.props?.children)
         const haystack = `${value ?? ""} ${label}`.toLowerCase()
 
@@ -110,6 +113,7 @@ function filterSelectChildren(
 
       if (displayName === SELECT_GROUP_DISPLAY_NAME) {
         const nestedChildren = filterSelectChildren(
+          // @ts-ignore
           React.Children.toArray(child.props?.children),
           term
         )

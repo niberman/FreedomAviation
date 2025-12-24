@@ -249,6 +249,7 @@
     color: hsl(var(--muted-foreground));
     pointer-events: none;
   }
+}
 
   .no-default-hover-elevate {}
 
@@ -309,7 +310,6 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
-}
 
 /* Mobile Optimization */
 @layer base {

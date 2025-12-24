@@ -28,7 +28,7 @@ export function AuthRedirectHandler() {
         hasProcessed.current = true;
         
         if (location !== '/reset-password') {
-          console.log('[AuthRedirectHandler] Recovery token detected, redirecting to /reset-password');
+          // console.log('[AuthRedirectHandler] Recovery token detected, redirecting to /reset-password');
           window.location.href = `/reset-password${hash}`;
         }
       } else if (tokenType === 'invite' && accessToken && refreshToken) {
@@ -44,14 +44,14 @@ export function AuthRedirectHandler() {
             if (error) {
               console.error('[AuthRedirectHandler] Error setting invite session:', error);
             } else {
-              console.log('[AuthRedirectHandler] Invite token processed, redirecting to /onboarding');
+              // console.log('[AuthRedirectHandler] Invite token processed, redirecting to /onboarding');
               // Redirect to onboarding without the hash
               window.location.href = '/onboarding';
             }
           });
         } else {
           // Already signed in, just clear the hash to avoid confusion
-          console.log('[AuthRedirectHandler] Invite token detected but user already signed in, clearing hash');
+          // console.log('[AuthRedirectHandler] Invite token detected but user already signed in, clearing hash');
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
       }

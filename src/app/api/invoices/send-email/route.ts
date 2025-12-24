@@ -527,9 +527,6 @@ Freedom Aviation
       });
     } else {
       // Console mode - log but don't send
-      console.log(`[CONSOLE MODE] Invoice email would be sent to ${owner.email}`);
-      console.log(`Invoice: ${invoice.invoice_number}, Total: $${totalAmount.toFixed(2)}`);
-      console.log(`Payment URL: ${paymentUrl}`);
 
       return NextResponse.json({
         success: true,
@@ -561,3 +558,4 @@ export async function OPTIONS() {
     },
   });
 }
+

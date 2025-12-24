@@ -7,11 +7,32 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase environment variables are not set. Some features may not work.');
 }
 
+// Determine the current domain for cookie configuration (if running in browser)
+const isProduction = typeof window !== 'undefined' && 
+  (window.location.hostname === 'www.freedomaviationco.com' || 
+   window.location.hostname === 'freedomaviationco.com');
+
+const cookieDomain = isProduction ? '.freedomaviationco.com' : undefined;
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    // Use browser's localStorage
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    // Storage key for session (use different key per domain to avoid conflicts)
+    storageKey: isProduction ? 'fa-prod-auth-token' : 'fa-dev-auth-token',
+    // Configure cookies for proper cross-subdomain auth
+    flowType: 'pkce', // Use PKCE flow for better security
+    // Cookie options for custom domain
+    ...(cookieDomain && {
+      cookieOptions: {
+        domain: cookieDomain,
+        path: '/',
+        sameSite: 'lax',
+      },
+    }),
   },
 });
 
