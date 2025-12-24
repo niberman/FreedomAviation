@@ -16,8 +16,6 @@ import {
   Home,
   Fuel,
   MapPin,
-  Calendar,
-  Clock,
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
@@ -113,13 +111,6 @@ export function OwnerDashboardPage() {
       return data || [];
     }
   });
-
-  const activeFlight = serviceRequests.find(
-    (req: any) =>
-      req.service_type === 'Pre-Flight Concierge' &&
-      req.status !== 'completed' &&
-      req.status !== 'cancelled'
-  );
 
   const { data: serviceTasks = [] } = useQuery({
     queryKey: ['service-tasks', aircraft?.id],
@@ -235,17 +226,6 @@ export function OwnerDashboardPage() {
     }
   };
 
-  const getMissionProgress = () => {
-    if (!activeFlight) return null;
-
-    const status = activeFlight.status;
-
-    if (status === 'completed') return { stage: 'Ready', progress: 100, color: 'emerald' };
-    if (status === 'in_progress') return { stage: 'Line Ops', progress: 66, color: 'yellow' };
-    return { stage: 'Received', progress: 33, color: 'blue' };
-  };
-
-  const missionProgress = getMissionProgress();
 
   const fuelLevel = 85;
 
@@ -400,66 +380,6 @@ export function OwnerDashboardPage() {
         </Card>
       )}
 
-      {activeFlight && missionProgress && (
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Today&apos;s Mission
-              </CardTitle>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                {activeFlight.requested_departure && (
-                  <span>
-                    Departure: {new Date(activeFlight.requested_departure).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">{missionProgress.stage}</span>
-                <span className="text-muted-foreground">{missionProgress.progress}%</span>
-              </div>
-              <Progress value={missionProgress.progress} className="h-2" />
-            </div>
-
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  Received
-                </Badge>
-                <span className="text-muted-foreground">→</span>
-                <Badge
-                  variant={missionProgress.progress >= 66 ? 'default' : 'outline'}
-                  className="text-xs"
-                >
-                  Line Ops
-                </Badge>
-                <span className="text-muted-foreground">→</span>
-                <Badge
-                  variant={missionProgress.progress === 100 ? 'default' : 'outline'}
-                  className={missionProgress.progress === 100 ? 'bg-emerald-500 hover:bg-emerald-600' : 'text-xs'}
-                >
-                  Ready
-                </Badge>
-              </div>
-            </div>
-
-            {activeFlight.description && (
-              <div className="pt-2 border-t">
-                <p className="text-sm text-muted-foreground">{activeFlight.description}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {aircraft && (
         <div className="mb-6">
