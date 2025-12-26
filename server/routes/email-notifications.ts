@@ -93,10 +93,27 @@ async function processNotification(notification: Record<string, unknown>): Promi
   } else if (recipient_role === 'cfi') {
     const { data: cfiUsers } = await supabase.rpc('get_cfi_emails');
     recipients = cfiUsers || [];
+  } else if (recipient_role === 'staff') {
+    const { data: staffUsers } = await supabase.rpc('get_staff_emails');
+    recipients = staffUsers || [];
+  } else if (recipient_role === 'founder') {
+    const { data: founderUsers } = await supabase.rpc('get_founder_emails');
+    recipients = founderUsers || [];
   }
 
+  // If no recipients found, mark as sent (no one to notify) and return early
   if (recipients.length === 0) {
-    throw new Error(`No recipients found for role: ${recipient_role}`);
+    console.log(`No recipients found for role: ${recipient_role}, marking as sent`);
+    await supabase
+      .from('email_notifications')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        error_message: `No recipients found for role: ${recipient_role}`,
+      })
+      .eq('id', notification.id);
+    return;
   }
 
   console.log(`Sending ${type} notification to ${recipients.length} ${recipient_role} users`);

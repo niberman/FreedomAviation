@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 export function HeroSection() {
   const router = useRouter();
@@ -11,12 +10,16 @@ export function HeroSection() {
   const handleOpenPortal = () => {
     router.push("/login");
   };
+  
+  // Use public folder paths for images
+  const heroImage = "/images/premium_cirrus_sr22t_b2f4f8b8.jpg";
+  const logoImage = "/images/falogo.png";
 
   return (
     <div className="relative min-h-[70vh] sm:min-h-[80vh] flex items-center justify-center overflow-hidden">
       <div 
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(/images/premium_cirrus_sr22t_b2f4f8b8.jpg)` }}
+        style={{ backgroundImage: `url(${heroImage})` }}
         role="img"
         aria-label="Premium Cirrus SR22T aircraft at Centennial Airport ready for flight"
       />
@@ -24,14 +27,11 @@ export function HeroSection() {
       
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 text-center">
         <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <Image 
-            src="/images/falogo.png" 
+          <img 
+            src={logoImage} 
             alt="Freedom Aviation Logo - Premium Aircraft Management Colorado" 
-            width={48}
-            height={48}
             className="h-8 sm:h-10 md:h-12 w-auto"
-            style={{ width: 'auto' }}
-            priority
+            loading="eager"
           />
           <span className="text-xs sm:text-sm font-semibold tracking-wide text-muted-foreground uppercase">
             Freedom Aviation
