@@ -67,6 +67,7 @@ export default function StaffDashboard() {
   const queryClient = useQueryClient();
   const [selectedServiceRequest, setSelectedServiceRequest] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [requestFilter, setRequestFilter] = useState<'all' | 'service' | 'maintenance' | 'instruction'>('all');
 
   // Get tab from URL query parameter
   const searchString = useSearch();
@@ -202,6 +203,25 @@ export default function StaffDashboard() {
       setIsEditDialogOpen(true);
     }
   };
+
+  // Compute filtered requests count
+  const filteredRequestsCount = serviceRequests.filter((sr: any) => {
+    if (!sr || !sr.id) return false;
+    const serviceTypeLower = (sr.service_type || '').toLowerCase();
+    if (requestFilter === 'all') return true;
+    if (requestFilter === 'maintenance') {
+      return serviceTypeLower.includes('maintenance');
+    }
+    if (requestFilter === 'instruction') {
+      return sr.service_type === 'Flight Instruction' || serviceTypeLower.includes('instruction');
+    }
+    if (requestFilter === 'service') {
+      return !serviceTypeLower.includes('maintenance') && 
+             sr.service_type !== 'Flight Instruction' && 
+             !serviceTypeLower.includes('instruction');
+    }
+    return true;
+  }).length;
 
   // Handle service requests loading errors
   useEffect(() => {
@@ -355,9 +375,41 @@ export default function StaffDashboard() {
               </div>
               {serviceRequests.length > 0 && (
                 <Badge variant="secondary" className="text-sm">
-                  {serviceRequests.length} total
+                  {requestFilter === 'all' ? serviceRequests.length : filteredRequestsCount} {requestFilter === 'all' ? 'total' : 'filtered'}
                 </Badge>
               )}
+            </div>
+
+            {/* Request Type Filter */}
+            <div className="flex gap-2 border-b pb-4">
+              <Button
+                variant={requestFilter === 'all' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setRequestFilter('all')}
+              >
+                All Requests
+              </Button>
+              <Button
+                variant={requestFilter === 'service' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setRequestFilter('service')}
+              >
+                Service Requests
+              </Button>
+              <Button
+                variant={requestFilter === 'maintenance' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setRequestFilter('maintenance')}
+              >
+                Maintenance
+              </Button>
+              <Button
+                variant={requestFilter === 'instruction' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setRequestFilter('instruction')}
+              >
+                Flight Instruction
+              </Button>
             </div>
             {isLoadingServiceRequests ? (
               <Card>
@@ -400,12 +452,18 @@ export default function StaffDashboard() {
                   </div>
                 </CardContent>
               </Card>
-            ) : serviceRequests.length === 0 ? (
+            ) : filteredRequestsCount === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">No service requests yet.</p>
+                  <p className="text-muted-foreground">
+                    {requestFilter === 'all' 
+                      ? 'No service requests yet.' 
+                      : `No ${requestFilter === 'service' ? 'service' : requestFilter === 'maintenance' ? 'maintenance' : 'flight instruction'} requests found.`}
+                  </p>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Service requests from owners will appear here.
+                    {requestFilter === 'all' 
+                      ? 'Service requests from owners will appear here.'
+                      : 'Try selecting a different filter or check back later.'}
                   </p>
                 </CardContent>
               </Card>
@@ -413,7 +471,28 @@ export default function StaffDashboard() {
               <>
                 <KanbanBoard 
                   items={serviceRequests
-                    .filter((sr: any) => sr && sr.id) // Filter out any null/undefined items or items without id
+                    .filter((sr: any) => {
+                      // Filter out any null/undefined items or items without id
+                      if (!sr || !sr.id) return false;
+                      
+                      // Apply request type filter
+                      const serviceTypeLower = (sr.service_type || '').toLowerCase();
+                      
+                      if (requestFilter === 'all') return true;
+                      if (requestFilter === 'maintenance') {
+                        return serviceTypeLower.includes('maintenance');
+                      }
+                      if (requestFilter === 'instruction') {
+                        return sr.service_type === 'Flight Instruction' || serviceTypeLower.includes('instruction');
+                      }
+                      if (requestFilter === 'service') {
+                        // General service requests (exclude maintenance and instruction)
+                        return !serviceTypeLower.includes('maintenance') && 
+                               sr.service_type !== 'Flight Instruction' && 
+                               !serviceTypeLower.includes('instruction');
+                      }
+                      return true;
+                    })
                     .map((sr: any) => {
                       // Map database statuses to Kanban board statuses
                       const statusMap: Record<string, 'new' | 'in_progress' | 'done'> = {

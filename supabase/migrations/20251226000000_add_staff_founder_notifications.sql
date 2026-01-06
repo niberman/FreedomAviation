@@ -42,6 +42,22 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =============================================================================
+-- FUNCTION: get_cfi_emails
+-- Returns emails of users with role = 'cfi'
+-- =============================================================================
+CREATE OR REPLACE FUNCTION public.get_cfi_emails()
+RETURNS TABLE(email TEXT, full_name TEXT) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT up.email, up.full_name
+  FROM public.user_profiles up
+  WHERE up.role = 'cfi'
+    AND up.email IS NOT NULL
+    AND up.email != '';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================================================
 -- FUNCTION: get_founder_emails
 -- Returns emails of founders who have enabled service request notifications
 -- Respects notification_preferences table for opt-in/opt-out
@@ -67,7 +83,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =============================================================================
 -- FUNCTION: notify_service_request_created (UPDATED)
--- Now creates notifications for ops, staff, AND founder roles
+-- Categorizes requests and routes to appropriate roles:
+-- - Maintenance requests → Ops + Founders
+-- - General service requests → Ops + Staff + Founders
 -- =============================================================================
 CREATE OR REPLACE FUNCTION notify_service_request_created() 
 RETURNS trigger AS $$
@@ -76,6 +94,7 @@ DECLARE
   v_aircraft_data RECORD;
   v_user_data RECORD;
   v_base_url TEXT;
+  v_is_maintenance BOOLEAN;
 BEGIN
   -- Get the base URL from environment or use default
   v_base_url := COALESCE(
@@ -95,6 +114,9 @@ BEGIN
   FROM public.user_profiles
   WHERE id = NEW.user_id;
 
+  -- Determine if this is a maintenance request (case-insensitive check)
+  v_is_maintenance := LOWER(NEW.service_type) LIKE '%maintenance%';
+
   -- Build notification data
   v_request_data := jsonb_build_object(
     'request_id', NEW.id,
@@ -111,7 +133,7 @@ BEGIN
     'created_at', NEW.created_at
   );
 
-  -- Insert notification for ops users
+  -- Insert notification for ops users (always notified)
   INSERT INTO public.email_notifications (
     type,
     recipient_role,
@@ -124,20 +146,7 @@ BEGIN
     'pending'
   );
 
-  -- Insert notification for staff users
-  INSERT INTO public.email_notifications (
-    type,
-    recipient_role,
-    data,
-    status
-  ) VALUES (
-    'service_request',
-    'staff',
-    v_request_data,
-    'pending'
-  );
-
-  -- Insert notification for founder users
+  -- Insert notification for founder users (always notified)
   INSERT INTO public.email_notifications (
     type,
     recipient_role,
@@ -149,6 +158,21 @@ BEGIN
     v_request_data,
     'pending'
   );
+
+  -- For general service requests (non-maintenance), also notify staff
+  IF NOT v_is_maintenance THEN
+    INSERT INTO public.email_notifications (
+      type,
+      recipient_role,
+      data,
+      status
+    ) VALUES (
+      'service_request',
+      'staff',
+      v_request_data,
+      'pending'
+    );
+  END IF;
 
   RETURN NEW;
 END;
@@ -168,5 +192,6 @@ CREATE TRIGGER service_request_created_trigger
 -- =============================================================================
 GRANT EXECUTE ON FUNCTION public.get_ops_emails() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_staff_emails() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_cfi_emails() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_founder_emails() TO authenticated;
 

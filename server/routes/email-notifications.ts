@@ -97,8 +97,15 @@ async function processNotification(notification: Record<string, unknown>): Promi
     const { data: staffUsers } = await supabase.rpc('get_staff_emails');
     recipients = staffUsers || [];
   } else if (recipient_role === 'founder') {
-    const { data: founderUsers } = await supabase.rpc('get_founder_emails');
-    recipients = founderUsers || [];
+    // Use different function based on notification type
+    if (type === 'instruction_request') {
+      const { data: founderUsers } = await supabase.rpc('get_founder_instruction_emails');
+      recipients = founderUsers || [];
+    } else {
+      // For service_request and other types, use the standard function
+      const { data: founderUsers } = await supabase.rpc('get_founder_emails');
+      recipients = founderUsers || [];
+    }
   }
 
   // If no recipients found, mark as sent (no one to notify) and return early
