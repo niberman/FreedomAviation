@@ -1,530 +1,579 @@
+import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
-  Plane, 
-  Wrench, 
-  Users, 
-  Calendar, 
-  FileText, 
   DollarSign, 
-  Home,
-  Settings2,
-  Fuel,
-  CreditCard,
-  BarChart3,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
   ArrowRight,
-  TrendingUp,
-  TrendingDown,
-  Activity
+  AlertCircle,
+  Wrench,
+  Plane,
+  Settings2,
+  Users,
 } from "lucide-react";
 import logoImage from "@assets/falogo.png";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/lib/auth-context";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { Link, useLocation } from "wouter";
-import { format, subDays, isAfter } from "date-fns";
+import { Link, useSearch } from "wouter";
+import { format, subDays, startOfMonth } from "date-fns";
 import { NotificationCenter } from "@/components/notification-center";
-import { authenticatedFetch } from "@/lib/auth-utils";
+import { useToast } from "@/hooks/use-toast";
+import { KanbanBoard } from "@/components/kanban-board";
+import { AircraftTable } from "@/components/aircraft-table";
+import { ClientsTable } from "@/components/clients-table";
+import { ServiceRequestEditDialog } from "@/components/service-request-edit-dialog";
+import { StaffManagement } from "@/components/staff-management";
+import { MaintenanceCRUD } from "@/components/maintenance-crud";
+import { useClients } from "@/hooks/useClients";
+import { useAircraftTable } from "@/hooks/useAircraft";
 
 export default function StaffHome() {
-  const { user, session } = useAuth();
-  const [, setLocation] = useLocation();
-  const managePath = window.location.pathname.startsWith('/admin') ? '/admin/manage' : '/staff/manage';
+  const searchString = useSearch();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedServiceRequest, setSelectedServiceRequest] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  type CockpitToolTab = "invoice" | "requests" | "aircraft" | "maintenance" | "clients" | "staff";
+  const [activeToolTab, setActiveToolTab] = useState<CockpitToolTab>("invoice");
 
-  // Fetch dashboard statistics
-  const { data: stats, isLoading: isLoadingStats } = useQuery({
-    queryKey: ['staff-dashboard-stats'],
-    queryFn: async () => {
-      // Fetch various statistics in parallel
-      const [
-        aircraftResult,
-        ownersResult, 
-        serviceRequestsResult,
-        maintenanceResult,
-        invoicesResult
-      ] = await Promise.all([
-        // Total aircraft
-        supabase.from('aircraft').select('id', { count: 'exact', head: true }),
-        // Total owners
-        supabase.from('user_profiles').select('id', { count: 'exact', head: true }).eq('role', 'owner'),
-        // Service requests by status
-        supabase.from('service_requests').select('id, status'),
-        // Maintenance items
-        supabase.from('maintenance').select('id, status, due_date'),
-        // Recent invoices
-        supabase.from('invoices').select('id, status, created_at').gte('created_at', subDays(new Date(), 30).toISOString())
-      ]);
-
-      // Process service requests
-      const serviceRequests = serviceRequestsResult.data || [];
-      const pendingRequests = serviceRequests.filter(sr => sr.status === 'pending').length;
-      const inProgressRequests = serviceRequests.filter(sr => sr.status === 'in_progress').length;
-
-      // Process maintenance
-      const maintenanceItems = maintenanceResult.data || [];
-      const overdueMaintenanceCount = maintenanceItems.filter(m => m.status === 'overdue').length;
-      const dueSoonMaintenanceCount = maintenanceItems.filter(m => m.status === 'due_soon').length;
-
-      // Process invoices
-      const invoices = invoicesResult.data || [];
-      const unpaidInvoices = invoices.filter(inv => inv.status === 'finalized' || inv.status === 'sent').length;
-
-      return {
-        totalAircraft: aircraftResult.count || 0,
-        totalOwners: ownersResult.count || 0,
-        pendingServiceRequests: pendingRequests,
-        inProgressServiceRequests: inProgressRequests,
-        totalServiceRequests: serviceRequests.length,
-        overdueMaintenanceCount,
-        dueSoonMaintenanceCount,
-        totalMaintenanceItems: maintenanceItems.length,
-        unpaidInvoicesCount: unpaidInvoices,
-        recentInvoicesCount: invoices.length
-      };
-    },
-    refetchInterval: 60000 // Refresh every minute
+  useEffect(() => {
+    const requestedTool = new URLSearchParams(searchString).get("tool");
+    if (requestedTool === "requests" || requestedTool === "aircraft" || requestedTool === "maintenance" || requestedTool === "clients" || requestedTool === "staff") {
+      setActiveToolTab(requestedTool);
+    }
+  }, [searchString]);
+  
+  // Local state for Quick Invoice Form
+  const [invoiceForm, setInvoiceForm] = useState({
+    clientId: "",
+    aircraftId: "",
+    description: "Flight Instruction",
+    hours: "1.5",
+    rate: "100",
+    date: format(new Date(), "yyyy-MM-dd")
   });
 
-  // Fetch recent activity
-  const { data: recentActivity = [], isLoading: isLoadingActivity } = useQuery({
-    queryKey: ['staff-recent-activity'],
+  // --- 1. DATA FETCHING ---
+
+  // Fetch KPI Stats
+  const { data: stats } = useQuery({
+    queryKey: ['cockpit-stats'],
     queryFn: async () => {
-      // Fetch recent service requests
-      const { data: serviceRequests } = await supabase
-        .from('service_requests')
+      const now = new Date();
+      const firstDayOfMonth = startOfMonth(now).toISOString();
+      const thirtyDaysAgo = subDays(now, 30).toISOString();
+
+      const [invoices, owners] = await Promise.all([
+        supabase.from('invoices').select('amount, status, created_at').gte('created_at', thirtyDaysAgo),
+        supabase.from('user_profiles').select('id', { count: 'exact', head: true }).eq('role', 'owner')
+      ]);
+
+      const invData = invoices.data || [];
+      const unpaidCount = invData.filter(i => i.status === 'sent' || i.status === 'finalized').length;
+      const totalRevenue = invData.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+      const paidCount = invData.filter(i => i.status === 'paid').length;
+      const collectionRate = invData.length > 0 ? (paidCount / invData.length) * 100 : 0;
+
+      return {
+        unpaidCount,
+        monthlyRevenue: totalRevenue,
+        collectionRate,
+        activeStudents: owners.count || 0
+      };
+    },
+    refetchInterval: 30000
+  });
+
+  // Fetch Form Data (Clients & Aircraft)
+  const { data: formOptions } = useQuery({
+    queryKey: ['invoice-form-options'],
+    queryFn: async () => {
+      const [clients, aircraft] = await Promise.all([
+        supabase.from('user_profiles').select('id, full_name, email').eq('role', 'owner').order('full_name'),
+        supabase.from('aircraft').select('id, tail_number').eq('status', 'active')
+      ]);
+      return { clients: clients.data || [], aircraft: aircraft.data || [] };
+    }
+  });
+
+  // Fetch Recent Invoices (Ledger)
+  const { data: ledger } = useQuery({
+    queryKey: ['cockpit-ledger'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('invoices')
+        .select(`
+          id, 
+          created_at, 
+          amount, 
+          status, 
+          description,
+          client:user_id(full_name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      return data || [];
+    }
+  });
+
+  const { data: owners = [], error: ownersError } = useClients();
+  const { aircraftFull, error: aircraftError, isLoading: isLoadingAircraft } = useAircraftTable();
+
+  useEffect(() => {
+    if (ownersError) {
+      toast({
+        title: "Error loading clients",
+        description: ownersError instanceof Error ? ownersError.message : "Failed to load clients.",
+        variant: "destructive",
+      });
+    }
+  }, [ownersError, toast]);
+
+  useEffect(() => {
+    if (aircraftError) {
+      toast({
+        title: "Error loading aircraft",
+        description: aircraftError instanceof Error ? aircraftError.message : "Failed to load aircraft.",
+        variant: "destructive",
+      });
+    }
+  }, [aircraftError, toast]);
+
+  const {
+    data: serviceRequests = [],
+    refetch: refetchServiceRequests,
+    error: serviceRequestsError,
+    isLoading: isLoadingServiceRequests,
+  } = useQuery({
+    queryKey: ["service-requests"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("service_requests")
         .select(`
           id,
           service_type,
+          requested_departure,
+          requested_date,
+          requested_time,
+          description,
+          notes,
           status,
+          priority,
+          airport,
           created_at,
+          aircraft_id,
+          user_id,
           aircraft:aircraft_id(tail_number),
           owner:user_id(full_name, email)
         `)
-        .order('created_at', { ascending: false })
-        .limit(5);
+        .order("created_at", { ascending: false });
 
-      return (serviceRequests || []).map(sr => ({
-        id: sr.id,
-        type: 'service_request',
-        title: sr.service_type,
-        description: `${sr.aircraft?.tail_number || 'N/A'} - ${(sr.owner as any)?.full_name || (sr.owner as any)?.email || 'Unknown'}`,
-        status: sr.status,
-        timestamp: sr.created_at,
-        icon: Wrench,
-        color: sr.status === 'pending' ? 'text-yellow-600' : sr.status === 'in_progress' ? 'text-blue-600' : 'text-green-600'
-      }));
+      if (error) throw error;
+      return data || [];
     },
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
-  // Fetch items needing attention
-  const { data: attentionItems = [], isLoading: isLoadingAttention } = useQuery({
-    queryKey: ['staff-attention-items'],
-    queryFn: async () => {
-      const items: any[] = [];
+  const handleStatusChange = async (requestId: string, status: "pending" | "in_progress" | "completed") => {
+    try {
+      const { error } = await supabase
+        .from("service_requests")
+        .update({ status })
+        .eq("id", requestId);
 
-      // Pending service requests
-      const { data: pendingRequests } = await supabase
-        .from('service_requests')
-        .select(`
-          id,
-          service_type,
-          requested_date,
-          aircraft:aircraft_id(tail_number)
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true })
-        .limit(3);
-
-      (pendingRequests || []).forEach(req => {
-        items.push({
-          id: req.id,
-          type: 'service_request',
-          title: `Pending ${req.service_type}`,
-          description: `${(req.aircraft as any)?.tail_number || 'N/A'} - ${req.requested_date ? format(new Date(req.requested_date), 'MMM d') : 'ASAP'}`,
-          priority: 'high',
-          actionLabel: 'Review',
-          actionPath: `${managePath}?tab=requests`
-        });
+      if (error) throw error;
+      toast({ title: "Status updated", description: `Service request status changed to ${status}` });
+      queryClient.invalidateQueries({ queryKey: ["service-requests"] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update status",
+        variant: "destructive",
       });
-
-      // Overdue maintenance
-      const { data: overdueItems } = await supabase
-        .from('maintenance')
-        .select(`
-          id,
-          item_name,
-          due_date,
-          aircraft:aircraft_id(tail_number)
-        `)
-        .eq('status', 'overdue')
-        .order('due_date', { ascending: true })
-        .limit(3);
-
-      (overdueItems || []).forEach(item => {
-        items.push({
-          id: item.id,
-          type: 'maintenance',
-          title: `Overdue: ${item.item_name}`,
-          description: `${(item.aircraft as any)?.tail_number || 'N/A'} - Due ${format(new Date(item.due_date), 'MMM d')}`,
-          priority: 'critical',
-          actionLabel: 'View',
-          actionPath: `${managePath}?tab=maintenance`
-        });
-      });
-
-      return items;
-    },
-    refetchInterval: 60000 // Refresh every minute
-  });
-
-  const quickAccessCards = [
-    {
-      title: "Service Requests",
-      description: "Manage pending service requests",
-      icon: Wrench,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      path: `${managePath}?tab=requests`,
-      stats: {
-        pending: stats?.pendingServiceRequests || 0,
-        inProgress: stats?.inProgressServiceRequests || 0
-      }
-    },
-    {
-      title: "Aircraft Fleet",
-      description: "View and manage aircraft",
-      icon: Plane,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-      path: `${managePath}?tab=aircraft`,
-      stats: {
-        total: stats?.totalAircraft || 0
-      }
-    },
-    {
-      title: "Maintenance",
-      description: "Track maintenance schedules",
-      icon: Settings2,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      path: `${managePath}?tab=maintenance`,
-      stats: {
-        overdue: stats?.overdueMaintenanceCount || 0,
-        dueSoon: stats?.dueSoonMaintenanceCount || 0
-      }
-    },
-    {
-      title: "Clients",
-      description: "Manage client accounts",
-      icon: Users,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      path: `${managePath}?tab=clients`,
-      stats: {
-        total: stats?.totalOwners || 0
-      }
-    },
-    {
-      title: "Invoices",
-      description: "Create and track invoices",
-      icon: DollarSign,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
-      path: `${managePath}?tab=invoices`,
-      stats: {
-        unpaid: stats?.unpaidInvoicesCount || 0
-      }
-    },
-    {
-      title: "Reports",
-      description: "View analytics and reports",
-      icon: BarChart3,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50",
-      path: `${managePath}?tab=reports`,
-      stats: {}
-    }
-  ];
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return 'text-red-600 bg-red-50';
-      case 'high':
-        return 'text-orange-600 bg-orange-50';
-      case 'medium':
-        return 'text-yellow-600 bg-yellow-50';
-      default:
-        return 'text-blue-600 bg-blue-50';
+      throw error;
     }
   };
 
+  const handleCardSelect = (requestId: string) => {
+    const request = serviceRequests.find((sr: any) => sr.id === requestId);
+    if (request) {
+      setSelectedServiceRequest(request);
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  // --- 2. ACTIONS ---
+
+  const createInvoice = useMutation({
+    mutationFn: async () => {
+      if (!invoiceForm.clientId || !invoiceForm.rate || !invoiceForm.hours) throw new Error("Missing fields");
+      
+      const amount = parseFloat(invoiceForm.rate) * parseFloat(invoiceForm.hours);
+      
+      const { error } = await supabase.from('invoices').insert({
+        user_id: invoiceForm.clientId,
+        aircraft_id: invoiceForm.aircraftId || null,
+        description: invoiceForm.description,
+        amount: amount,
+        status: 'sent', // Auto-send in this optimized workflow
+        due_date: format(subDays(new Date(), -14), "yyyy-MM-dd"), // Net 14 default
+        created_at: new Date().toISOString()
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Invoice Sent", description: "Client has been billed successfully." });
+      queryClient.invalidateQueries({ queryKey: ['cockpit-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['cockpit-ledger'] });
+      // Reset logic could go here, but power users might want to retain settings
+    },
+    onError: (err) => {
+      toast({ variant: "destructive", title: "Failed", description: err.message });
+    }
+  });
+
+  // --- 3. RENDER ---
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-background">
       {/* Header */}
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link href="/">
-                <img
-                  src={logoImage}
-                  alt="Freedom Aviation"
-                  className="h-8 w-auto transition-opacity hover:opacity-80"
-                />
-              </Link>
-              <div className="flex items-center gap-2">
-                <Plane className="h-5 w-5 text-primary" />
-                <h1 className="text-xl font-semibold">Staff Dashboard</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <NotificationCenter />
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setLocation(window.location.pathname.startsWith('/admin') ? '/admin/manage' : '/staff/manage')}
-              >
-                Management Console
-              </Button>
-              <Link href="/">
-                <Button variant="outline" size="sm">
-                  Back to Home
-                </Button>
-              </Link>
-              <ThemeToggle />
-            </div>
+      <header className="border-b bg-background/95 backdrop-blur z-50 sticky top-0">
+        <div className="max-w-[1800px] mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <img src={logoImage} alt="FA" className="h-6 w-auto" />
+            </Link>
+            <span className="text-sm font-semibold text-muted-foreground">/</span>
+            <span className="font-semibold text-sm">Operations Cockpit</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <NotificationCenter />
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-8">
-          {/* Welcome Section */}
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight">Welcome back!</h2>
-            <p className="text-muted-foreground">
-              Here's an overview of your aviation operations
-            </p>
-          </div>
+      <main className="max-w-[1800px] mx-auto px-4 py-4 space-y-4">
+        
+        <Tabs value={activeToolTab} onValueChange={(value) => setActiveToolTab(value as CockpitToolTab)} className="space-y-4">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Management Tools</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <TabsList className="grid w-full grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6 h-auto">
+                <TabsTrigger value="invoice" className="justify-start gap-2"><DollarSign className="h-4 w-4" />Invoicing</TabsTrigger>
+                <TabsTrigger value="requests" className="justify-start gap-2"><Wrench className="h-4 w-4" />Service Requests</TabsTrigger>
+                <TabsTrigger value="aircraft" className="justify-start gap-2"><Plane className="h-4 w-4" />Aircraft</TabsTrigger>
+                <TabsTrigger value="maintenance" className="justify-start gap-2"><Settings2 className="h-4 w-4" />Maintenance</TabsTrigger>
+                <TabsTrigger value="clients" className="justify-start gap-2"><Users className="h-4 w-4" />Clients</TabsTrigger>
+                <TabsTrigger value="staff" className="justify-start gap-2"><Users className="h-4 w-4" />Staff</TabsTrigger>
+              </TabsList>
+            </CardContent>
+          </Card>
 
-          {/* Key Metrics */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Aircraft</CardTitle>
-                <Plane className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalAircraft || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Active in fleet
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Service Requests</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.pendingServiceRequests || 0}</div>
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <span>{stats?.inProgressServiceRequests || 0} in progress</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Maintenance Items</CardTitle>
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.overdueMaintenanceCount || 0}</div>
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <span className="text-orange-600">{stats?.dueSoonMaintenanceCount || 0} due soon</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Unpaid Invoices</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.unpaidInvoicesCount || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Awaiting payment
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Attention Required Section */}
-          {attentionItems.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold">Attention Required</h3>
-                <Badge variant="secondary">{attentionItems.length} items</Badge>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {attentionItems.map((item) => (
-                  <Card key={item.id} className="relative overflow-hidden">
-                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${getPriorityColor(item.priority).split(' ')[0]}`} />
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{item.title}</CardTitle>
-                        <Badge className={getPriorityColor(item.priority)} variant="secondary">
-                          {item.priority}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-3">{item.description}</p>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setLocation(item.actionPath)}
-                        className="w-full"
-                      >
-                        {item.actionLabel}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Quick Access Cards */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Quick Access</h3>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {quickAccessCards.map((card) => {
-                const Icon = card.icon;
-                return (
-                  <Card 
-                    key={card.title} 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => setLocation(card.path)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className={`p-2 rounded-lg ${card.bgColor}`}>
-                          <Icon className={`h-6 w-6 ${card.color}`} />
-                        </div>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <CardTitle className="text-lg">{card.title}</CardTitle>
-                      <CardDescription>{card.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-4 text-sm">
-                        {card.stats.total !== undefined && (
-                          <div>
-                            <p className="text-2xl font-bold">{card.stats.total}</p>
-                            <p className="text-xs text-muted-foreground">Total</p>
-                          </div>
-                        )}
-                        {card.stats.pending !== undefined && (
-                          <div>
-                            <p className="text-2xl font-bold text-yellow-600">{card.stats.pending}</p>
-                            <p className="text-xs text-muted-foreground">Pending</p>
-                          </div>
-                        )}
-                        {card.stats.inProgress !== undefined && (
-                          <div>
-                            <p className="text-2xl font-bold text-blue-600">{card.stats.inProgress}</p>
-                            <p className="text-xs text-muted-foreground">In Progress</p>
-                          </div>
-                        )}
-                        {card.stats.overdue !== undefined && card.stats.overdue > 0 && (
-                          <div>
-                            <p className="text-2xl font-bold text-red-600">{card.stats.overdue}</p>
-                            <p className="text-xs text-muted-foreground">Overdue</p>
-                          </div>
-                        )}
-                        {card.stats.dueSoon !== undefined && card.stats.dueSoon > 0 && (
-                          <div>
-                            <p className="text-2xl font-bold text-orange-600">{card.stats.dueSoon}</p>
-                            <p className="text-xs text-muted-foreground">Due Soon</p>
-                          </div>
-                        )}
-                        {card.stats.unpaid !== undefined && (
-                          <div>
-                            <p className="text-2xl font-bold text-orange-600">{card.stats.unpaid}</p>
-                            <p className="text-xs text-muted-foreground">Unpaid</p>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold">Recent Activity</h3>
-              <Button variant="outline" size="sm" onClick={() => setLocation(`${managePath}?tab=requests`)}>
-                View All
-              </Button>
-            </div>
-            <Card>
-              <CardContent className="p-0">
-                {isLoadingActivity ? (
-                  <div className="p-6 text-center text-muted-foreground">
-                    Loading recent activity...
+          <TabsContent value="invoice" className="mt-0 space-y-0">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-180px)] min-h-[600px]">
+              <Card className="lg:col-span-4 flex flex-col h-full border-t-4 border-t-primary shadow-md">
+                <CardHeader className="pb-4 bg-muted/20 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-primary/10 rounded-md">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Quick Invoice</CardTitle>
+                      <p className="text-xs text-muted-foreground">Bill flight time instantly</p>
+                    </div>
                   </div>
-                ) : recentActivity.length === 0 ? (
-                  <div className="p-6 text-center text-muted-foreground">
-                    No recent activity
+                </CardHeader>
+                <CardContent className="flex-1 p-6 space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Student / Client</Label>
+                    <Select
+                      value={invoiceForm.clientId}
+                      onValueChange={(val) => setInvoiceForm({ ...invoiceForm, clientId: val })}
+                    >
+                      <SelectTrigger className="h-12 text-lg">
+                        <SelectValue placeholder="Select Student" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {formOptions?.clients.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>{c.full_name || c.email}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Aircraft</Label>
+                    <Select
+                      value={invoiceForm.aircraftId}
+                      onValueChange={(val) => setInvoiceForm({ ...invoiceForm, aircraftId: val })}
+                    >
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Select Aircraft (Optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {formOptions?.aircraft.map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>{a.tail_number}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Flight Hours</Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.1"
+                          className="h-12 text-lg font-mono pl-3"
+                          value={invoiceForm.hours}
+                          onChange={(e) => setInvoiceForm({ ...invoiceForm, hours: e.target.value })}
+                        />
+                        <span className="absolute right-3 top-3.5 text-xs text-muted-foreground">HRS</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs uppercase text-muted-foreground font-bold">Rate / Hr</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-3.5 text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          className="h-12 text-lg font-mono pl-7"
+                          value={invoiceForm.rate}
+                          onChange={(e) => setInvoiceForm({ ...invoiceForm, rate: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Description</Label>
+                    <Input
+                      value={invoiceForm.description}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })}
+                      className="h-10"
+                    />
+                  </div>
+
+                  <div className="pt-4 mt-auto">
+                    <Button
+                      className="w-full h-14 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                      size="lg"
+                      onClick={() => createInvoice.mutate()}
+                      disabled={createInvoice.isPending || !invoiceForm.clientId}
+                    >
+                      {createInvoice.isPending ? "Sending..." : "Send Invoice & Charge"}
+                      {!createInvoice.isPending && <ArrowRight className="ml-2 h-5 w-5" />}
+                    </Button>
+                    <p className="text-center text-xs text-muted-foreground mt-3">
+                      Invoices are automatically emailed to the client.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="lg:col-span-8 flex flex-col gap-4 h-full">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="h-20 flex flex-col justify-center border-l-4 border-l-red-500 shadow-sm">
+                    <CardContent className="p-4 flex justify-between items-center">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Unpaid Invoices</p>
+                        <div className="text-2xl font-bold text-red-600 flex items-center gap-2">
+                          {stats?.unpaidCount || 0}
+                          {stats?.unpaidCount ? <AlertCircle className="h-4 w-4" /> : null}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="h-20 flex flex-col justify-center border-l-4 border-l-emerald-500 shadow-sm">
+                    <CardContent className="p-4 flex justify-between items-center">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">30d Revenue</p>
+                        <div className="text-2xl font-bold text-emerald-600">
+                          ${stats?.monthlyRevenue?.toLocaleString() || "0"}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="h-20 flex flex-col justify-center border-l-4 border-l-blue-500 shadow-sm">
+                    <CardContent className="p-4 flex justify-between items-center">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Collection Rate</p>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {stats?.collectionRate?.toFixed(1) || "0"}%
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="h-20 flex flex-col justify-center border-l-4 border-l-slate-500 shadow-sm">
+                    <CardContent className="p-4 flex justify-between items-center">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active Students</p>
+                        <div className="text-2xl font-bold text-slate-700 dark:text-slate-200">
+                          {stats?.activeStudents || 0}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="flex-1 overflow-hidden flex flex-col">
+                  <CardHeader className="py-4 px-6 border-b bg-muted/10">
+                    <CardTitle className="text-base">Recent Ledger (Last 20)</CardTitle>
+                  </CardHeader>
+                  <div className="flex-1 overflow-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/30 sticky top-0 z-10">
+                        <tr className="border-b">
+                          <th className="h-10 px-6 text-left font-medium text-muted-foreground w-[120px]">Date</th>
+                          <th className="h-10 px-6 text-left font-medium text-muted-foreground">Client</th>
+                          <th className="h-10 px-6 text-left font-medium text-muted-foreground">Description</th>
+                          <th className="h-10 px-6 text-right font-medium text-muted-foreground">Amount</th>
+                          <th className="h-10 px-6 text-right font-medium text-muted-foreground">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ledger?.map((inv: any) => (
+                          <tr key={inv.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors group">
+                            <td className="p-4 px-6 font-mono text-xs text-muted-foreground">
+                              {format(new Date(inv.created_at), "MMM dd")}
+                            </td>
+                            <td className="p-4 px-6 font-medium">
+                              {inv.client?.full_name || "Unknown"}
+                            </td>
+                            <td className="p-4 px-6 text-muted-foreground">
+                              {inv.description}
+                            </td>
+                            <td className="p-4 px-6 text-right font-mono">
+                              ${inv.amount?.toFixed(2)}
+                            </td>
+                            <td className="p-4 px-6 text-right">
+                              <Badge
+                                variant="outline"
+                                className={`
+                                  ${inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : ''}
+                                  ${inv.status === 'sent' ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}
+                                  ${inv.status === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' : ''}
+                                `}
+                              >
+                                {inv.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                        {!ledger?.length && (
+                          <tr>
+                            <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                              No recent invoices found.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="requests" className="mt-0">
+            <Card>
+              <CardHeader>
+                <CardTitle>Service Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingServiceRequests ? (
+                  <p className="text-muted-foreground py-8 text-center">Loading service requests...</p>
+                ) : serviceRequestsError ? (
+                  <div className="py-8 text-center">
+                    <p className="text-destructive font-medium">Error loading service requests</p>
+                    <Button variant="outline" size="sm" className="mt-3" onClick={() => refetchServiceRequests()}>
+                      Retry
+                    </Button>
                   </div>
                 ) : (
-                  <div className="divide-y">
-                    {recentActivity.map((activity) => {
-                      const Icon = activity.icon;
-                      return (
-                        <div key={activity.id} className="p-4 hover:bg-muted/50 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <div className={`mt-0.5 ${activity.color}`}>
-                              <Icon className="h-5 w-5" />
-                            </div>
-                            <div className="flex-1 space-y-1">
-                              <p className="text-sm font-medium">{activity.title}</p>
-                              <p className="text-sm text-muted-foreground">{activity.description}</p>
-                              <div className="flex items-center gap-3">
-                                <Badge variant="secondary" className="text-xs">
-                                  {activity.status}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  {format(new Date(activity.timestamp), 'MMM d, h:mm a')}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <KanbanBoard
+                      items={serviceRequests
+                        .filter((sr: any) => sr && sr.id)
+                        .map((sr: any) => ({
+                          id: sr.id,
+                          tailNumber: sr.aircraft?.tail_number || "N/A",
+                          type: sr.service_type,
+                          requestedFor: sr.requested_departure ? format(new Date(sr.requested_departure), "MMM d, yyyy HH:mm") : (sr.airport || "TBD"),
+                          notes: sr.description || "",
+                          status: sr.status === "pending" ? "new" : sr.status === "in_progress" ? "in_progress" : "done",
+                          ownerName: sr.owner?.full_name || sr.owner?.email || undefined,
+                        }))}
+                      onCardSelect={handleCardSelect}
+                      onStatusChange={handleStatusChange}
+                    />
+                    <ServiceRequestEditDialog
+                      open={isEditDialogOpen}
+                      onOpenChange={setIsEditDialogOpen}
+                      serviceRequest={selectedServiceRequest}
+                      onSuccess={() => {
+                        refetchServiceRequests();
+                      }}
+                    />
+                  </>
                 )}
               </CardContent>
             </Card>
-          </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="aircraft" className="mt-0">
+            <Card>
+              <CardHeader>
+                <CardTitle>Aircraft</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingAircraft ? (
+                  <p className="text-muted-foreground py-8 text-center">Loading aircraft...</p>
+                ) : (
+                  <AircraftTable items={aircraftFull} owners={owners} />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="maintenance" className="mt-0">
+            <MaintenanceCRUD />
+          </TabsContent>
+
+          <TabsContent value="clients" className="mt-0">
+            <Card>
+              <CardHeader>
+                <CardTitle>Clients</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ClientsTable />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="staff" className="mt-0">
+            <StaffManagement />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

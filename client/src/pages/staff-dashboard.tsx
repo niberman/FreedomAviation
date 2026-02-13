@@ -3,50 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Calendar, FileText, DollarSign, Wrench, Plane, Settings2, Users, Fuel, BarChart3, Home, Files } from "lucide-react";
+import { FileText, Wrench, Plane, Home } from "lucide-react";
 import logoImage from "@assets/falogo.png";
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { Link, useSearch } from "wouter";
 import { KanbanBoard } from "@/components/kanban-board";
 import { AircraftTable } from "@/components/aircraft-table";
-import { MaintenanceList } from "@/components/maintenance-list";
 import { ClientsTable } from "@/components/clients-table";
 import { ServiceRequestEditDialog } from "@/components/service-request-edit-dialog";
-import { FlightLogsList } from "@/components/flight-logs-list";
-import { CFISchedule } from "@/components/cfi-schedule";
 import { authenticatedFetch } from "@/lib/auth-utils";
 import { StaffManagement } from "@/components/staff-management";
 import { MaintenanceCRUD } from "@/components/maintenance-crud";
-import { FuelTracking } from "@/components/fuel-tracking";
 import { NotificationCenter } from "@/components/notification-center";
-import { ReportsDashboard } from "@/components/reports-dashboard";
-import { DocumentManagement } from "@/components/document-management";
-import { HangarManagement } from "@/components/hangar-management";
-import { RampDashboard } from "@/components/ramp-dashboard";
-
-import { InvoicesTab } from "@/components/staff-dashboard/InvoicesTab";
 import { useClients } from "@/hooks/useClients";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useAircraftTable } from "@/hooks/useAircraft";
@@ -54,9 +27,7 @@ import { useAircraftTable } from "@/hooks/useAircraft";
 // Valid tab values for the management console
 const VALID_TABS = [
   // "ramp", // Temporarily disabled
-  "requests", "aircraft", "maintenance", "clients", "hangars",
-  "documents", "fuel", "schedule", "logs", "invoices",
-  "reports", "staff"
+  "requests", "aircraft", "maintenance", "clients", "staff"
 ] as const;
 
 type TabValue = typeof VALID_TABS[number];
@@ -340,19 +311,12 @@ export default function StaffDashboard() {
           </div>
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 xl:grid-cols-13 h-auto gap-1">
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto gap-1">
               {/* <TabsTrigger value="ramp" data-testid="tab-ramp" className="text-xs sm:text-sm">Ramp Ops</TabsTrigger> */}
               <TabsTrigger value="requests" data-testid="tab-requests" className="text-xs sm:text-sm">Service Requests</TabsTrigger>
               <TabsTrigger value="aircraft" data-testid="tab-aircraft" className="text-xs sm:text-sm">Aircraft</TabsTrigger>
               <TabsTrigger value="maintenance" data-testid="tab-maintenance" className="text-xs sm:text-sm">Maintenance</TabsTrigger>
               <TabsTrigger value="clients" data-testid="tab-clients" className="text-xs sm:text-sm">Clients</TabsTrigger>
-              <TabsTrigger value="hangars" data-testid="tab-hangars" className="text-xs sm:text-sm">Hangars</TabsTrigger>
-              <TabsTrigger value="documents" data-testid="tab-documents" className="text-xs sm:text-sm">Documents</TabsTrigger>
-              <TabsTrigger value="fuel" data-testid="tab-fuel" className="text-xs sm:text-sm">Fuel</TabsTrigger>
-              <TabsTrigger value="schedule" data-testid="tab-schedule" className="text-xs sm:text-sm">Schedule</TabsTrigger>
-              <TabsTrigger value="logs" data-testid="tab-logs" className="text-xs sm:text-sm">Flight Logs</TabsTrigger>
-              <TabsTrigger value="invoices" data-testid="tab-invoices" className="text-xs sm:text-sm">Invoices</TabsTrigger>
-              <TabsTrigger value="reports" data-testid="tab-reports" className="text-xs sm:text-sm">Reports</TabsTrigger>
               <TabsTrigger value="staff" data-testid="tab-staff" className="text-xs sm:text-sm">Staff</TabsTrigger>
             </TabsList>
 
@@ -613,190 +577,6 @@ export default function StaffDashboard() {
               </p>
             </div>
             <ClientsTable />
-          </TabsContent>
-
-          {/* Hangars */}
-          <TabsContent value="hangars" className="space-y-6">
-            <HangarManagement />
-          </TabsContent>
-
-          {/* Documents */}
-          <TabsContent value="documents" className="space-y-6">
-            <DocumentManagement />
-          </TabsContent>
-
-          {/* CFI Schedule */}
-          <TabsContent value="schedule" className="space-y-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-2xl font-semibold">CFI Schedule</h2>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                View and manage flight instruction schedules
-              </p>
-            </div>
-
-            <CFISchedule />
-
-            {/* Instruction Requests */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Pending Instruction Requests</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Instruction requests from owners awaiting CFI assignment
-                </p>
-              </CardHeader>
-              <CardContent>
-                {isLoadingServiceRequests ? (
-                  <div className="py-8 text-center text-muted-foreground">
-                    Loading instruction requests...
-                  </div>
-                ) : serviceRequestsError ? (
-                  <div className="py-8 text-center text-destructive">
-                    Error loading instruction requests: {serviceRequestsError.message}
-                  </div>
-                ) : (() => {
-                  // Filter for Flight Instruction requests and sort by date/time
-                  const instructionRequests = (serviceRequests || [])
-                    .filter((sr: any) => sr && sr.id && sr.service_type === "Flight Instruction")
-                    .sort((a: any, b: any) => {
-                      // Sort by requested_date, then requested_time
-                      // Requests without dates go to the end
-                      if (!a.requested_date && !b.requested_date) {
-                        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                      }
-                      if (!a.requested_date) return 1;
-                      if (!b.requested_date) return -1;
-                      
-                      const dateA = new Date(a.requested_date + (a.requested_time ? `T${a.requested_time}` : 'T00:00:00')).getTime();
-                      const dateB = new Date(b.requested_date + (b.requested_time ? `T${b.requested_time}` : 'T00:00:00')).getTime();
-                      return dateA - dateB;
-                    });
-
-                  if (instructionRequests.length === 0) {
-                    return (
-                      <div className="py-8 text-center text-muted-foreground">
-                        No flight instruction requests at this time.
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="space-y-4">
-                      {instructionRequests.map((request: any) => {
-                        const isAssigned = false;
-                        const isAssignedToOther = false;
-                        
-                        return (
-                          <Card key={request.id} className={isAssigned ? "border-primary" : ""}>
-                            <CardContent className="pt-6">
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <h3 className="font-semibold">
-                                      {request.owner?.full_name || request.owner?.email || "Unknown Owner"}
-                                    </h3>
-                                    {request.aircraft && (
-                                      <Badge variant="outline">
-                                        {request.aircraft.tail_number}
-                                      </Badge>
-                                    )}
-                                    <Badge variant={request.status === "pending" ? "secondary" : request.status === "in_progress" ? "default" : "outline"}>
-                                      {request.status}
-                                    </Badge>
-                                    {isAssigned && (
-                                      <Badge variant="default">Assigned to You</Badge>
-                                    )}
-                                    {isAssignedToOther && (
-                                      <Badge variant="outline">Assigned to Another CFI</Badge>
-                                    )}
-                                  </div>
-                                  
-                                  {request.requested_date && (
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                      <span className="flex items-center gap-1">
-                                        <Calendar className="h-4 w-4" />
-                                        {new Date(request.requested_date).toLocaleDateString()}
-                                      </span>
-                                      {request.requested_time && (
-                                        <span className="flex items-center gap-1">
-                                          {request.requested_time}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                  
-                                  {request.description && (
-                                    <p className="text-sm text-muted-foreground line-clamp-2">
-                                      {request.description}
-                                    </p>
-                                  )}
-                                  
-                                  {request.notes && (
-                                    <p className="text-sm text-muted-foreground italic">
-                                      Notes: {request.notes}
-                                    </p>
-                                  )}
-                                  
-                                  <div className="text-xs text-muted-foreground">
-                                    Requested: {new Date(request.created_at).toLocaleString()}
-                                  </div>
-                                </div>
-                                
-                                <div className="flex flex-col gap-2">
-                                  {/* Assignment feature disabled (column not available) */}
-                                  
-                                  {/* Unassign disabled */}
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Flight Logs */}
-          <TabsContent value="logs" className="space-y-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <h2 className="text-2xl font-semibold">Flight Logs</h2>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Review and sign off on flight logs
-              </p>
-            </div>
-            <FlightLogsList />
-          </TabsContent>
-
-          {/* Invoices */}
-          <TabsContent value="invoices" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-muted-foreground" />
-                  <h2 className="text-2xl font-semibold">Invoicing Tool</h2>
-                </div>
-                <p className="text-sm text-muted-foreground">Create and manage invoices for clients</p>
-              </div>
-            </div>
-            <InvoicesTab />
-          </TabsContent>
-
-          {/* Fuel Tracking */}
-          <TabsContent value="fuel" className="space-y-6">
-            <FuelTracking />
-          </TabsContent>
-
-          {/* Reports Dashboard */}
-          <TabsContent value="reports" className="space-y-6">
-            <ReportsDashboard />
           </TabsContent>
 
           {/* Staff Management */}

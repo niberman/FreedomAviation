@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import StaffDashboard from './staff-dashboard';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/hooks/use-toast';
+const mockSearch = vi.fn(() => '');
 
 // Mock dependencies
 vi.mock('@/lib/supabase', () => {
@@ -31,6 +32,18 @@ vi.mock('@/lib/supabase', () => {
 });
 vi.mock('@/lib/auth-context');
 vi.mock('@/hooks/use-toast');
+vi.mock('wouter', async () => {
+  const actual = await vi.importActual<any>('wouter');
+  return {
+    ...actual,
+    useSearch: () => mockSearch(),
+    Link: ({ href, children, ...props }: any) => (
+      <a href={href} {...props}>
+        {children}
+      </a>
+    ),
+  };
+});
 vi.mock('@/components/kanban-board', () => ({
   KanbanBoard: ({ items }: { items: any[] }) => (
     <div data-testid="kanban-board">
@@ -95,6 +108,7 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockSearch.mockReturnValue('');
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -163,6 +177,16 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
   };
 
   describe('Service Request Viewing', () => {
+    it('should honor tab query and open staff tab', async () => {
+      mockSearch.mockReturnValue('tab=staff');
+
+      renderWithProviders(<StaffDashboard />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tab-staff')).toHaveAttribute('data-state', 'active');
+      });
+    });
+
     it('should fetch and display service requests from owners', async () => {
       const mockServiceRequests = [
         {
@@ -198,143 +222,6 @@ describe('StaffDashboard - Owner-Staff Interactions', () => {
       await waitFor(() => {
         expect(screen.getAllByText(/Service Requests/i).length).toBeGreaterThan(0);
       });
-    });
-  });
-
-  describe('Invoice Creation', () => {
-    it('should create instruction invoice for owner', async () => {
-      const mockOwners = [
-        { id: 'owner-123', full_name: 'John Doe', email: 'john@test.com' },
-      ];
-      const mockAircraft = [
-        { id: 'aircraft-123', tail_number: 'N123FA', owner_id: 'owner-123' },
-      ];
-
-      // Mock owners query
-      mockSupabase.from.mockReturnValue(mockSupabase);
-      mockSupabase.select.mockReturnValue(mockSupabase);
-      mockSupabase.eq.mockReturnValue(mockSupabase);
-      mockSupabase.order.mockResolvedValueOnce({
-        data: mockOwners,
-        error: null,
-      });
-
-      // Mock aircraft query
-      mockSupabase.order.mockResolvedValueOnce({
-        data: mockAircraft,
-        error: null,
-      });
-
-      // Mock invoice query
-      mockSupabase.order.mockResolvedValueOnce({
-        data: [],
-        error: null,
-      });
-
-      // Mock user profile query
-      mockSupabase.maybeSingle = vi.fn().mockResolvedValue({
-        data: { role: 'staff' },
-        error: null,
-      });
-
-      // Mock invoice creation RPC
-      mockSupabase.rpc.mockResolvedValueOnce({
-        data: 'invoice-123',
-        error: null,
-      });
-
-      // Mock finalize invoice RPC
-      mockSupabase.rpc.mockResolvedValueOnce({
-        error: null,
-      });
-
-      // Mock auth
-      mockSupabase.auth.getUser.mockResolvedValue({
-        data: { user: mockStaffUser },
-      });
-      mockSupabase.auth.getSession.mockResolvedValue({
-        data: { session: { access_token: 'token-123' } },
-      });
-
-      // Mock email API
-      (global.fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ sent: true }),
-      });
-
-      renderWithProviders(<StaffDashboard />);
-
-      // Wait for data to load
-      await waitFor(() => {
-        expect(screen.getByTestId('tab-invoices')).toBeInTheDocument();
-      });
-
-      // Click invoices tab
-      const invoicesTab = screen.getByTestId('tab-invoices');
-      await userEvent.click(invoicesTab);
-
-      // Fill invoice form
-      await waitFor(() => {
-        const ownerSelect = screen.getByTestId('select-owner');
-        expect(ownerSelect).toBeInTheDocument();
-      });
-
-      const ownerSelect = screen.getByTestId('select-owner');
-      await userEvent.click(ownerSelect);
-
-      // Note: In a real test, we'd need to interact with the Select component properly
-      // For now, we'll test the mutation function directly
-    });
-  });
-
-  describe('Instruction Request Assignment', () => {
-    it('should allow staff to assign instruction request to themselves', async () => {
-      const mockRequests = [
-        {
-          id: 'request-1',
-          service_type: 'Flight Instruction',
-          status: 'pending',
-          aircraft: { tail_number: 'N123FA' },
-          owner: { full_name: 'John Doe', email: 'john@test.com' },
-          requested_date: '2024-01-15',
-          requested_time: '10:00',
-          description: 'IPC',
-        },
-      ];
-
-      // Mock initial GET
-      const fetchMock = vi.spyOn(global, 'fetch').mockImplementation((input: RequestInfo, init?: RequestInit) => {
-        const url = typeof input === 'string' ? input : input.toString();
-        if (url === '/api/service-requests' && (!init || init.method === 'GET')) {
-          return Promise.resolve(
-            new Response(JSON.stringify({ serviceRequests: mockRequests }), { status: 200 }) as any,
-          );
-        }
-        if (url.startsWith('/api/service-requests/') && init?.method === 'PATCH') {
-          return Promise.resolve(new Response(JSON.stringify({ success: true }), { status: 200 }) as any);
-        }
-        return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }) as any);
-      });
-
-      renderWithProviders(<StaffDashboard />);
-
-      // Wait for instruction requests heading to appear
-      await waitFor(() => {
-        expect(screen.getByText(/Schedule/i)).toBeInTheDocument();
-      });
-
-      // Navigate to schedule tab
-      await userEvent.click(screen.getByTestId('tab-schedule'));
-
-      await waitFor(() => {
-        expect(screen.getAllByText(/Flight Instruction/i).length).toBeGreaterThan(0);
-      });
-
-      expect(fetchMock).toHaveBeenCalledWith('/api/service-requests', expect.any(Object));
-      expect(fetchMock).toHaveBeenCalledWith(
-        `/api/service-requests/${mockRequests[0].id}`,
-        expect.objectContaining({ method: 'PATCH' }),
-      );
     });
   });
 
