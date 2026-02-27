@@ -21,7 +21,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Mail, User, Plane, Pencil, Plus, Eye, DollarSign, FileText, Clock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Mail, User, Plane, Pencil, Plus, Eye, DollarSign, FileText, Clock, Send, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +30,15 @@ import { queryClient } from "@/lib/queryClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUpdateInvoice } from "@/hooks/useInvoices";
+import { useResendInvoice } from "@/hooks/useResendInvoice";
+
+interface EditableLineItem {
+  id: string;
+  description: string;
+  quantity: string;
+  rate: string;
+}
 
 interface Client {
   id: string;
@@ -53,6 +63,23 @@ export function ClientsTable() {
   const [newClientEmail, setNewClientEmail] = useState("");
   const [newClientName, setNewClientName] = useState("");
   const [newClientPhone, setNewClientPhone] = useState("");
+
+  // Invoice edit state
+  const [isInvoiceEditOpen, setIsInvoiceEditOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [editFlightDate, setEditFlightDate] = useState('');
+  const [editHours, setEditHours] = useState('1');
+  const [editRate, setEditRate] = useState('100');
+  const [editNotes, setEditNotes] = useState('');
+  const [editLineItems, setEditLineItems] = useState<EditableLineItem[]>([
+    { id: '1', description: '', quantity: '1', rate: '0' },
+  ]);
+
+  const updateInvoiceMutation = useUpdateInvoice();
+  const resendInvoiceMutation = useResendInvoice({
+    invalidateQueryKeys: [['/api/client-details', selectedClientId]],
+  });
 
   // Fetch all clients (owners)
   const accessToken = session?.access_token ?? null;
@@ -274,6 +301,73 @@ export function ClientsTable() {
       return;
     }
     updateClientMutation.mutate();
+  };
+
+  const openInvoiceEditor = (invoice: any) => {
+    if (invoice.status === 'paid') return;
+
+    setEditingInvoice(invoice);
+    setEditNotes(invoice.notes || '');
+
+    const lines = invoice.invoice_lines || [];
+    const mapped = lines.map((line: any, idx: number) => ({
+      id: `${idx}`,
+      description: line.description || '',
+      quantity: String(line.quantity ?? 1),
+      rate: String(((line.unit_cents ?? 0) as number) / 100),
+    }));
+    setEditLineItems(mapped.length > 0 ? mapped : [{ id: '1', description: '', quantity: '1', rate: '0' }]);
+
+    if (invoice.category === 'instruction') {
+      const firstLine = lines[0];
+      if (firstLine) {
+        const parts = String(firstLine.description || '').split(' - ');
+        const maybeDate = parts.pop();
+        const descPart = parts.join(' - ');
+        const validDate = maybeDate && !Number.isNaN(Date.parse(maybeDate))
+          ? new Date(maybeDate).toISOString().split('T')[0]
+          : '';
+        setEditDescription(validDate ? descPart : (firstLine.description || ''));
+        setEditFlightDate(validDate);
+        setEditHours(String(firstLine.quantity ?? 1));
+        setEditRate(String(((firstLine.unit_cents ?? 0) as number) / 100));
+      } else {
+        setEditDescription('');
+        setEditFlightDate('');
+        setEditHours('1');
+        setEditRate('100');
+      }
+    }
+
+    setIsInvoiceEditOpen(true);
+  };
+
+  const handleSaveInvoiceEdit = () => {
+    if (!editingInvoice) return;
+
+    const payloadLineItems = editingInvoice.category === 'instruction'
+      ? [{
+          description: editFlightDate ? `${editDescription} - ${editFlightDate}` : editDescription,
+          quantity: parseFloat(editHours || '0'),
+          unit_cents: Math.round(parseFloat(editRate || '0') * 100),
+        }]
+      : editLineItems.map((item) => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity || '0'),
+          unit_cents: Math.round(parseFloat(item.rate || '0') * 100),
+        }));
+
+    updateInvoiceMutation.mutate({
+      invoiceId: editingInvoice.id,
+      notes: editingInvoice.category === 'maintenance' ? editNotes : undefined,
+      lineItems: payloadLineItems,
+    }, {
+      onSuccess: () => {
+        setIsInvoiceEditOpen(false);
+        setEditingInvoice(null);
+        queryClient.invalidateQueries({ queryKey: ['/api/client-details', selectedClientId] });
+      },
+    });
   };
 
   if (isLoading) {
@@ -739,6 +833,27 @@ export function ClientsTable() {
                                   </span>
                                 )}
                               </div>
+                              {invoice.status !== 'paid' && (
+                                <div className="flex gap-2 pt-3 border-t mt-3">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openInvoiceEditor(invoice)}
+                                  >
+                                    <Pencil className="h-3 w-3 mr-1" />
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => resendInvoiceMutation.mutate(invoice.id)}
+                                    disabled={resendInvoiceMutation.isPending}
+                                  >
+                                    <Send className="h-3 w-3 mr-1" />
+                                    {resendInvoiceMutation.isPending ? 'Sending...' : 'Send Again'}
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -853,6 +968,94 @@ export function ClientsTable() {
               <p className="text-muted-foreground">No data available</p>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Invoice Dialog */}
+      <Dialog open={isInvoiceEditOpen} onOpenChange={setIsInvoiceEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Invoice {editingInvoice?.invoice_number ? `#${editingInvoice.invoice_number}` : ''}</DialogTitle>
+            <DialogDescription>
+              Update invoice details. Changes will be saved immediately.
+            </DialogDescription>
+          </DialogHeader>
+          {editingInvoice && (
+            <div className="space-y-4 py-2">
+              {editingInvoice.category === 'instruction' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Flight Instruction" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Flight Date</Label>
+                    <Input type="date" value={editFlightDate} onChange={(e) => setEditFlightDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hours</Label>
+                    <Input type="number" step="0.1" min="0" value={editHours} onChange={(e) => setEditHours(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hourly Rate ($)</Label>
+                    <Input type="number" step="0.01" min="0" value={editRate} onChange={(e) => setEditRate(e.target.value)} />
+                  </div>
+                  <div className="col-span-full pt-2 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Total: <span className="font-semibold text-foreground">${(parseFloat(editHours || '0') * parseFloat(editRate || '0')).toFixed(2)}</span>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Optional maintenance notes" rows={3} />
+                  </div>
+                  <div className="space-y-3">
+                    <Label>Line Items</Label>
+                    {editLineItems.map((item, idx) => (
+                      <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
+                        <div className="col-span-5">
+                          {idx === 0 && <Label className="text-xs text-muted-foreground">Description</Label>}
+                          <Input placeholder="Description" value={item.description} onChange={(e) => setEditLineItems((prev) => prev.map((li) => li.id === item.id ? { ...li, description: e.target.value } : li))} />
+                        </div>
+                        <div className="col-span-2">
+                          {idx === 0 && <Label className="text-xs text-muted-foreground">Qty</Label>}
+                          <Input type="number" step="0.1" min="0" placeholder="Qty" value={item.quantity} onChange={(e) => setEditLineItems((prev) => prev.map((li) => li.id === item.id ? { ...li, quantity: e.target.value } : li))} />
+                        </div>
+                        <div className="col-span-2">
+                          {idx === 0 && <Label className="text-xs text-muted-foreground">Rate ($)</Label>}
+                          <Input type="number" step="0.01" min="0" placeholder="Rate" value={item.rate} onChange={(e) => setEditLineItems((prev) => prev.map((li) => li.id === item.id ? { ...li, rate: e.target.value } : li))} />
+                        </div>
+                        <div className="col-span-3 flex items-center gap-1">
+                          <span className="text-sm font-medium w-16 text-right">${(parseFloat(item.quantity || '0') * parseFloat(item.rate || '0')).toFixed(2)}</span>
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={editLineItems.length <= 1} onClick={() => setEditLineItems((prev) => prev.filter((li) => li.id !== item.id))}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={() => setEditLineItems((prev) => [...prev, { id: `${Date.now()}`, description: '', quantity: '1', rate: '0' }])}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Line Item
+                    </Button>
+                    <div className="pt-2 border-t">
+                      <p className="text-sm text-muted-foreground">
+                        Total: <span className="font-semibold text-foreground">${editLineItems.reduce((sum, li) => sum + parseFloat(li.quantity || '0') * parseFloat(li.rate || '0'), 0).toFixed(2)}</span>
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsInvoiceEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveInvoiceEdit} disabled={updateInvoiceMutation.isPending}>
+              {updateInvoiceMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

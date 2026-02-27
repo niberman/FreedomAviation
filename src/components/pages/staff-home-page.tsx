@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -23,6 +25,10 @@ import {
   Plane,
   Settings2,
   Users,
+  Pencil,
+  Send,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth-context';
@@ -41,6 +47,15 @@ import { StaffManagement } from '@/components/staff-management';
 import { MaintenanceCRUD } from '@/components/maintenance-crud';
 import { useClients } from '@/hooks/useClients';
 import { useAircraftTable } from '@/hooks/useAircraft';
+import { useUpdateInvoice } from '@/hooks/useInvoices';
+import { useResendInvoice } from '@/hooks/useResendInvoice';
+
+interface EditableLineItem {
+  id: string;
+  description: string;
+  quantity: string;
+  rate: string;
+}
 
 export function StaffHomePage() {
   const { user } = useAuth();
@@ -51,6 +66,23 @@ export function StaffHomePage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   type CockpitToolTab = 'invoice' | 'requests' | 'aircraft' | 'maintenance' | 'clients' | 'staff';
   const [activeToolTab, setActiveToolTab] = useState<CockpitToolTab>('invoice');
+
+  // Invoice edit dialog state
+  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
+  const [isInvoiceEditOpen, setIsInvoiceEditOpen] = useState(false);
+  const [editDescription, setEditDescription] = useState('');
+  const [editFlightDate, setEditFlightDate] = useState('');
+  const [editHours, setEditHours] = useState('1');
+  const [editRate, setEditRate] = useState('100');
+  const [editNotes, setEditNotes] = useState('');
+  const [editLineItems, setEditLineItems] = useState<EditableLineItem[]>([
+    { id: '1', description: '', quantity: '1', rate: '0' },
+  ]);
+
+  const updateInvoiceMutation = useUpdateInvoice();
+  const resendInvoiceMutation = useResendInvoice({
+    invalidateQueryKeys: [['cockpit-ledger'], ['cockpit-stats']],
+  });
 
   useEffect(() => {
     const requestedTool = searchParams.get('tool');
@@ -127,6 +159,9 @@ export function StaffHomePage() {
           status,
           category,
           invoice_number,
+          owner_id,
+          aircraft_id,
+          notes,
           owner:owner_id(full_name, email),
           invoice_lines(description, quantity, unit_cents)
         `)
@@ -138,7 +173,7 @@ export function StaffHomePage() {
       // Fallback: fetch invoices + owners separately
       const fallback = await supabase
         .from('invoices')
-        .select('id, created_at, amount, status, category, invoice_number, owner_id')
+        .select('id, created_at, amount, status, category, invoice_number, owner_id, aircraft_id, notes')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -310,6 +345,76 @@ export function StaffHomePage() {
     },
   });
 
+  // --- Invoice Edit/Resend Helpers ---
+
+  const openInvoiceEditor = (invoice: any) => {
+    if (invoice.status === 'paid') return;
+
+    setEditingInvoice(invoice);
+    setEditNotes(invoice.notes || '');
+
+    const lines = invoice.invoice_lines || [];
+    const mapped = lines.map((line: any, idx: number) => ({
+      id: `${idx}`,
+      description: line.description || '',
+      quantity: String(line.quantity ?? 1),
+      rate: String(((line.unit_cents ?? 0) as number) / 100),
+    }));
+    setEditLineItems(mapped.length > 0 ? mapped : [{ id: '1', description: '', quantity: '1', rate: '0' }]);
+
+    if (invoice.category === 'instruction') {
+      const firstLine = lines[0];
+      if (firstLine) {
+        const parts = String(firstLine.description || '').split(' - ');
+        const maybeDate = parts.pop();
+        const descPart = parts.join(' - ');
+        const validDate = maybeDate && !Number.isNaN(Date.parse(maybeDate))
+          ? new Date(maybeDate).toISOString().split('T')[0]
+          : '';
+        setEditDescription(validDate ? descPart : (firstLine.description || ''));
+        setEditFlightDate(validDate);
+        setEditHours(String(firstLine.quantity ?? 1));
+        setEditRate(String(((firstLine.unit_cents ?? 0) as number) / 100));
+      } else {
+        setEditDescription('');
+        setEditFlightDate('');
+        setEditHours('1');
+        setEditRate('100');
+      }
+    }
+
+    setIsInvoiceEditOpen(true);
+  };
+
+  const handleSaveInvoiceEdit = () => {
+    if (!editingInvoice) return;
+
+    const payloadLineItems = editingInvoice.category === 'instruction'
+      ? [{
+          description: editFlightDate ? `${editDescription} - ${editFlightDate}` : editDescription,
+          quantity: parseFloat(editHours || '0'),
+          unit_cents: Math.round(parseFloat(editRate || '0') * 100),
+        }]
+      : editLineItems.map((item) => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity || '0'),
+          unit_cents: Math.round(parseFloat(item.rate || '0') * 100),
+        }));
+
+    updateInvoiceMutation.mutate({
+      invoiceId: editingInvoice.id,
+      notes: editingInvoice.category === 'maintenance' ? editNotes : undefined,
+      lineItems: payloadLineItems,
+    }, {
+      onSuccess: () => {
+        setIsInvoiceEditOpen(false);
+        setEditingInvoice(null);
+        queryClient.invalidateQueries({ queryKey: ['cockpit-ledger'] });
+        queryClient.invalidateQueries({ queryKey: ['cockpit-stats'] });
+      },
+    });
+  };
+
   // --- 3. RENDER ---
 
   return (
@@ -443,6 +548,16 @@ export function StaffHomePage() {
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase text-muted-foreground font-bold">Flight Date</Label>
+                    <Input
+                      type="date"
+                      className="h-10"
+                      value={invoiceForm.date}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, date: e.target.value })}
+                    />
+                  </div>
+
                   <div className="pt-4 mt-auto">
                     <Button
                       className="w-full h-14 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
@@ -521,11 +636,13 @@ export function StaffHomePage() {
                           <th className="h-10 px-6 text-left font-medium text-muted-foreground">Description</th>
                           <th className="h-10 px-6 text-right font-medium text-muted-foreground">Amount</th>
                           <th className="h-10 px-6 text-right font-medium text-muted-foreground">Status</th>
+                          <th className="h-10 px-4 text-right font-medium text-muted-foreground w-[180px]">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {ledger?.map((inv: any) => {
                           const displayDesc = inv.invoice_lines?.[0]?.description || inv.category || '—';
+                          const isPaid = inv.status === 'paid';
                           return (
                             <tr key={inv.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors group">
                               <td className="p-4 px-6 font-mono text-xs text-muted-foreground">
@@ -553,12 +670,38 @@ export function StaffHomePage() {
                                   {inv.status}
                                 </Badge>
                               </td>
+                              <td className="p-4 px-4 text-right">
+                                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => openInvoiceEditor(inv)}
+                                    disabled={isPaid}
+                                    title={isPaid ? 'Paid invoices cannot be edited' : 'Edit invoice'}
+                                  >
+                                    <Pencil className="h-3 w-3 mr-1" />
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => resendInvoiceMutation.mutate(inv.id)}
+                                    disabled={isPaid || resendInvoiceMutation.isPending}
+                                    title={isPaid ? 'Paid invoices cannot be resent' : 'Send invoice again'}
+                                  >
+                                    <Send className="h-3 w-3 mr-1" />
+                                    Resend
+                                  </Button>
+                                </div>
+                              </td>
                             </tr>
                           );
                         })}
                         {!ledger?.length && (
                           <tr>
-                            <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                            <td colSpan={6} className="p-8 text-center text-muted-foreground">
                               No recent invoices found.
                             </td>
                           </tr>
@@ -652,6 +795,94 @@ export function StaffHomePage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Edit Invoice Dialog */}
+      <Dialog open={isInvoiceEditOpen} onOpenChange={setIsInvoiceEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Invoice {editingInvoice?.invoice_number ? `#${editingInvoice.invoice_number}` : ''}</DialogTitle>
+            <DialogDescription>
+              Update invoice details. Changes will be saved immediately.
+            </DialogDescription>
+          </DialogHeader>
+          {editingInvoice && (
+            <div className="space-y-4 py-2">
+              {editingInvoice.category === 'instruction' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="Flight Instruction" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Flight Date</Label>
+                    <Input type="date" value={editFlightDate} onChange={(e) => setEditFlightDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hours</Label>
+                    <Input type="number" step="0.1" min="0" value={editHours} onChange={(e) => setEditHours(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hourly Rate ($)</Label>
+                    <Input type="number" step="0.01" min="0" value={editRate} onChange={(e) => setEditRate(e.target.value)} />
+                  </div>
+                  <div className="col-span-full pt-2 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Total: <span className="font-semibold text-foreground">${(parseFloat(editHours || '0') * parseFloat(editRate || '0')).toFixed(2)}</span>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Optional maintenance notes" rows={3} />
+                  </div>
+                  <div className="space-y-3">
+                    <Label>Line Items</Label>
+                    {editLineItems.map((item, idx) => (
+                      <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
+                        <div className="col-span-5">
+                          {idx === 0 && <Label className="text-xs text-muted-foreground">Description</Label>}
+                          <Input placeholder="Description" value={item.description} onChange={(e) => setEditLineItems((prev) => prev.map((li) => li.id === item.id ? { ...li, description: e.target.value } : li))} />
+                        </div>
+                        <div className="col-span-2">
+                          {idx === 0 && <Label className="text-xs text-muted-foreground">Qty</Label>}
+                          <Input type="number" step="0.1" min="0" placeholder="Qty" value={item.quantity} onChange={(e) => setEditLineItems((prev) => prev.map((li) => li.id === item.id ? { ...li, quantity: e.target.value } : li))} />
+                        </div>
+                        <div className="col-span-2">
+                          {idx === 0 && <Label className="text-xs text-muted-foreground">Rate ($)</Label>}
+                          <Input type="number" step="0.01" min="0" placeholder="Rate" value={item.rate} onChange={(e) => setEditLineItems((prev) => prev.map((li) => li.id === item.id ? { ...li, rate: e.target.value } : li))} />
+                        </div>
+                        <div className="col-span-2 flex items-center gap-1">
+                          <span className="text-sm font-medium w-16 text-right">${(parseFloat(item.quantity || '0') * parseFloat(item.rate || '0')).toFixed(2)}</span>
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled={editLineItems.length <= 1} onClick={() => setEditLineItems((prev) => prev.filter((li) => li.id !== item.id))}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={() => setEditLineItems((prev) => [...prev, { id: `${Date.now()}`, description: '', quantity: '1', rate: '0' }])}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Line Item
+                    </Button>
+                    <div className="pt-2 border-t">
+                      <p className="text-sm text-muted-foreground">
+                        Total: <span className="font-semibold text-foreground">${editLineItems.reduce((sum, li) => sum + parseFloat(li.quantity || '0') * parseFloat(li.rate || '0'), 0).toFixed(2)}</span>
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsInvoiceEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveInvoiceEdit} disabled={updateInvoiceMutation.isPending}>
+              {updateInvoiceMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
