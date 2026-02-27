@@ -13,7 +13,7 @@ import { Plus, Trash2, Wrench, Plane, MoreVertical, Pencil } from "lucide-react"
 import { useAuth } from "@/lib/auth-context";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useClients } from "@/hooks/useClients";
-import { useAircraft } from "@/hooks/useAircraft";
+import { useStaffAircraftList } from "@/hooks/useAircraft";
 import { useInvoices, useDeleteInvoice, useUpdateInvoice } from "@/hooks/useInvoices";
 import { useCreateInvoice, useCreateMaintenanceInvoice } from "@/hooks/useCreateInvoice";
 
@@ -31,7 +31,7 @@ export function InvoicesTab() {
   const { user } = useAuth();
   const { isAdmin } = useUserProfile();
   const { data: clients = [] } = useClients();
-  const { data: aircraft = [] } = useAircraft();
+  const { data: aircraft = [] } = useStaffAircraftList();
   const { data: invoices = [], isLoading: isLoadingInvoices, error: invoicesError, refetch: refetchInvoices } = useInvoices();
   const createInvoiceMutation = useCreateInvoice();
   const createMaintenanceMutation = useCreateMaintenanceInvoice();

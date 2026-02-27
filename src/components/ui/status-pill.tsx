@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { ServiceStatus, MaintenanceStatus } from "@/lib/types/database";
+import type { ServiceStatus, MaintenanceStatus } from "@shared/database-types";
 
 interface StatusPillProps {
   status: ServiceStatus | MaintenanceStatus | string;

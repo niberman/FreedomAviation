@@ -35,7 +35,6 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { format, subDays, startOfMonth } from 'date-fns';
-import { NotificationCenter } from '@/components/notification-center';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -218,6 +217,9 @@ export function StaffHomePage() {
   const { aircraftFull, error: aircraftError, isLoading: isLoadingAircraft } = useAircraftTable();
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/ce595c44-18a7-46d2-b583-275de660c288',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'99c487'},body:JSON.stringify({sessionId:'99c487',location:'staff-home-page.tsx:ownersEffect',message:'Owners useEffect fired',data:{hasOwnersError:!!ownersError,ownersErrorMsg:ownersError instanceof Error ? ownersError.message : String(ownersError),ownersLength:(owners||[]).length,ownersRef:typeof owners},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     if (ownersError) {
       toast({
         title: 'Error loading clients',
@@ -228,6 +230,9 @@ export function StaffHomePage() {
   }, [ownersError, toast]);
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/ce595c44-18a7-46d2-b583-275de660c288',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'99c487'},body:JSON.stringify({sessionId:'99c487',location:'staff-home-page.tsx:aircraftEffect',message:'Aircraft error useEffect fired',data:{hasAircraftError:!!aircraftError,aircraftErrorMsg:aircraftError instanceof Error ? aircraftError.message : String(aircraftError)},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     if (aircraftError) {
       toast({
         title: 'Error loading aircraft',
@@ -437,7 +442,6 @@ export function StaffHomePage() {
             <span className="font-semibold text-sm">Operations Cockpit</span>
           </div>
           <div className="flex items-center gap-3">
-            <NotificationCenter />
             <ThemeToggle />
           </div>
         </div>

@@ -68,6 +68,23 @@ export function QuoteStep({
         // Continue anyway - the quote generation is more for show
       }
 
+      // Send quote copy to client's email (fire-and-forget)
+      fetch('/api/onboarding/send-quote-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toEmail: user?.email,
+          memberName: personalInfo?.full_name || user?.email,
+          tierName,
+          baseMonthly,
+          hangarCost,
+          totalMonthly: totalMonthly,
+          aircraftTail: aircraftInfo?.tail_number,
+          aircraftMake: aircraftInfo?.make,
+          aircraftModel: aircraftInfo?.model,
+        }),
+      }).catch((err) => console.warn('Quote email send failed:', err));
+
       toast({
         title: "Quote Generated!",
         description: "Your membership quote has been created. We'll be in touch soon.",

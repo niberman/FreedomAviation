@@ -9,22 +9,3 @@ export const metadata: Metadata = {
 export default function StaffHome() {
   return <StaffHomePage />;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

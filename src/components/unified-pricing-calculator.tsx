@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Plus, Info, ArrowRight, Sparkles, Building2, MapPin } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { useLocations } from '@/features/pricing/hooks';
+import { useLocations } from '@/hooks/usePricing';
 import {
   PRICING_TIERS,
   HOURS_BANDS,

@@ -136,43 +136,28 @@ export function AircraftTable({
         throw new Error("Missing aircraft identifier");
       }
 
-      if (serviceType === "oil_topoff") {
-        // Create a service request for oil top-off instead of consumable event
-        const { error } = await supabase
-          .from("service_requests")
-          .insert([
-            {
-              aircraft_id: aircraft.id,
-              user_id: aircraft.ownerId || '',
-              service_type: "Oil Top-Off",
-              description: `Oil top-off: ${notes || "2 quarts requested from staff dashboard"}`,
-              priority: "low",
-              status: "pending",
-              is_extra_charge: true,
-              credits_used: 0,
-            },
-          ]);
+      const serviceTypeLabel = SERVICE_OPTIONS.find(opt => opt.value === serviceType)?.label || serviceType;
+      const description = notes
+        ? `${serviceTypeLabel}: ${notes}`
+        : `${serviceTypeLabel} requested from staff dashboard`;
 
-        if (error) {
-          throw new Error(error.message ?? "Unable to create oil top-off request.");
-        }
-        return;
-      }
-
-      // All other services create service_tasks
       const { error } = await supabase
-        .from("service_tasks")
+        .from("service_requests")
         .insert([
           {
             aircraft_id: aircraft.id,
-            type: serviceType,
+            user_id: aircraft.ownerId || '',
+            service_type: serviceTypeLabel,
+            description,
+            priority: "normal",
             status: "pending",
-            notes: notes || `Service task created from staff dashboard`,
+            is_extra_charge: serviceType === "oil_topoff",
+            credits_used: 0,
           },
         ]);
 
       if (error) {
-        throw new Error(error.message ?? `Unable to create ${serviceType} task.`);
+        throw new Error(error.message ?? `Unable to create ${serviceTypeLabel} request.`);
       }
       return;
     },
@@ -186,7 +171,7 @@ export function AircraftTable({
       });
 
       queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/service-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["service-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/aircraft/full"] });
       
       // Reset dialog state

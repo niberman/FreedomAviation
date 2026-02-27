@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, ExternalLink, MapPin } from "lucide-react";
-import { useLocations } from "@/features/pricing/hooks";
+import { useLocations } from "@/hooks/usePricing";
 import { useAuth } from "@/lib/auth-context";
 import { RequestServiceSheet } from "@/components/request-service-sheet";
 

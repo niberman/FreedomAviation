@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { AircraftTable } from "@/components/aircraft-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plane } from "lucide-react";
+import { useAircraftTable } from "@/hooks/useAircraft";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -13,41 +14,8 @@ import { Button } from "@/components/ui/button";
 
 export default function StaffAircraft() {
   const { user } = useAuth();
-  
-  const { data: aircraftFull = [], isLoading: isLoadingAircraft, error: aircraftError } = useQuery({
-    queryKey: ['/api/aircraft/full'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('aircraft')
-        .select(`
-          id,
-          tail_number,
-          make,
-          model,
-          class,
-          base_location,
-          owner_id,
-          owner:owner_id(full_name, email)
-        `)
-        .order('tail_number');
+  const { aircraftFull, isLoading: isLoadingAircraft, isError: aircraftError } = useAircraftTable();
 
-      if (error) throw error;
-      
-      return (data || []).map((ac: any) => ({
-        id: ac.id,
-        tailNumber: ac.tail_number,
-        make: ac.make || 'N/A',
-        model: ac.model || '',
-        class: ac.class || 'Unknown',
-        baseAirport: ac.base_location || 'KAPA',
-        owner: ac.owner?.full_name || ac.owner?.email || 'Unassigned',
-        ownerId: ac.owner_id ?? null,
-        ownerEmail: ac.owner?.email ?? null,
-      }));
-    },
-    enabled: Boolean(user),
-  });
-  
   const { data: owners = [] } = useQuery({
     queryKey: ['/api/owners'],
     queryFn: async () => {
@@ -78,7 +46,7 @@ export default function StaffAircraft() {
           Track aircraft details, ownership, and maintenance status
         </p>
       </div>
-      
+
       {isLoadingAircraft ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -100,4 +68,3 @@ export default function StaffAircraft() {
     </DashboardLayout>
   );
 }
-

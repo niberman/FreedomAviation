@@ -28,7 +28,6 @@ const nextConfig = {
       },
     ],
   },
-  // Handle redirects
   async redirects() {
     return [
       {
@@ -44,6 +43,26 @@ const nextConfig = {
       {
         source: '/partners/fa-hangar',
         destination: '/hangars',
+        permanent: true,
+      },
+      {
+        source: '/admin',
+        destination: '/staff',
+        permanent: true,
+      },
+      {
+        source: '/admin/console',
+        destination: '/staff/console',
+        permanent: true,
+      },
+      {
+        source: '/admin/manage',
+        destination: '/staff',
+        permanent: true,
+      },
+      {
+        source: '/pricing-configurator',
+        destination: '/pricing',
         permanent: true,
       },
     ];

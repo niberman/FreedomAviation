@@ -1,62 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase-server';
+import { normalizeLineItem } from '@/lib/stripe-utils';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
-  apiVersion: '2025-10-29.clover' as any,
-}) : null;
-
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  : null;
-
-function normalizeLineItem(item: {
-  price_data: {
-    currency: string;
-    product_data: { name: string };
-    unit_amount: number;
-  };
-  quantity: number | string;
-}): {
-  price_data: {
-    currency: string;
-    product_data: { name: string };
-    unit_amount: number;
-  };
-  quantity: number;
-} {
-  const qty = parseFloat(String(item.quantity));
-
-  if (!Number.isFinite(qty) || qty <= 0) {
-    throw new Error(`Invalid quantity: ${item.quantity}`);
-  }
-
-  if (!Number.isInteger(qty)) {
-    const adjustedPrice = Math.round(item.price_data.unit_amount * qty);
-    return {
-      ...item,
-      price_data: {
-        ...item.price_data,
-        unit_amount: adjustedPrice,
-      },
-      quantity: 1,
-    };
-  }
-
-  return {
-    ...item,
-    quantity: qty,
-  };
-}
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createAdminClient();
     if (!stripe || !supabase) {
       return NextResponse.json({
         error: 'Stripe or Supabase not configured. Please set STRIPE_SECRET_KEY and Supabase credentials.'
@@ -108,9 +60,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    interface InvoiceLine { quantity: number; unit_cents: number; description?: string }
+
     let totalCents = 0;
-    if (invoice.invoice_lines && Array.isArray(invoice.invoice_lines)) {
-      totalCents = invoice.invoice_lines.reduce((sum: number, line: any) => {
+    const lines = invoice.invoice_lines as InvoiceLine[] | null;
+    if (lines && Array.isArray(lines)) {
+      totalCents = lines.reduce((sum: number, line: InvoiceLine) => {
         return sum + Math.round(line.quantity * line.unit_cents);
       }, 0);
     } else {
@@ -131,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: invoice.invoice_lines?.map((line: any) => {
+      line_items: lines?.map((line: InvoiceLine) => {
         const quantity = Number(line.quantity);
         if (isNaN(quantity) || quantity <= 0) {
           throw new Error(`Invalid quantity: ${line.quantity}`);
@@ -142,18 +97,14 @@ export async function POST(request: NextRequest) {
           throw new Error(`Invalid unit amount: ${line.unit_cents}`);
         }
 
-        const lineItem = {
+        return normalizeLineItem({
           price_data: {
             currency: 'usd',
-            product_data: {
-              name: line.description || 'Flight Instruction',
-            },
+            product_data: { name: line.description || 'Flight Instruction' },
             unit_amount: unitAmount,
           },
-          quantity: quantity,
-        };
-
-        return normalizeLineItem(lineItem);
+          quantity,
+        });
       }) || [{
         price_data: {
           currency: 'usd',
@@ -184,30 +135,11 @@ export async function POST(request: NextRequest) {
       checkoutUrl: session.url,
       sessionId: session.id
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating checkout session:', error);
     return NextResponse.json({
       error: 'Failed to create checkout session',
-      message: error.message
+      message: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 500 });
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

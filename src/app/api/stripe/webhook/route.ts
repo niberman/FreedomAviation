@@ -1,23 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase-server';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
-  apiVersion: '2025-10-29.clover' as any,
-}) : null;
-
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  : null;
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createAdminClient();
     if (!stripe || !supabase) {
       return NextResponse.json({
         error: 'Stripe or Supabase not configured'
@@ -41,9 +31,10 @@ export async function POST(request: NextRequest) {
 
     try {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-    } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
-      return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Webhook signature verification failed:', message);
+      return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
     }
 
     switch (event.type) {
@@ -59,7 +50,7 @@ export async function POST(request: NextRequest) {
             .single();
 
           if (!fetchError && invoice && invoice.status !== 'paid' && !invoice.paid_date) {
-            const updateData: any = {
+            const updateData: Record<string, string> = {
               status: 'paid',
               paid_date: new Date().toISOString().split('T')[0],
             };
@@ -121,30 +112,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ received: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Webhook error:', error);
     return NextResponse.json({
       error: 'Webhook handler failed',
-      message: error.message
+      message: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 500 });
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import type { ServiceStatus } from "@/lib/types/database";
+import type { ServiceStatus } from "@shared/database-types";
 
 interface ServiceRequest {
   id: string;

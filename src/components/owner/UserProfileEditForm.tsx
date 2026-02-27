@@ -12,7 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useUserProfile, userProfileSchema, type UserProfileFormData } from "@/lib/hooks/useUserProfile";
+import { useUserProfile, userProfileSchema, type UserProfileFormData } from "@/hooks/useUserProfile";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 

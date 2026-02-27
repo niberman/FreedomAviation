@@ -6,7 +6,7 @@ import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRight, CheckCircle2, Loader2, Building2, MapPin } from 'lucide-react';
-import { useLocations } from '@/features/pricing/hooks';
+import { useLocations } from '@/hooks/usePricing';
 
 export function HangarsPage() {
   const { data: locations, isLoading } = useLocations();

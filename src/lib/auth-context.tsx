@@ -24,15 +24,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('[AuthContext] Error getting initial session:', error);
+      }
+      setSession(session ?? null);
       setUser(session?.user ?? null);
+      setLoading(false);
+    }).catch((err) => {
+      console.error('[AuthContext] Failed to get initial session:', err);
+      setSession(null);
+      setUser(null);
       setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[AuthContext] Auth event:', event);
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/ce595c44-18a7-46d2-b583-275de660c288',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'99c487'},body:JSON.stringify({sessionId:'99c487',location:'auth-context.tsx:onAuthStateChange',message:'Auth state change event',data:{event,hasSession:!!session,hasAccessToken:!!session?.access_token,tokenPrefix:session?.access_token?.substring(0,10)},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -77,8 +88,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      // Use scope: 'local' to clear only this device's session without calling the server.
+      // This avoids 403 when the session is already invalid/revoked (e.g. "auth session missing").
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) {
+        console.warn('[AuthContext] Sign out error (clearing local state anyway):', error.message);
+      }
+    } catch (err) {
+      console.warn('[AuthContext] Sign out threw (clearing local state anyway):', err);
+    } finally {
+      // Always clear local state so the UI shows logged out even if the server returned 403 or threw.
+      setSession(null);
+      setUser(null);
+    }
   };
 
   const updatePassword = async (newPassword: string) => {

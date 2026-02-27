@@ -4,6 +4,10 @@ import { useAuth } from "@/lib/auth-context";
 export function useClients() {
   const { session } = useAuth();
 
+  // #region agent log
+  fetch('http://127.0.0.1:7243/ingest/ce595c44-18a7-46d2-b583-275de660c288',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'99c487'},body:JSON.stringify({sessionId:'99c487',location:'useClients.ts:render',message:'useClients hook rendered',data:{hasSession:!!session,hasAccessToken:!!session?.access_token},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
+
   return useQuery({
     queryKey: ['/api/clients', session?.access_token],
     queryFn: async () => {

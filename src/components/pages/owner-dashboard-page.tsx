@@ -19,7 +19,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { useAircraft } from '@/lib/hooks/useAircraft';
+import { useAircraft } from '@/hooks/useAircraft';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { isStaffRole } from '@/lib/roles';
@@ -79,42 +79,10 @@ export function OwnerDashboardPage() {
 
   const aircraft = aircraftList?.[0];
 
-  const { data: serviceTasks = [] } = useQuery({
-    queryKey: ['service-tasks', aircraft?.id],
-    enabled: isDemo || Boolean(aircraft?.id && user?.id),
-    queryFn: async () => {
-      if (isDemo) {
-        const { DEMO_SERVICE_TASKS } = await import('@/lib/demo-data');
-        return DEMO_SERVICE_TASKS;
-      }
-      if (!aircraft?.id) return [];
+  const readinessStatus = 'Ready';
+  const isReady = true;
 
-      const { data, error } = await supabase
-        .from('service_tasks')
-        .select('*')
-        .eq('aircraft_id', aircraft.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) {
-        console.error('Error fetching service tasks:', error);
-        return [];
-      }
-
-      return data.map((task: any) => ({
-        id: task.id,
-        aircraft_id: task.aircraft_id,
-        type: task.type,
-        status: task.status,
-        assigned_to: task.assigned_to,
-        notes: task.notes,
-        photos: Array.isArray(task.photos) ? task.photos.filter((p: any): p is string => typeof p === 'string') : [],
-        completed_at: task.completed_at,
-        created_at: task.created_at,
-        updated_at: task.updated_at,
-      }));
-    },
-  });
+  const queryClient = useQueryClient();
 
   const { data: membership = null } = useQuery({
     queryKey: ['membership', isDemo ? 'demo' : user?.id],
@@ -141,28 +109,6 @@ export function OwnerDashboardPage() {
       return data;
     },
   });
-
-  const readinessTypes = [
-    'readiness',
-    'clean',
-    'detail',
-    'oil',
-    'o2',
-    'tks',
-    'db_update',
-  ];
-
-  const hasOpenTask = serviceTasks.some(
-    (task: any) =>
-      task.status !== 'completed' &&
-      task.status !== 'cancelled' &&
-      readinessTypes.some((type) => task.type.toLowerCase().includes(type))
-  );
-
-  const readinessStatus = hasOpenTask ? 'Needs Service' : 'Ready';
-  const isReady = !hasOpenTask;
-
-  const queryClient = useQueryClient();
 
   const handleAircraftUpdate = async (field: string, value: string | number | null) => {
     if (!aircraft?.id || isDemo) return;

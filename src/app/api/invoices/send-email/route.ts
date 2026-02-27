@@ -1,37 +1,20 @@
-/**
- * Invoice Email API Route
- * 
- * POST /api/invoices/send-email
- * Sends invoice email with Stripe payment link
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient, isSupabaseConfigured } from '@/lib/supabase-server';
+import { requireRole } from '@/lib/api-auth';
+import { API_ROLES } from '@/lib/roles';
+import { normalizeLineItem } from '@/lib/stripe-utils';
 import Stripe from 'stripe';
 
-// =============================================================================
-// Configuration
-// =============================================================================
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const resendApiKey = process.env.RESEND_API_KEY;
 const emailService = process.env.EMAIL_SERVICE || 'console';
 const emailFrom = process.env.EMAIL_FROM || 'Freedom Aviation <onboarding@resend.dev>';
 const frontendUrl = process.env.FRONTEND_URL || process.env.SITE_URL || 'https://www.freedomaviationco.com';
 
-// Initialize Stripe if configured
 let stripe: Stripe | null = null;
 if (stripeSecretKey) {
-  stripe = new Stripe(stripeSecretKey, {
-    apiVersion: '2025-10-29.clover' as Stripe.LatestApiVersion,
-  });
+  stripe = new Stripe(stripeSecretKey);
 }
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
 
 function escapeHtml(text: string): string {
   const map: Record<string, string> = {
@@ -42,42 +25,6 @@ function escapeHtml(text: string): string {
     "'": '&#039;',
   };
   return text.replace(/[&<>"']/g, (m) => map[m]);
-}
-
-function normalizeLineItem(item: {
-  price_data: {
-    currency: string;
-    product_data: { name: string };
-    unit_amount: number;
-  };
-  quantity: number;
-}): {
-  price_data: {
-    currency: string;
-    product_data: { name: string };
-    unit_amount: number;
-  };
-  quantity: number;
-} {
-  const qty = item.quantity;
-
-  if (!Number.isFinite(qty) || qty <= 0) {
-    throw new Error(`Invalid quantity: ${qty}`);
-  }
-
-  if (!Number.isInteger(qty)) {
-    const adjustedPrice = Math.round(item.price_data.unit_amount * qty);
-    return {
-      ...item,
-      price_data: {
-        ...item.price_data,
-        unit_amount: adjustedPrice,
-      },
-      quantity: 1,
-    };
-  }
-
-  return item;
 }
 
 interface InvoiceEmailData {
@@ -258,17 +205,19 @@ async function sendEmailViaResend(
 
 export async function POST(request: NextRequest) {
   try {
-    // Check Supabase configuration
-    if (!supabaseUrl || !supabaseServiceKey) {
+    const authResult = await requireRole(request, [...API_ROLES.INVOICING]);
+    if (!authResult.ok) {
       return NextResponse.json(
-        { error: 'Supabase not configured' },
-        { status: 503 }
+        { error: authResult.status === 401 ? 'Unauthorized' : 'Forbidden', message: authResult.message },
+        { status: authResult.status }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createAdminClient();
+    if (!supabase) {
+      return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
+    }
 
-    // Parse request body
     const body = await request.json();
     const { invoiceId } = body;
 
@@ -279,27 +228,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get auth token from header (optional)
-    const authHeader = request.headers.get('Authorization');
-    let currentUserId: string | null = null;
-    let userRole: string | null = null;
-
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) {
-        currentUserId = user.id;
-        // Get user role
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        userRole = profile?.role || null;
-      }
-    }
-
-    // Fetch invoice with related data
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
       .select(`
@@ -318,29 +246,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate owner info
     const owner = invoice.owner as { id: string; email?: string; full_name?: string } | null;
     if (!owner?.email) {
       return NextResponse.json(
         { error: 'Owner email not found' },
         { status: 400 }
       );
-    }
-
-    // Check authorization (if authenticated)
-    if (currentUserId) {
-      const isAdmin = userRole === 'admin';
-      const isFounder = userRole === 'founder';
-      const isStaff = userRole === 'staff';
-      const isCFI = userRole === 'cfi';
-      const isInvoiceCreator = invoice.created_by_cfi_id === currentUserId;
-
-      if (!isAdmin && !isFounder && !(isStaff && isInvoiceCreator) && !(isCFI && isInvoiceCreator)) {
-        return NextResponse.json(
-          { error: 'Not authorized to send this invoice' },
-          { status: 403 }
-        );
-      }
     }
 
     // Validate invoice status
@@ -547,15 +458,4 @@ Freedom Aviation
   }
 }
 
-// Handle OPTIONS for CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
-}
 

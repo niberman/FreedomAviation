@@ -12,22 +12,3 @@ export default function robots(): MetadataRoute.Robots {
     sitemap: 'https://www.freedomaviationco.com/sitemap.xml',
   };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

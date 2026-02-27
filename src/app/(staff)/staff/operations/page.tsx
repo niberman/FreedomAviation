@@ -8,52 +8,59 @@ import { MaintenanceList } from "@/components/maintenance-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipboardList, Wrench } from "lucide-react";
+import { useStaffServiceRequests } from "@/hooks/useServiceRequests";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { format } from "date-fns";
 
+interface ServiceRequestRow {
+  id: string;
+  service_type: string;
+  requested_departure?: string;
+  description?: string;
+  status: string;
+  priority: string;
+  airport?: string;
+  aircraft?: { tail_number?: string } | null;
+  owner?: { full_name?: string; email?: string } | null;
+}
+
+interface MaintenanceRow {
+  id: string;
+  item_name: string;
+  due_date?: string;
+  due_hobbs?: number;
+  status: string;
+  aircraft?: { tail_number?: string; hobbs_hours?: number } | null;
+}
+
 export default function StaffOperations() {
   const { user } = useAuth();
   const [selectedServiceRequest, setSelectedServiceRequest] = useState<string | null>(null);
-  
-  const { data: serviceRequests = [], refetch: refetchServiceRequests, error: serviceRequestsError, isLoading: isLoadingServiceRequests } = useQuery({
-    queryKey: ['/api/service-requests'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_requests')
-        .select(`
-          id, service_type, requested_departure, description, status, priority, airport, created_at, aircraft_id, user_id,
-          aircraft:aircraft_id(tail_number),
-          owner:user_id(full_name, email)
-        `)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    refetchInterval: 30000,
-    enabled: Boolean(user),
-  });
+
+  const {
+    data: serviceRequests = [],
+    isLoading: isLoadingServiceRequests,
+    updateStatus,
+  } = useStaffServiceRequests();
 
   const { data: maintenanceItems = [] } = useQuery({
     queryKey: ['/api/maintenance'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('maintenance')
-        .select(`id, aircraft_id, item_name, due_date, due_hobbs, status, aircraft:aircraft_id(tail_number, hobbs_hours)`)
+        .select('id, aircraft_id, item_name, due_date, due_hobbs, status, aircraft:aircraft_id(tail_number, hobbs_hours)')
         .order('due_date', { ascending: true });
       if (error) throw error;
-      return (data || []).map((m: any) => ({
-        ...m, item: m.item_name, due_at_date: m.due_date, due_at_hours: m.due_hobbs,
-      }));
+      return (data || []) as MaintenanceRow[];
     },
     enabled: Boolean(user),
   });
-  
-  const handleStatusChange = async (requestId: string, status: "pending" | "in_progress" | "completed") => {
-    await supabase.from('service_requests').update({ status }).eq('id', requestId);
-    refetchServiceRequests();
+
+  const handleStatusChange = (requestId: string, status: "pending" | "in_progress" | "completed") => {
+    updateStatus({ requestId, status });
   };
 
   return (
@@ -76,7 +83,7 @@ export default function StaffOperations() {
             <Card><CardContent className="py-12 text-center"><p className="text-muted-foreground">No service requests yet.</p></CardContent></Card>
           ) : (
             <KanbanBoard
-              items={serviceRequests.map((sr: any) => ({
+              items={(serviceRequests as ServiceRequestRow[]).map((sr) => ({
                 id: sr.id,
                 tailNumber: sr.aircraft?.tail_number || 'N/A',
                 type: sr.service_type,
@@ -97,13 +104,13 @@ export default function StaffOperations() {
               <h2 className="text-2xl font-semibold">Maintenance Tracking</h2>
             </div>
           </div>
-          <MaintenanceList items={maintenanceItems.map((m: any) => ({
+          <MaintenanceList items={maintenanceItems.map((m) => ({
             id: m.id,
             tailNumber: m.aircraft?.tail_number || 'N/A',
-            title: m.item,
-            hobbsDue: m.due_at_hours,
+            title: m.item_name,
+            hobbsDue: m.due_hobbs,
             hobbsCurrent: m.aircraft?.hobbs_hours,
-            calendarDue: m.due_at_date,
+            calendarDue: m.due_date,
             status: m.status === 'overdue' ? 'overdue' : m.status === 'due_soon' ? 'due_soon' : 'ok',
           }))} />
         </TabsContent>
@@ -111,4 +118,3 @@ export default function StaffOperations() {
     </DashboardLayout>
   );
 }
-

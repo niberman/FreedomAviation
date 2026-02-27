@@ -169,18 +169,7 @@ export interface ServiceRequest {
   updated_at: string;
 }
 
-export interface ServiceTask {
-  id: string;
-  aircraft_id: string; // FK to aircraft
-  type: string;
-  status: ServiceStatus;
-  assigned_to?: string; // FK to user_profiles
-  notes?: string;
-  photos?: string[];
-  completed_at?: string;
-  created_at: string;
-  updated_at: string;
-}
+// ServiceTask table removed - all service flow via service_requests
 
 // ============================================
 // MAINTENANCE
@@ -793,3 +782,41 @@ export interface PricingPackage {
   updated_at: string;
 }
 
+// ============================================
+// LEGACY (may be deprecated)
+// ============================================
+
+export interface PricingPackage {
+  id: string;
+  name: string;
+  description?: string;
+  class: MembershipClass;
+  monthly_base_rate: number;
+  hourly_rate?: number;
+  features?: Record<string, any>;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
+// INSERT / UPDATE HELPER TYPES
+// ============================================
+
+export type AircraftInsert = Omit<Aircraft, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+/** Partial update; optional fields may be set to null to clear them in the DB. */
+export type AircraftUpdate = Partial<{ [K in keyof Omit<Aircraft, 'id'>]: Aircraft[K] | null }>;
+
+export type ServiceRequestInsert = Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'> & {
+  id?: string;
+  status?: ServiceStatus;
+  created_at?: string;
+  updated_at?: string;
+};
+export type ServiceRequestUpdate = Partial<Omit<ServiceRequest, 'id'>>;
+
+export type UserProfileUpdate = Partial<Omit<UserProfile, 'id'>>;

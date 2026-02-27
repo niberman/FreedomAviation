@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
-import type { ServiceTask } from "../types";
 
 interface ServiceRequest {
   id: string;
@@ -21,12 +20,11 @@ interface ServiceRequest {
 }
 
 interface ServiceTimelineProps {
-  tasks: ServiceTask[];
   requests: ServiceRequest[];
   isLoading: boolean;
 }
 
-export function ServiceTimeline({ tasks, requests, isLoading }: ServiceTimelineProps) {
+export function ServiceTimeline({ requests, isLoading }: ServiceTimelineProps) {
   const [showAll, setShowAll] = useState(false);
 
   const formatServiceType = (type: string) => {
@@ -76,9 +74,9 @@ export function ServiceTimeline({ tasks, requests, isLoading }: ServiceTimelineP
     });
   };
 
-  // Combine and sort all services
-  const allServices = [
-    ...requests.map(req => ({
+  // Combine and sort all services (requests only)
+  const allServices = requests
+    .map(req => ({
       id: req.id,
       type: 'request' as const,
       serviceType: req.service_type,
@@ -90,23 +88,9 @@ export function ServiceTimeline({ tasks, requests, isLoading }: ServiceTimelineP
       created_at: req.created_at,
       completed_at: null,
       notes: null,
-      photos: []
-    })),
-    ...tasks.map(task => ({
-      id: task.id,
-      type: 'task' as const,
-      serviceType: task.type,
-      status: task.status,
-      description: null,
-      airport: null,
-      requestedDeparture: null,
-      fuelInfo: null,
-      created_at: task.created_at,
-      completed_at: task.completed_at,
-      notes: task.notes,
-      photos: task.photos
+      photos: [] as string[]
     }))
-  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const displayedServices = showAll ? allServices : allServices.slice(0, 5);
   const hasMore = allServices.length > 5;

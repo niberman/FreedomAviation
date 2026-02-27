@@ -22,7 +22,7 @@ import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import type { ServiceRequest, ServiceStatus } from "@/lib/types/database";
+import type { ServiceRequest, ServiceStatus } from "@shared/database-types";
 
 interface ServiceRequestDialogProps {
   open: boolean;

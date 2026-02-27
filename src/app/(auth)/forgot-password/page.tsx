@@ -6,9 +6,6 @@ export const metadata: Metadata = {
   description: 'Reset your Freedom Aviation account password.',
 };
 
-export const dynamic = 'force-dynamic';
-
 export default function ForgotPassword() {
   return <ForgotPasswordPage />;
 }
-
