@@ -4,7 +4,7 @@ import { getTokensFromCode, isGoogleCalendarConfigured } from '@/lib/google-cale
 
 export async function GET(request: NextRequest) {
   if (!isGoogleCalendarConfigured()) {
-    return NextResponse.redirect(new URL('/staff-dashboard?calendar_error=not_configured', request.url));
+    return NextResponse.redirect(new URL('/staff?calendar_error=not_configured', request.url));
   }
 
   const { searchParams } = new URL(request.url);
