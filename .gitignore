@@ -6,6 +6,7 @@ vite.config.ts.*
 .env
 .env.local
 .env.*.local
+.vercel
 
 # iOS / Capacitor
 ios/App/Pods/
