@@ -83,6 +83,41 @@ export function StaffHomePage() {
     invalidateQueryKeys: [['cockpit-ledger'], ['cockpit-stats']],
   });
 
+  const unsendInvoiceMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'draft' })
+        .eq('id', invoiceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cfi-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['cockpit-ledger'] });
+      queryClient.invalidateQueries({ queryKey: ['cockpit-stats'] });
+      toast({ title: 'Invoice unsent', description: 'Status set back to draft.' });
+    },
+    onError: (err: Error) => {
+      toast({ variant: 'destructive', title: 'Failed to unsend', description: err.message });
+    },
+  });
+
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const { error } = await supabase.from('invoices').delete().eq('id', invoiceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cfi-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['cockpit-ledger'] });
+      queryClient.invalidateQueries({ queryKey: ['cockpit-stats'] });
+      toast({ title: 'Invoice deleted', description: 'Invoice has been removed.' });
+    },
+    onError: (err: Error) => {
+      toast({ variant: 'destructive', title: 'Failed to delete', description: err.message });
+    },
+  });
+
   useEffect(() => {
     const requestedTool = searchParams.get('tool');
     if (requestedTool === 'requests' || requestedTool === 'aircraft' || requestedTool === 'maintenance' || requestedTool === 'clients' || requestedTool === 'staff') {
@@ -100,24 +135,37 @@ export function StaffHomePage() {
     date: format(new Date(), 'yyyy-MM-dd'),
   });
 
+  // KPI time period: 7d, 30d, 90d, or all time
+  type KpiPeriod = '7' | '30' | '90' | 'all';
+  const [kpiPeriod, setKpiPeriod] = useState<KpiPeriod>('30');
+
   // --- 1. DATA FETCHING ---
 
   // Fetch KPI Stats
   const { data: stats } = useQuery({
-    queryKey: ['cockpit-stats'],
+    queryKey: ['cockpit-stats', kpiPeriod],
     queryFn: async () => {
       const now = new Date();
-      const thirtyDaysAgo = subDays(now, 30).toISOString();
+
+      let invoicesQuery = supabase
+        .from('invoices')
+        .select('amount, status, created_at')
+        .in('category', ['instruction', 'maintenance']);
+
+      if (kpiPeriod !== 'all') {
+        const since = subDays(now, Number(kpiPeriod)).toISOString();
+        invoicesQuery = invoicesQuery.gte('created_at', since);
+      }
 
       const [invoices, owners] = await Promise.all([
-        supabase.from('invoices').select('amount, status, created_at')
-          .in('category', ['instruction', 'maintenance'])
-          .gte('created_at', thirtyDaysAgo),
+        invoicesQuery,
         supabase.from('user_profiles').select('id', { count: 'exact', head: true }).eq('role', 'owner'),
       ]);
 
       const invData = invoices.data || [];
-      const unpaidCount = invData.filter((i: any) => i.status === 'sent' || i.status === 'finalized').length;
+      const unpaidCount = invData.filter(
+        (i: any) => i.status === 'sent' || i.status === 'finalized' || i.status === 'overdue'
+      ).length;
       const totalRevenue = invData.reduce((acc: number, curr: any) => acc + (curr.amount || 0), 0);
       const paidCount = invData.filter((i: any) => i.status === 'paid').length;
       const collectionRate = invData.length > 0 ? (paidCount / invData.length) * 100 : 0;
@@ -315,31 +363,29 @@ export function StaffHomePage() {
       if (!invoiceForm.clientId || !invoiceForm.rate || !invoiceForm.hours) {
         throw new Error('Missing fields');
       }
-
-      const amount = parseFloat(invoiceForm.rate) * parseFloat(invoiceForm.hours);
-
-      const { data: invoice, error } = await supabase.from('invoices').insert({
-        owner_id: invoiceForm.clientId,
-        aircraft_id: invoiceForm.aircraftId || null,
-        amount: amount,
-        status: 'sent',
-        category: 'instruction',
-        due_date: format(subDays(new Date(), -14), 'yyyy-MM-dd'),
-        created_by_cfi_id: user?.id || null,
-      }).select('id').single();
-
-      if (error) throw error;
-
-      // Create the line item
-      if (invoice?.id) {
-        const { error: lineError } = await supabase.from('invoice_lines').insert({
-          invoice_id: invoice.id,
-          description: `${invoiceForm.description} - ${invoiceForm.date}`,
-          quantity: parseFloat(invoiceForm.hours),
-          unit_cents: Math.round(parseFloat(invoiceForm.rate) * 100),
-        });
-        if (lineError) console.error('Line item error:', lineError);
+      if (!user?.id) {
+        throw new Error('Not authenticated');
       }
+
+      const { data: invoiceId, error: rpcError } = await supabase.rpc('create_instruction_invoice', {
+        p_owner_id: invoiceForm.clientId,
+        p_aircraft_id: invoiceForm.aircraftId || null,
+        p_description: `${invoiceForm.description} - ${invoiceForm.date}`,
+        p_hours: parseFloat(invoiceForm.hours),
+        p_rate_cents: Math.round(parseFloat(invoiceForm.rate) * 100),
+        p_cfi_id: user.id,
+      });
+
+      if (rpcError) throw rpcError;
+      if (!invoiceId) throw new Error('Failed to create invoice');
+
+      const dueDate = format(subDays(new Date(), -14), 'yyyy-MM-dd');
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({ status: 'sent', due_date: dueDate })
+        .eq('id', invoiceId);
+
+      if (updateError) throw updateError;
     },
     onSuccess: () => {
       toast({ title: 'Invoice Sent', description: 'Client has been billed successfully.' });
@@ -582,6 +628,17 @@ export function StaffHomePage() {
               </Card>
 
               <div className="lg:col-span-8 flex flex-col gap-4 h-full">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium text-muted-foreground">Time range</span>
+                  <Tabs value={kpiPeriod} onValueChange={(v) => setKpiPeriod(v as KpiPeriod)}>
+                    <TabsList className="h-8">
+                      <TabsTrigger value="7" className="text-xs px-2">7d</TabsTrigger>
+                      <TabsTrigger value="30" className="text-xs px-2">30d</TabsTrigger>
+                      <TabsTrigger value="90" className="text-xs px-2">90d</TabsTrigger>
+                      <TabsTrigger value="all" className="text-xs px-2">All time</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card className="h-20 flex flex-col justify-center border-l-4 border-l-red-500 shadow-sm">
                     <CardContent className="p-4 flex justify-between items-center">
@@ -598,7 +655,9 @@ export function StaffHomePage() {
                   <Card className="h-20 flex flex-col justify-center border-l-4 border-l-emerald-500 shadow-sm">
                     <CardContent className="p-4 flex justify-between items-center">
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">30d Revenue</p>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          {kpiPeriod === 'all' ? 'All time Revenue' : `${kpiPeriod}d Revenue`}
+                        </p>
                         <div className="text-2xl font-bold text-emerald-600">
                           ${stats?.monthlyRevenue?.toLocaleString() || '0'}
                         </div>
@@ -649,6 +708,8 @@ export function StaffHomePage() {
                         {ledger?.map((inv: any) => {
                           const displayDesc = inv.invoice_lines?.[0]?.description || inv.category || '—';
                           const isPaid = inv.status === 'paid';
+                          const canUnsend = !isPaid && (inv.status === 'sent' || inv.status === 'finalized' || inv.status === 'overdue');
+                          const canDelete = !isPaid && inv.status === 'draft';
                           return (
                             <tr key={inv.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors group">
                               <td className="p-4 px-6 font-mono text-xs text-muted-foreground">
@@ -677,7 +738,7 @@ export function StaffHomePage() {
                                 </Badge>
                               </td>
                               <td className="p-4 px-4 text-right">
-                                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -700,6 +761,39 @@ export function StaffHomePage() {
                                     <Send className="h-3 w-3 mr-1" />
                                     Resend
                                   </Button>
+                                  {canUnsend && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2 text-xs"
+                                      onClick={() => {
+                                        if (window.confirm('Set this invoice back to draft? The client will no longer see it as sent.')) {
+                                          unsendInvoiceMutation.mutate(inv.id);
+                                        }
+                                      }}
+                                      disabled={unsendInvoiceMutation.isPending}
+                                      title="Set invoice back to draft"
+                                    >
+                                      Unsend
+                                    </Button>
+                                  )}
+                                  {canDelete && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                      onClick={() => {
+                                        if (window.confirm('Permanently delete this invoice? This cannot be undone.')) {
+                                          deleteInvoiceMutation.mutate(inv.id);
+                                        }
+                                      }}
+                                      disabled={deleteInvoiceMutation.isPending}
+                                      title="Delete invoice"
+                                    >
+                                      <Trash2 className="h-3 w-3 mr-1" />
+                                      Delete
+                                    </Button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
