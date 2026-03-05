@@ -27,6 +27,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { apiJson } from "@/lib/api-client";
+import type { Client } from "@/hooks/useClients";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,15 +42,6 @@ interface EditableLineItem {
   rate: string;
 }
 
-interface Client {
-  id: string;
-  full_name: string;
-  email: string;
-  phone?: string;
-  role: string;
-  created_at: string;
-  aircraft_count?: number;
-}
 
 export function ClientsTable() {
   const { toast } = useToast();
@@ -78,7 +71,7 @@ export function ClientsTable() {
 
   const updateInvoiceMutation = useUpdateInvoice();
   const resendInvoiceMutation = useResendInvoice({
-    invalidateQueryKeys: [['/api/client-details', selectedClientId]],
+    invalidateQueryKeys: [['client-details', selectedClientId]],
   });
 
   // Fetch all clients (owners)
@@ -86,7 +79,7 @@ export function ClientsTable() {
 
   // Fetch detailed client information when a client is selected
   const { data: clientDetails, isLoading: isLoadingDetails } = useQuery({
-    queryKey: ['/api/client-details', selectedClientId],
+    queryKey: ['client-details', selectedClientId],
     queryFn: async () => {
       if (!selectedClientId) return null;
 
@@ -146,29 +139,8 @@ export function ClientsTable() {
   const { data: clients = [], isLoading, error: clientsError } = useQuery({
     queryKey: ['/api/clients', accessToken],
     queryFn: async () => {
-      console.log('[ClientsTable] Fetching clients from API...');
-      
-      // IMPORTANT: Fetch from API endpoint, NOT directly from Supabase
-      // The API uses service role to bypass RLS
-      const response = await fetch('/api/clients', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[ClientsTable] Error fetching clients:', errorText);
-        throw new Error(`Failed to fetch clients: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('[ClientsTable] Clients from API:', data);
-      
-      // API returns {clients: [...], total: 12}, extract the clients array
-      return data.clients || [];
+      const data = await apiJson<{ clients?: Client[] }>('/api/clients');
+      return data.clients ?? [];
     },
     enabled: !!accessToken,
     retry: false,
@@ -177,22 +149,8 @@ export function ClientsTable() {
   // Create new client
   const createClientMutation = useMutation({
     mutationFn: async () => {
-      if (!accessToken) {
-        throw new Error('Not authenticated. Please sign in again.');
-      }
-
-      console.log('Creating client with:', {
-        email: newClientEmail,
-        full_name: newClientName,
-        phone: newClientPhone || null,
-      });
-
-      const response = await fetch('/api/clients/create', {
+      return apiJson<{ message?: string }>('/api/clients', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
         body: JSON.stringify({
           email: newClientEmail,
           full_name: newClientName,
@@ -200,19 +158,10 @@ export function ClientsTable() {
           sendInvite: true,
         }),
       });
-
-      const data = await response.json();
-      console.log('Server response:', { status: response.status, data });
-      console.log('Error details:', JSON.stringify(data, null, 2));
-      
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Failed to create client');
-      }
-      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/owners'] });
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
       setIsAddDialogOpen(false);
       setNewClientEmail("");
       setNewClientName("");
@@ -246,7 +195,7 @@ export function ClientsTable() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/owners'] });
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
       setIsEditDialogOpen(false);
       setEditClientId("");
       setEditClientName("");
@@ -272,7 +221,7 @@ export function ClientsTable() {
 
   const handleEditClient = (client: Client) => {
     setEditClientId(client.id);
-    setEditClientName(client.full_name);
+    setEditClientName(client.full_name ?? "");
     setEditClientPhone(client.phone || "");
     setIsEditDialogOpen(true);
   };
@@ -365,7 +314,7 @@ export function ClientsTable() {
       onSuccess: () => {
         setIsInvoiceEditOpen(false);
         setEditingInvoice(null);
-        queryClient.invalidateQueries({ queryKey: ['/api/client-details', selectedClientId] });
+        queryClient.invalidateQueries({ queryKey: ['client-details', selectedClientId] });
       },
     });
   };
@@ -466,7 +415,7 @@ export function ClientsTable() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(client.created_at).toLocaleDateString()}
+                        {client.created_at ? new Date(client.created_at).toLocaleDateString() : '—'}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">Active</Badge>

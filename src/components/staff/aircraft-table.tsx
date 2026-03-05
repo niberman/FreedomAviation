@@ -170,9 +170,9 @@ export function AircraftTable({
         description: `${serviceLabel} created for ${aircraft.tailNumber}.`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
       queryClient.invalidateQueries({ queryKey: ["service-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/aircraft/full"] });
+      queryClient.invalidateQueries({ queryKey: ["aircraft", "full"] });
       
       // Reset dialog state
       setIsServiceDialogOpen(false);
@@ -274,7 +274,7 @@ export function AircraftTable({
 
       resetAssignDialog();
       queryClient.invalidateQueries({ queryKey: ["/api/aircraft"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/aircraft/full"] });
+      queryClient.invalidateQueries({ queryKey: ["aircraft", "full"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       onAircraftCreated?.();
     } catch (err: any) {
@@ -342,7 +342,7 @@ export function AircraftTable({
       setNewAircraft(createInitialAircraftState());
 
       queryClient.invalidateQueries({ queryKey: ["/api/aircraft"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/aircraft/full"] });
+      queryClient.invalidateQueries({ queryKey: ["aircraft", "full"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
       onAircraftCreated?.();
     } catch (err: any) {

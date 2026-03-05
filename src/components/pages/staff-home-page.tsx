@@ -38,12 +38,12 @@ import { format, subDays, startOfMonth } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { KanbanBoard } from '@/components/kanban-board';
-import { AircraftTable } from '@/components/aircraft-table';
-import { ClientsTable } from '@/components/clients-table';
-import { ServiceRequestEditDialog } from '@/components/service-request-edit-dialog';
-import { StaffManagement } from '@/components/staff-management';
-import { MaintenanceCRUD } from '@/components/maintenance-crud';
+import { KanbanBoard } from '@/components/staff/kanban-board';
+import { AircraftTable } from '@/components/staff/aircraft-table';
+import { ClientsTable } from '@/components/staff/clients-table';
+import { ServiceRequestEditDialog } from '@/components/staff/service-request-edit-dialog';
+import { StaffManagement } from '@/components/staff/staff-management';
+import { MaintenanceCRUD } from '@/components/staff/maintenance-crud';
 import { useClients } from '@/hooks/useClients';
 import { useAircraftTable } from '@/hooks/useAircraft';
 import { useUpdateInvoice } from '@/hooks/useInvoices';
@@ -345,7 +345,7 @@ export function StaffHomePage() {
       toast({ title: 'Invoice Sent', description: 'Client has been billed successfully.' });
       queryClient.invalidateQueries({ queryKey: ['cockpit-stats'] });
       queryClient.invalidateQueries({ queryKey: ['cockpit-ledger'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/cfi/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['cfi-invoices'] });
     },
     onError: (err: Error) => {
       toast({ variant: 'destructive', title: 'Failed', description: err.message });

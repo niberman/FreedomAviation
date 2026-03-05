@@ -50,7 +50,7 @@ export function useOwnerMore() {
   }, [searchParams, toast, queryClient, router]);
 
   const { data: aircraftList } = useQuery({
-    queryKey: ["/api/aircraft", { ownerId: isDemo ? "demo" : user?.id }],
+    queryKey: ["aircraft", "owner-list", isDemo ? "demo" : user?.id],
     enabled: isDemo || Boolean(user?.id),
     queryFn: async () => {
       if (isDemo) return [DEMO_AIRCRAFT];

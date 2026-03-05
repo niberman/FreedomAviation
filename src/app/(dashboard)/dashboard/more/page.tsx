@@ -9,7 +9,7 @@ import { ServiceTimeline } from "@/features/owner/components/ServiceTimeline";
 import { BillingCard } from "@/features/owner/components/BillingCard";
 import { DocsCard } from "@/features/owner/components/DocsCard";
 import { PasswordChangeCard } from "@/features/owner/components/PasswordChangeCard";
-import { DemoBanner } from "@/components/DemoBanner";
+import { DemoBanner } from "@/components/demo-banner";
 import { useOwnerMore } from "@/hooks/useOwnerMore";
 import type { ComponentProps } from "react";
 

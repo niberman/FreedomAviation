@@ -3,7 +3,7 @@
 import { DashboardLayout } from "@/components/dashboard/layout";
 import { staffDashboardNavItems } from "@/components/dashboard/nav-items";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { RampDashboard } from "@/components/ramp-dashboard";
+import { RampDashboard } from "@/components/staff/ramp-dashboard";
 
 export default function StaffRamp() {
   return (

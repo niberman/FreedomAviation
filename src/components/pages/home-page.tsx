@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { HeroSection } from '@/components/hero-section';
 import { FeaturesGrid } from '@/components/features-grid';
-import OwnerPortalDemo from '@/components/OwnerPortalDemo';
+import OwnerPortalDemo from '@/components/owner-portal-demo';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Calculator } from 'lucide-react';
 import { SimpleCalculatorDialog } from '@/components/simple-calculator-dialog';

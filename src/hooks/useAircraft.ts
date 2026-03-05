@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
+import { apiJson } from "@/lib/api-client";
 import { z } from "zod";
 import type { Aircraft, AircraftInsert, AircraftUpdate } from "@shared/database-types";
 
@@ -21,6 +22,18 @@ export const aircraftSchema = z.object({
 
 export type AircraftFormData = z.infer<typeof aircraftSchema>;
 
+/** Shape of each aircraft item returned by GET /api/aircraft */
+export interface StaffAircraftListItem {
+  id: string;
+  tail_number?: string;
+  make?: string;
+  model?: string;
+  class?: string;
+  base_location?: string;
+  owner_id?: string;
+  owner?: { full_name?: string; email?: string };
+}
+
 /** Staff: all aircraft via API route (requires staff role on server) */
 export function useStaffAircraftList() {
   const { session } = useAuth();
@@ -28,27 +41,8 @@ export function useStaffAircraftList() {
   return useQuery({
     queryKey: ['/api/aircraft', session?.access_token],
     queryFn: async () => {
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error('Not authenticated. Please sign in again.');
-      }
-
-      const response = await fetch('/api/aircraft', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error fetching aircraft:', errorText);
-        throw new Error(`Failed to fetch aircraft: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.aircraft || [];
+      const data = await apiJson<{ aircraft?: StaffAircraftListItem[] }>('/api/aircraft');
+      return data.aircraft ?? [];
     },
     enabled: !!session?.access_token,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -59,7 +53,7 @@ export function useStaffAircraftList() {
 export function useAircraftTable() {
   const { data: aircraft = [], ...rest } = useStaffAircraftList();
 
-  const aircraftFull = aircraft.map((ac: { id: string; tail_number?: string; make?: string; model?: string; class?: string; base_location?: string; owner_id?: string; owner?: { full_name?: string; email?: string } }) => {
+  const aircraftFull = aircraft.map((ac: StaffAircraftListItem) => {
     const ownerRecord = ac.owner || null;
     const ownerName = ownerRecord?.full_name || ownerRecord?.email || null;
 

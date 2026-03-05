@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { AuthProvider } from '@/lib/auth-context';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/toaster';
-import { AuthRedirectHandler } from '@/components/auth-redirect-handler';
+import { AuthRedirectHandler } from '@/components/auth/auth-redirect-handler';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(

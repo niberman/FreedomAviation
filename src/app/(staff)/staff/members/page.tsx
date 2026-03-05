@@ -3,7 +3,7 @@
 import { DashboardLayout } from "@/components/dashboard/layout";
 import { staffDashboardNavItems } from "@/components/dashboard/nav-items";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ClientsTable } from "@/components/clients-table";
+import { ClientsTable } from "@/components/staff/clients-table";
 import { Users } from "lucide-react";
 
 export default function StaffMembers() {

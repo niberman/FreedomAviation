@@ -3,7 +3,7 @@
 import { DashboardLayout } from "@/components/dashboard/layout";
 import { staffDashboardNavItems } from "@/components/dashboard/nav-items";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AircraftTable } from "@/components/aircraft-table";
+import { AircraftTable } from "@/components/staff/aircraft-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plane } from "lucide-react";
 import { useAircraftTable } from "@/hooks/useAircraft";
@@ -17,7 +17,7 @@ export default function StaffAircraft() {
   const { aircraftFull, isLoading: isLoadingAircraft, isError: aircraftError } = useAircraftTable();
 
   const { data: owners = [] } = useQuery({
-    queryKey: ['/api/owners'],
+    queryKey: ['owners'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_profiles')

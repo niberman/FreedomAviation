@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { DemoBanner } from '@/components/DemoBanner';
+import { DemoBanner } from '@/components/demo-banner';
 import { useDemoMode } from '@/hooks/use-demo-mode';
 import { DEMO_AIRCRAFT } from '@/lib/demo-data';
 import Link from 'next/link';
@@ -62,7 +62,7 @@ export function OwnerDashboardPage() {
   const { updateAircraft } = useAircraft();
 
   const { data: aircraftList, isLoading: aircraftLoading } = useQuery({
-    queryKey: ['/api/aircraft', { ownerId: isDemo ? 'demo' : user?.id }],
+    queryKey: ['aircraft', 'owner-list', isDemo ? 'demo' : user?.id],
     enabled: isDemo || Boolean(user?.id),
     queryFn: async () => {
       if (isDemo) return [DEMO_AIRCRAFT];
@@ -120,7 +120,7 @@ export function OwnerDashboardPage() {
       });
 
       queryClient.invalidateQueries({
-        queryKey: ['/api/aircraft', { ownerId: isDemo ? 'demo' : user?.id }]
+        queryKey: ['aircraft', 'owner-list', isDemo ? 'demo' : user?.id]
       });
 
       toast({

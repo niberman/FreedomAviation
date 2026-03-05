@@ -3,8 +3,8 @@
 import { DashboardLayout } from "@/components/dashboard/layout";
 import { staffDashboardNavItems } from "@/components/dashboard/nav-items";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { KanbanBoard } from "@/components/kanban-board";
-import { MaintenanceList } from "@/components/maintenance-list";
+import { KanbanBoard } from "@/components/staff/kanban-board";
+import { MaintenanceList } from "@/components/staff/maintenance-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipboardList, Wrench } from "lucide-react";
@@ -47,7 +47,7 @@ export default function StaffOperations() {
   } = useStaffServiceRequests();
 
   const { data: maintenanceItems = [] } = useQuery({
-    queryKey: ['/api/maintenance'],
+    queryKey: ['maintenance'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('maintenance')

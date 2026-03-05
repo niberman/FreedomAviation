@@ -89,7 +89,7 @@ export function MaintenanceCRUD() {
 
   // Fetch maintenance items
   const { data: maintenanceItems = [], isLoading } = useQuery({
-    queryKey: ["/api/maintenance"],
+    queryKey: ["maintenance"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("maintenance")
@@ -157,7 +157,7 @@ export function MaintenanceCRUD() {
         title: "Maintenance item created",
         description: "The maintenance item has been added successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
       setIsAddDialogOpen(false);
       // Reset form
       setSelectedAircraftId("");
@@ -189,7 +189,7 @@ export function MaintenanceCRUD() {
         title: "Maintenance item updated",
         description: "Changes have been saved successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
       setEditingItem(null);
     },
     onError: (error) => {
@@ -215,7 +215,7 @@ export function MaintenanceCRUD() {
         title: "Maintenance item deleted",
         description: "The maintenance item has been removed.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
       setDeleteConfirmId(null);
     },
     onError: (error) => {
@@ -244,7 +244,7 @@ export function MaintenanceCRUD() {
         title: "Maintenance completed",
         description: "The maintenance item has been marked as completed.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/maintenance"] });
+      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
     },
     onError: (error) => {
       toast({

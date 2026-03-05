@@ -12,7 +12,7 @@ export function useInvoices() {
   const { canSeeAllInvoices } = useUserProfile();
 
   return useQuery<InstructionInvoice[]>({
-    queryKey: ['/api/cfi/invoices', user?.id, isDev, canSeeAllInvoices],
+    queryKey: ['cfi-invoices', user?.id, isDev, canSeeAllInvoices],
     queryFn: async () => {
       if (!user && isDev) return [];
       if (!user) throw new Error('Not authenticated');
@@ -123,7 +123,7 @@ export function useDeleteInvoice() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cfi/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['cfi-invoices'] });
       toast({
         title: "Invoice deleted",
         description: "The invoice has been successfully deleted.",
@@ -220,7 +220,7 @@ export function useUpdateInvoice() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cfi/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['cfi-invoices'] });
       toast({
         title: "Invoice updated",
         description: "The invoice has been successfully updated.",
