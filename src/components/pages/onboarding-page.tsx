@@ -19,7 +19,7 @@ import { supabase } from '@/lib/supabase';
 
 export function OnboardingPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
@@ -198,18 +198,20 @@ export function OnboardingPage() {
     
     // Send welcome email
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch('/api/onboarding/welcome-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ userId: user?.id }),
-      });
+      const accessToken = session?.access_token;
+      if (accessToken && user?.id) {
+        const response = await fetch('/api/onboarding/welcome-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ userId: user.id }),
+        });
 
-      if (!response.ok) {
-        console.error('Failed to send welcome email');
+        if (!response.ok) {
+          console.error('Failed to send welcome email');
+        }
       }
     } catch (err) {
       console.error('Error sending welcome email:', err);

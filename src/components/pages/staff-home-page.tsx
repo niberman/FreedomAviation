@@ -129,6 +129,7 @@ export function StaffHomePage() {
         activeStudents: owners.count || 0,
       };
     },
+    enabled: !!user,
     refetchInterval: 30000,
   });
 
@@ -142,6 +143,7 @@ export function StaffHomePage() {
       ]);
       return { clients: clients.data || [], aircraft: aircraft.data || [] };
     },
+    enabled: !!user,
   });
 
   // Fetch Recent Invoices (Ledger)
@@ -160,7 +162,6 @@ export function StaffHomePage() {
           invoice_number,
           owner_id,
           aircraft_id,
-          notes,
           owner:owner_id(full_name, email),
           invoice_lines(description, quantity, unit_cents)
         `)
@@ -172,7 +173,7 @@ export function StaffHomePage() {
       // Fallback: fetch invoices + owners separately
       const fallback = await supabase
         .from('invoices')
-        .select('id, created_at, amount, status, category, invoice_number, owner_id, aircraft_id, notes')
+        .select('id, created_at, amount, status, category, invoice_number, owner_id, aircraft_id')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -211,6 +212,7 @@ export function StaffHomePage() {
         invoice_lines: linesByInvoice[inv.id] || [],
       }));
     },
+    enabled: !!user,
   });
 
   const { data: owners = [], error: ownersError } = useClients();

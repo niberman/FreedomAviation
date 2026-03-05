@@ -1,5 +1,10 @@
 import { supabase } from './supabase';
 
+function isInvalidRefreshTokenError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /Refresh Token|Invalid Refresh Token/i.test(message);
+}
+
 /**
  * Get a valid auth token, refreshing the session if necessary
  */
@@ -7,39 +12,51 @@ export async function getValidAuthToken(): Promise<string | null> {
   try {
     // First try to get the current session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+
     if (sessionError) {
-      console.error('Session error:', sessionError);
+      if (process.env.NODE_ENV !== 'production') console.error('Session error:', sessionError);
+      if (isInvalidRefreshTokenError(sessionError)) {
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
       return null;
     }
-    
+
     if (session?.access_token) {
       // Check if token is expired (with 5 minute buffer)
       const expiresAt = session.expires_at;
       if (expiresAt && expiresAt * 1000 - Date.now() < 5 * 60 * 1000) {
-        console.log('Token expiring soon, refreshing...');
+        if (process.env.NODE_ENV !== 'production') console.log('Token expiring soon, refreshing...');
         const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError && isInvalidRefreshTokenError(refreshError)) {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+          return null;
+        }
         if (!refreshError && refreshedSession?.access_token) {
-          console.log('Session refreshed successfully');
           return refreshedSession.access_token;
         }
       }
       return session.access_token;
     }
-    
+
     // No session, try to refresh
-    console.log('No session found, attempting to refresh...');
+    if (process.env.NODE_ENV !== 'production') console.log('No session found, attempting to refresh...');
     const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-    
-    if (refreshError || !refreshedSession?.access_token) {
-      console.error('Failed to refresh session:', refreshError);
+
+    if (refreshError && isInvalidRefreshTokenError(refreshError)) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       return null;
     }
-    
-    console.log('Session refreshed successfully');
+    if (refreshError || !refreshedSession?.access_token) {
+      if (process.env.NODE_ENV !== 'production') console.error('Failed to refresh session:', refreshError);
+      return null;
+    }
+
     return refreshedSession.access_token;
   } catch (error) {
-    console.error('Error getting auth token:', error);
+    if (process.env.NODE_ENV !== 'production') console.error('Error getting auth token:', error);
+    if (isInvalidRefreshTokenError(error)) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    }
     return null;
   }
 }
@@ -71,9 +88,13 @@ export async function authenticatedFetch(
   
   // If we get a 401, try to refresh the token and retry once
   if (response.status === 401) {
-    console.warn('Got 401, refreshing token and retrying...');
+    if (process.env.NODE_ENV !== 'production') console.warn('Got 401, refreshing token and retrying...');
     const { data: { session }, error } = await supabase.auth.refreshSession();
-    
+
+    if (error && isInvalidRefreshTokenError(error)) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      throw new Error('Session expired. Please log in again.');
+    }
     if (!error && session?.access_token) {
       const retryResponse = await fetch(url, {
         ...options,
@@ -84,16 +105,10 @@ export async function authenticatedFetch(
         },
         credentials: 'include',
       });
-      
-      if (retryResponse.ok) {
-        console.log('Request succeeded after token refresh');
-        return retryResponse;
-      }
+
+      if (retryResponse.ok) return retryResponse;
     }
-    
-    // DON'T automatically sign out - let the app handle it via auth context
-    // This prevents 403 errors and logout loops
-    console.error('Session refresh failed. User needs to re-authenticate.');
+
     throw new Error('Session expired. Please log in again.');
   }
   

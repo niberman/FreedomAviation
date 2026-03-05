@@ -140,7 +140,7 @@ export function ClientsTable() {
         serviceRequests: serviceRequests || [],
       };
     },
-    enabled: !!selectedClientId,
+    enabled: !!selectedClientId && !!session?.access_token,
   });
 
   const { data: clients = [], isLoading, error: clientsError } = useQuery({

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient } from '@/lib/supabase-server';
+import { getAuthenticatedUser } from '@/lib/api-auth';
+import { isStaffRole } from '@/lib/roles';
 import { normalizeLineItem } from '@/lib/stripe-utils';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -8,6 +10,11 @@ const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await getAuthenticatedUser(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Missing or invalid authorization. Please log in.' }, { status: 401 });
+    }
+
     const supabase = createAdminClient();
     if (!stripe || !supabase) {
       return NextResponse.json({
@@ -18,19 +25,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { invoiceId, userId } = body;
 
-    if (!invoiceId || !userId) {
-      return NextResponse.json({ error: 'Missing invoiceId or userId' }, { status: 400 });
+    if (!invoiceId) {
+      return NextResponse.json({ error: 'Missing invoiceId' }, { status: 400 });
     }
 
-    const { data: invoice, error: invoiceError } = await supabase
+    const isStaff = isStaffRole(auth.profile?.role);
+    if (!isStaff && body.userId !== auth.user.id) {
+      return NextResponse.json({ error: 'You can only create checkout for your own invoices' }, { status: 403 });
+    }
+
+    let query = supabase
       .from('invoices')
-      .select(`
-        *,
-        invoice_lines(*)
-      `)
-      .eq('id', invoiceId)
-      .eq('owner_id', userId)
-      .single();
+      .select(`*, invoice_lines(*)`)
+      .eq('id', invoiceId);
+    if (!isStaff) {
+      query = query.eq('owner_id', auth.user.id);
+    }
+    const { data: invoice, error: invoiceError } = await query.single();
 
     if (invoiceError || !invoice) {
       return NextResponse.json({ error: 'Invoice not found or access denied' }, { status: 404 });
@@ -79,7 +90,7 @@ export async function POST(request: NextRequest) {
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('email, full_name')
-      .eq('id', userId)
+      .eq('id', invoice.owner_id)
       .single();
 
     const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -121,7 +132,7 @@ export async function POST(request: NextRequest) {
       customer_email: userProfile?.email,
       metadata: {
         invoice_id: invoiceId,
-        owner_id: userId,
+        owner_id: invoice.owner_id,
         invoice_number: invoice.invoice_number,
       },
     });

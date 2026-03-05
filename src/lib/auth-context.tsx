@@ -23,16 +23,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    function clearSessionOnInvalidRefresh(error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/Refresh Token|Invalid Refresh Token/i.test(message)) {
+        supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+        setSession(null);
+        setUser(null);
+      }
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error('[AuthContext] Error getting initial session:', error);
+        clearSessionOnInvalidRefresh(error);
       }
       setSession(session ?? null);
       setUser(session?.user ?? null);
       setLoading(false);
     }).catch((err) => {
       console.error('[AuthContext] Failed to get initial session:', err);
+      clearSessionOnInvalidRefresh(err);
       setSession(null);
       setUser(null);
       setLoading(false);
@@ -41,9 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[AuthContext] Auth event:', event);
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/ce595c44-18a7-46d2-b583-275de660c288',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'99c487'},body:JSON.stringify({sessionId:'99c487',location:'auth-context.tsx:onAuthStateChange',message:'Auth state change event',data:{event,hasSession:!!session,hasAccessToken:!!session?.access_token,tokenPrefix:session?.access_token?.substring(0,10)},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);

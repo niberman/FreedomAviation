@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 
 interface UseResendInvoiceOptions {
   invalidateQueryKeys?: Array<readonly unknown[]>;
@@ -19,6 +19,7 @@ function getInvoiceEmailApiUrl() {
 }
 
 export function useResendInvoice(options?: UseResendInvoiceOptions) {
+  const { session } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -27,15 +28,16 @@ export function useResendInvoice(options?: UseResendInvoiceOptions) {
       if (!invoiceId) {
         throw new Error("Missing invoice id");
       }
-
-      const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token;
+      if (!authToken) {
+        throw new Error("Not authenticated. Please log in.");
+      }
 
       const response = await fetch(getInvoiceEmailApiUrl(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(authToken && { Authorization: `Bearer ${authToken}` }),
+          Authorization: `Bearer ${authToken}`,
         },
         credentials: "include",
         body: JSON.stringify({ invoiceId }),

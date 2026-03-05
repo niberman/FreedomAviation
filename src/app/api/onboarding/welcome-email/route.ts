@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser } from '@/lib/api-auth';
 import { createAdminClient, isSupabaseConfigured } from '@/lib/supabase-server';
 import { sendWelcomeEmail } from '@/lib/welcome-email';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await getAuthenticatedUser(request);
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Missing or invalid authorization. Please log in.' },
+        { status: 401 }
+      );
+    }
+
     if (!isSupabaseConfigured()) {
       return NextResponse.json(
         { error: 'Supabase not configured' },
@@ -28,11 +37,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (userId !== auth.user.id) {
+      return NextResponse.json(
+        { error: 'You can only trigger the welcome email for yourself' },
+        { status: 403 }
+      );
+    }
 
     const { data: userProfile, error: profileError } = await supabase
       .from('user_profiles')
       .select('email, full_name')
-      .eq('id', userId)
+      .eq('id', auth.user.id)
       .single();
 
     if (profileError || !userProfile) {

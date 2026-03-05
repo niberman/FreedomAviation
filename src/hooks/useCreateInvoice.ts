@@ -27,7 +27,7 @@ interface CreateMaintenanceInvoiceParams {
 }
 
 export function useCreateInvoice() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -71,15 +71,14 @@ export function useCreateInvoice() {
         } else {
           apiUrl = `${window.location.origin}/api/invoices/send-email`;
         }
-        
-        const { data: { session } } = await supabase.auth.getSession();
         const authToken = session?.access_token;
+        if (!authToken) throw new Error("Not authenticated. Please log in.");
 
         const emailResponse = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(authToken && { Authorization: `Bearer ${authToken}` }),
+            Authorization: `Bearer ${authToken}`,
           },
           credentials: "include",
           body: JSON.stringify({ invoiceId }),
@@ -147,7 +146,7 @@ export function useCreateInvoice() {
 
 // Hook for creating maintenance invoices with multiple line items
 export function useCreateMaintenanceInvoice() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -194,15 +193,14 @@ export function useCreateMaintenanceInvoice() {
         } else {
           apiUrl = `${window.location.origin}/api/invoices/send-email`;
         }
-        
-        const { data: { session } } = await supabase.auth.getSession();
         const authToken = session?.access_token;
+        if (!authToken) throw new Error("Not authenticated. Please log in.");
 
         const emailResponse = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(authToken && { Authorization: `Bearer ${authToken}` }),
+            Authorization: `Bearer ${authToken}`,
           },
           credentials: "include",
           body: JSON.stringify({ invoiceId }),

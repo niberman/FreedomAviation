@@ -19,3 +19,41 @@
 {"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"INITIAL_SESSION","hasSession":false,"hasAccessToken":false},"timestamp":1772230926121,"hypothesisId":"C"}
 {"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"INITIAL_SESSION","hasSession":false,"hasAccessToken":false},"timestamp":1772230929141,"hypothesisId":"C"}
 {"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"INITIAL_SESSION","hasSession":false,"hasAccessToken":false},"timestamp":1772230929170,"hypothesisId":"C"}
+{"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"SIGNED_OUT","hasSession":false,"hasAccessToken":false},"timestamp":1772681383526,"hypothesisId":"C"}
+{"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"SIGNED_OUT","hasSession":false,"hasAccessToken":false},"timestamp":1772681383527,"hypothesisId":"C"}
+{"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"SIGNED_OUT","hasSession":false,"hasAccessToken":false},"timestamp":1772681383526,"hypothesisId":"C"}
+{"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"INITIAL_SESSION","hasSession":false,"hasAccessToken":false},"timestamp":1772681383544,"hypothesisId":"C"}
+{"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"SIGNED_OUT","hasSession":false,"hasAccessToken":false},"timestamp":1772681383541,"hypothesisId":"C"}
+{"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"INITIAL_SESSION","hasSession":false,"hasAccessToken":false},"timestamp":1772681383549,"hypothesisId":"C"}
+{"sessionId":"99c487","location":"auth-context.tsx:onAuthStateChange","message":"Auth state change event","data":{"event":"SIGNED_IN","hasSession":true,"hasAccessToken":true,"tokenPrefix":"eyJhbGciOi"},"timestamp":1772681389396,"hypothesisId":"C"}
+{"sessionId":"99c487","location":"use-toast.ts:dispatch","message":"Toast dispatch called","data":{"actionType":"ADD_TOAST","dispatchCount":1,"listenerCount":2,"toastCount":0},"timestamp":1772681390156,"hypothesisId":"B"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681390760,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"staff-home-page.tsx:ownersEffect","message":"Owners useEffect fired","data":{"hasOwnersError":false,"ownersErrorMsg":"null","ownersLength":0,"ownersRef":"object"},"timestamp":1772681390789,"hypothesisId":"A"}
+{"sessionId":"99c487","location":"staff-home-page.tsx:aircraftEffect","message":"Aircraft error useEffect fired","data":{"hasAircraftError":false,"aircraftErrorMsg":"null"},"timestamp":1772681390790,"hypothesisId":"E"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681391278,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681391289,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681391298,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681393169,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681393971,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681396689,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681398121,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681398288,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681400428,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681400979,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681402404,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681404446,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681405960,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772681696692,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682033213,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682033978,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682034578,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682035296,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682036012,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682036877,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682038945,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682233571,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682235578,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682242239,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682243537,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682244685,"hypothesisId":"D"}
+{"sessionId":"99c487","location":"useClients.ts:render","message":"useClients hook rendered","data":{"hasSession":true,"hasAccessToken":true},"timestamp":1772682248313,"hypothesisId":"D"}
