@@ -21,6 +21,7 @@ export function useResendInvoice(options?: UseResendInvoiceOptions) {
       });
     },
     onSuccess: async () => {
+      console.log("[Invoice] Resend: success");
       await queryClient.invalidateQueries({ queryKey: ["cfi-invoices"] });
 
       for (const queryKey of options?.invalidateQueryKeys || []) {

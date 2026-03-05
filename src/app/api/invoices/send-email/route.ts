@@ -254,10 +254,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate invoice status
-    if (invoice.status !== 'finalized' && invoice.status !== 'sent') {
+    // Validate invoice status (allow draft for initial send; API will set sent after email)
+    if (invoice.status !== 'finalized' && invoice.status !== 'sent' && invoice.status !== 'draft') {
       return NextResponse.json(
-        { error: `Can only send email for finalized or sent invoices. Current status: ${invoice.status}` },
+        { error: `Can only send email for draft, finalized, or sent invoices. Current status: ${invoice.status}` },
         { status: 400 }
       );
     }

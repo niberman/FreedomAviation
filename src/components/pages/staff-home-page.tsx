@@ -382,18 +382,25 @@ export function StaffHomePage() {
 
       if (updateError) throw updateError;
 
-      await apiJson<{ message?: string }>('/api/invoices/send-email', {
+      const idToSend = typeof invoiceId === 'string' ? invoiceId : (invoiceId as { id?: string })?.id ?? String(invoiceId);
+      const sendResult = await apiJson<{ message?: string; sent?: boolean }>('/api/invoices/send-email', {
         method: 'POST',
-        body: JSON.stringify({ invoiceId }),
+        body: JSON.stringify({ invoiceId: idToSend }),
       });
+      if (sendResult.sent === false) {
+        throw new Error('Invoice saved but email was not sent. Set EMAIL_SERVICE=resend and RESEND_API_KEY to send emails.');
+      }
+      console.log("[Invoice] Send (initial): success");
     },
     onSuccess: () => {
+      console.log("[Invoice] Created and sent: working");
       toast({ title: 'Invoice Sent', description: 'Client has been billed successfully.' });
       queryClient.invalidateQueries({ queryKey: ['cockpit-stats'] });
       queryClient.invalidateQueries({ queryKey: ['cockpit-ledger'] });
       queryClient.invalidateQueries({ queryKey: ['cfi-invoices'] });
     },
     onError: (err: Error) => {
+      console.error("[Invoice] Create/send failed:", err.message);
       toast({ variant: 'destructive', title: 'Failed', description: err.message });
     },
   });
@@ -539,7 +546,7 @@ export function StaffHomePage() {
                         <SelectValue placeholder="Select Student" />
                       </SelectTrigger>
                       <SelectContent>
-                        {formOptions?.clients.map((c: any) => (
+                        {(formOptions?.clients ?? []).map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>{c.full_name || c.email}</SelectItem>
                         ))}
                       </SelectContent>
@@ -556,7 +563,7 @@ export function StaffHomePage() {
                         <SelectValue placeholder="Select Aircraft (Optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        {formOptions?.aircraft.map((a: any) => (
+                        {(formOptions?.aircraft ?? []).map((a: any) => (
                           <SelectItem key={a.id} value={a.id}>{a.tail_number}</SelectItem>
                         ))}
                       </SelectContent>
