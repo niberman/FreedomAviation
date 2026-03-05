@@ -1,8 +1,10 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { serverEnv } from '@/lib/env';
+import { clientEnv } from '@/lib/env';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = serverEnv?.SUPABASE_URL || clientEnv.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = serverEnv?.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = serverEnv?.SUPABASE_ANON_KEY || clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const authOptions = {
   auth: {
