@@ -48,6 +48,7 @@ import { useClients } from '@/hooks/useClients';
 import { useAircraftTable } from '@/hooks/useAircraft';
 import { useUpdateInvoice } from '@/hooks/useInvoices';
 import { useResendInvoice } from '@/hooks/useResendInvoice';
+import { apiJson } from '@/lib/api-client';
 
 interface EditableLineItem {
   id: string;
@@ -380,6 +381,11 @@ export function StaffHomePage() {
         .eq('id', invoiceId);
 
       if (updateError) throw updateError;
+
+      await apiJson<{ message?: string }>('/api/invoices/send-email', {
+        method: 'POST',
+        body: JSON.stringify({ invoiceId }),
+      });
     },
     onSuccess: () => {
       toast({ title: 'Invoice Sent', description: 'Client has been billed successfully.' });
