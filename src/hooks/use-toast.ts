@@ -125,14 +125,7 @@ const listeners: Array<(state: State) => void> = [];
 
 let memoryState: State = { toasts: [] };
 
-// #region agent log
-let _dispatchCount = 0;
-// #endregion
 function dispatch(action: Action) {
-  // #region agent log
-  _dispatchCount++;
-  fetch('http://127.0.0.1:7243/ingest/ce595c44-18a7-46d2-b583-275de660c288',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'99c487'},body:JSON.stringify({sessionId:'99c487',location:'use-toast.ts:dispatch',message:'Toast dispatch called',data:{actionType:action.type,dispatchCount:_dispatchCount,listenerCount:listeners.length,toastCount:memoryState.toasts.length},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-  // #endregion
   memoryState = reducer(memoryState, action);
   listeners.forEach((listener) => {
     listener(memoryState);
