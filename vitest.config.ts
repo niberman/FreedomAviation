@@ -12,7 +12,14 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
-    exclude: ['dist/**', 'node_modules/**'],
+    exclude: [
+      'dist/**',
+      '**/node_modules/**',
+      '**/.claude/**',
+      '**/.next/**',
+      '**/.cursor/**',
+      '**/.vercel/**',
+    ],
     envDir: testEnvDir,
     env: {
       NODE_ENV: 'test',

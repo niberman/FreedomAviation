@@ -11,6 +11,7 @@ export function ThemeToggle() {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     const initialTheme = savedTheme || systemTheme;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR-safe read of browser-only APIs (localStorage/matchMedia) after mount
     setTheme(initialTheme);
     document.documentElement.classList.toggle("dark", initialTheme === "dark");
   }, []);

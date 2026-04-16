@@ -27,6 +27,7 @@ export function ContactPage() {
   useEffect(() => {
     // Set origin for form redirect
     if (typeof window !== 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR-safe read of window.location.origin after mount
       setOrigin(window.location.origin);
     }
 

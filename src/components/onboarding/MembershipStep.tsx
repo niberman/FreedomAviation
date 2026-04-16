@@ -46,6 +46,7 @@ export function MembershipStep({ initialData, aircraftInfo, onComplete, onBack, 
 
   useEffect(() => {
     if (hangarId === 'none') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset derived state when hangar selection changes
       setHangarCost(0);
     }
   }, [hangarId]);
@@ -215,7 +216,7 @@ export function MembershipStep({ initialData, aircraftInfo, onComplete, onBack, 
 
       {/* Includes Section */}
       <div className="space-y-2">
-        <h4 className="font-semibold text-sm">What's Included:</h4>
+        <h4 className="font-semibold text-sm">What&apos;s Included:</h4>
         <div className="grid gap-2">
           {CORE_FEATURES.map((feature, idx) => (
             <div key={idx} className="flex items-start gap-2 text-sm">

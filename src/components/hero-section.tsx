@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export function HeroSection() {
@@ -27,11 +28,13 @@ export function HeroSection() {
       
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 text-center">
         <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <img 
-            src={logoImage} 
-            alt="Freedom Aviation Logo - Premium Aircraft Management Colorado" 
+          <Image
+            src={logoImage}
+            alt="Freedom Aviation Logo - Premium Aircraft Management Colorado"
+            width={48}
+            height={48}
             className="h-8 sm:h-10 md:h-12 w-auto"
-            loading="eager"
+            priority
           />
           <span className="text-xs sm:text-sm font-semibold tracking-wide text-muted-foreground uppercase">
             Freedom Aviation

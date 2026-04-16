@@ -76,8 +76,9 @@ export function NavBar() {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
-  // Auth buttons component
-  const AuthButtons = ({ isMobile = false }: { isMobile?: boolean }) => {
+  // Auth buttons (rendered as helper, not a nested component, to avoid
+  // per-render remount flagged by react-hooks/components-during-render)
+  const renderAuthButtons = ({ isMobile = false }: { isMobile?: boolean }) => {
     if (loading) return null;
 
     const buttonClass = isMobile ? 'w-full justify-start' : '';
@@ -188,7 +189,7 @@ export function NavBar() {
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Desktop Auth Section */}
             <div className="hidden md:flex items-center gap-2">
-              <AuthButtons />
+              {renderAuthButtons({})}
             </div>
 
             <ThemeToggle />
@@ -224,7 +225,7 @@ export function NavBar() {
               </Link>
             ))}
             <div className="pt-2 border-t space-y-1">
-              <AuthButtons isMobile />
+              {renderAuthButtons({ isMobile: true })}
             </div>
           </div>
         )}

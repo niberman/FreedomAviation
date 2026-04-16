@@ -343,7 +343,7 @@ export function ClientsTable() {
               </p>
               {clientsError instanceof Error && clientsError.message.includes('Permission') && (
                 <p className="text-xs mt-2">
-                  Make sure you're logged in as an admin or CFI with proper permissions.
+                  Make sure you&apos;re logged in as an admin or CFI with proper permissions.
                 </p>
               )}
             </AlertDescription>

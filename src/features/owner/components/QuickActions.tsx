@@ -90,12 +90,14 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
 
   useEffect(() => {
     if (aircraftData?.id && !prepForm.aircraft_id) {
-      setPrepForm(f => ({ 
-        ...f, 
+      setPrepForm(f => ({
+        ...f,
         aircraft_id: aircraftData.id,
         airport: (aircraftData.base_location || "KAPA").toUpperCase()
       }));
     }
+    // Initialize only when aircraftData arrives; rerunning when prepForm.aircraft_id changes would undo user edits
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aircraftData]);
 
   const handlePrepareAircraft = async (e: React.FormEvent) => {

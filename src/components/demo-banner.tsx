@@ -8,7 +8,7 @@ export function DemoBanner() {
     <Alert className="mb-6 border-primary/50 bg-primary/10">
       <Info className="h-4 w-4" />
       <AlertDescription>
-        <strong>DEMO MODE</strong> - You're viewing a read-only demonstration. Actions are disabled.
+        <strong>DEMO MODE</strong> - You&apos;re viewing a read-only demonstration. Actions are disabled.
       </AlertDescription>
     </Alert>
   );

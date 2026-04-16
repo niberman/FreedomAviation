@@ -91,6 +91,7 @@ export function BillingCard({ invoices, isLoading }: BillingCardProps) {
       const { checkoutUrl } = await createCheckoutSession(invoice.id, user.id);
 
       // Redirect to Stripe checkout
+      // eslint-disable-next-line react-hooks/immutability -- intentional full-page navigation to Stripe
       window.location.href = checkoutUrl;
     } catch (error: any) {
       console.error("Error creating checkout session:", error);

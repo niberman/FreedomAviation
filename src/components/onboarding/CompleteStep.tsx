@@ -29,19 +29,19 @@ export function CompleteStep({ onComplete, personalInfo }: CompleteStepProps) {
       <div className="space-y-2">
         <h2 className="text-3xl font-bold">Welcome Aboard{personalInfo?.full_name ? `, ${personalInfo.full_name.split(' ')[0]}` : ''}!</h2>
         <p className="text-lg text-muted-foreground">
-          Your quote has been submitted and we'll be in touch within 24 hours.
+          Your quote has been submitted and we&apos;ll be in touch within 24 hours.
         </p>
       </div>
 
       <div className="bg-muted/50 rounded-lg p-6 space-y-4 text-left max-w-md mx-auto">
-        <h3 className="font-semibold text-center">What's Next?</h3>
+        <h3 className="font-semibold text-center">What&apos;s Next?</h3>
         <div className="space-y-3">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-medium">Check Your Email</p>
               <p className="text-sm text-muted-foreground">
-                You'll receive a copy of your quote and next steps
+                You&apos;ll receive a copy of your quote and next steps
               </p>
             </div>
           </div>
@@ -59,7 +59,7 @@ export function CompleteStep({ onComplete, personalInfo }: CompleteStepProps) {
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
             <div>
-              <p className="font-medium">We'll Contact You Soon</p>
+              <p className="font-medium">We&apos;ll Contact You Soon</p>
               <p className="text-sm text-muted-foreground">
                 Our team will reach out to finalize your membership details
               </p>

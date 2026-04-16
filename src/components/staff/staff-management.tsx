@@ -251,7 +251,7 @@ export function StaffManagement() {
         <CardContent className="py-12 text-center">
           <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            You don't have permission to manage staff members.
+            You don&apos;t have permission to manage staff members.
           </p>
         </CardContent>
       </Card>
@@ -526,7 +526,7 @@ export function StaffManagement() {
           <DialogHeader>
             <DialogTitle>Remove Staff Access</DialogTitle>
             <DialogDescription>
-              This will revoke staff access for this user and change their role to "Client".
+              This will revoke staff access for this user and change their role to &quot;Client&quot;.
               They will still be able to log in as a regular client.
             </DialogDescription>
           </DialogHeader>

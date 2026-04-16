@@ -11,7 +11,7 @@ export function WelcomeStep({ onContinue }: WelcomeStepProps) {
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold">Welcome to Freedom Aviation!</h2>
         <p className="text-muted-foreground text-lg">
-          We're excited to have you join our community of aircraft owners.
+          We&apos;re excited to have you join our community of aircraft owners.
         </p>
       </div>
 
@@ -58,7 +58,7 @@ export function WelcomeStep({ onContinue }: WelcomeStepProps) {
 
       <div className="flex justify-center pt-4">
         <Button size="lg" onClick={onContinue} className="px-8">
-          Let's Get Started
+          Let&apos;s Get Started
         </Button>
       </div>
     </div>

@@ -48,7 +48,7 @@ interface MockHandlers {
 }
 
 function createMockSupabase(handlers: MockHandlers = {}) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const chain: any = {};
   let currentTable = '';
   let currentOp: 'select' | 'insert' | 'update' | 'delete' = 'select';
@@ -95,7 +95,7 @@ function createMockSupabase(handlers: MockHandlers = {}) {
   return chain;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const asRequest = (body: unknown) => ({ json: async () => body } as any);
 
 interface TestInvoice {

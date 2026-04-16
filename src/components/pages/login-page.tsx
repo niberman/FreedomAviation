@@ -93,6 +93,8 @@ export function LoginPage() {
         });
       }
     }
+    // getRedirectPath is stable within the component; no need to re-run when its identity changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, router, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
