@@ -1,9 +1,12 @@
+import { createElement } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import type { InstructionInvoice } from "@/types/invoices";
 import { useToast } from "@/hooks/use-toast";
+import { apiJson } from "@/lib/api-client";
+import { Button } from "@/components/ui/button";
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -233,5 +236,76 @@ export function useUpdateInvoice() {
         variant: "destructive",
       });
     }
+  });
+}
+
+/** Response shape from POST /api/invoices/send-batch */
+export interface CombineInvoicesResult {
+  success?: boolean;
+  batchId?: string;
+  paymentUrl?: string;
+  totalAmount?: number;
+  invoiceCount?: number;
+  emailService?: string;
+  sent?: boolean;
+  message?: string;
+}
+
+/**
+ * Combine multiple invoices into one Stripe Checkout + combined payment email.
+ */
+export function useCombineInvoices() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (invoiceIds: string[]) => {
+      return apiJson<CombineInvoicesResult>("/api/invoices/send-batch", {
+        method: "POST",
+        body: JSON.stringify({ invoiceIds }),
+      });
+    },
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ["cockpit-ledger"] });
+      void queryClient.invalidateQueries({ queryKey: ["cockpit-stats"] });
+      void queryClient.invalidateQueries({ queryKey: ["cfi-invoices"] });
+
+      const paymentUrl = data.paymentUrl ?? "";
+      const count = data.invoiceCount ?? 0;
+      const total = (data.totalAmount ?? 0).toFixed(2);
+
+      toast({
+        title:
+          data.sent === false
+            ? "Combined payment link created"
+            : "Combined invoices sent",
+        description:
+          data.sent === false
+            ? `${data.message ?? "Email not sent (check EMAIL_SERVICE)."} ${count} invoice(s). Total: $${total}.`
+            : `Email sent for ${count} invoice(s). Total: $${total}.`,
+        action: paymentUrl
+          ? createElement(
+              Button,
+              {
+                type: "button",
+                variant: "outline",
+                size: "sm",
+                className: "shrink-0",
+                onClick: () => {
+                  void navigator.clipboard.writeText(paymentUrl);
+                },
+              },
+              "Copy link",
+            )
+          : undefined,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not combine invoices",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 }

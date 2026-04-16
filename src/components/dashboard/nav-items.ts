@@ -1,7 +1,7 @@
 export const ownerDashboardNavItems = [
   { href: "/", label: "Home", exact: true },
-  { href: "/dashboard", label: "Dashboard", exact: true },
-  { href: "/dashboard/more", label: "More" },
+  { href: "/dashboard", label: "Overview", exact: true },
+  { href: "/dashboard/more", label: "Operations" },
 ];
 
 export const staffDashboardNavItems = [
