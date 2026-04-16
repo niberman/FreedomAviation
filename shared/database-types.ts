@@ -467,6 +467,21 @@ export interface Invoice {
   line_items?: Record<string, any>; // JSONB - invoice line items
   stripe_checkout_session_id?: string;
   stripe_payment_intent_id?: string;
+  batch_id?: string | null; // FK to invoice_batches when combined with other invoices
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceBatch {
+  id: string;
+  owner_id: string; // FK to user_profiles
+  total_cents: number;
+  status: 'pending' | 'sent' | 'paid' | 'cancelled';
+  stripe_checkout_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
+  sent_at?: string | null;
+  paid_at?: string | null;
+  created_by?: string | null; // FK to user_profiles
   created_at: string;
   updated_at: string;
 }
