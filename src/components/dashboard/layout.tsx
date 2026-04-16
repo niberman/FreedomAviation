@@ -23,10 +23,8 @@ export type DashboardLayoutProps = {
 };
 
 export const defaultDashboardNav: DashboardNavItem[] = [
-  { href: "/dashboard", label: "Overview", exact: true },
-  { href: "/dashboard/members", label: "Members" },
-  { href: "/dashboard/aircraft", label: "Aircraft" },
-  { href: "/dashboard/settings", label: "Settings" },
+  { href: "/dashboard", label: "Dashboard", exact: true },
+  { href: "/dashboard/more", label: "More" },
 ];
 
 export function DashboardLayout({

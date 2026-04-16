@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Badge } from "@/components/ui/badge";
 import { Plane, Wrench, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
@@ -377,20 +376,30 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
     <Card>
       <CardHeader>
         <CardTitle>Quick Actions</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Tap an action to send a request to the Freedom Aviation team.
+        </p>
       </CardHeader>
-      <CardContent className="grid gap-3">
+      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Dialog open={openPrep} onOpenChange={setOpenPrep}>
           <DialogTrigger asChild>
-            <Button 
-              variant="default" 
-              className="w-full justify-start" 
+            <button
+              type="button"
+              className="group flex h-full flex-col items-start gap-3 rounded-lg border bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-testid="button-prepare-aircraft"
               aria-label="Prepare my aircraft"
               onClick={() => setOpenPrep(true)}
             >
-              <Plane className="mr-2 h-4 w-4" />
-              Prepare My Aircraft
-            </Button>
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Plane className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block text-base font-semibold">Prepare My Aircraft</span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  Pre-flight concierge: fuel, O₂, GPU, hangar pull-out.
+                </span>
+              </span>
+            </button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-label="Prepare Aircraft Dialog">
             <DialogHeader>
@@ -565,16 +574,23 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
 
         <Dialog open={openService} onOpenChange={setOpenService}>
           <DialogTrigger asChild>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start" 
+            <button
+              type="button"
+              className="group flex h-full flex-col items-start gap-3 rounded-lg border bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-testid="button-request-service"
               aria-label="Request service"
               onClick={() => setOpenService(true)}
             >
-              <Wrench className="mr-2 h-4 w-4" />
-              Request Service
-            </Button>
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Wrench className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block text-base font-semibold">Request Service</span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  Detail, oil, O₂, TKS, database updates, and more.
+                </span>
+              </span>
+            </button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-label="Request Service Dialog">
             <DialogHeader>
@@ -638,16 +654,23 @@ export function QuickActions({ aircraftId, userId, aircraftData, isDemo = false 
 
         <Dialog open={openInstruction} onOpenChange={setOpenInstruction}>
           <DialogTrigger asChild>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start" 
+            <button
+              type="button"
+              className="group flex h-full flex-col items-start gap-3 rounded-lg border bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               data-testid="button-request-instruction"
               aria-label="Request flight instruction"
               onClick={() => setOpenInstruction(true)}
             >
-              <GraduationCap className="mr-2 h-4 w-4" />
-              Request Flight Instruction
-            </Button>
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                <GraduationCap className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block text-base font-semibold">Request Flight Instruction</span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  Book a CFI for instruction, IPC, BFR, or checkouts.
+                </span>
+              </span>
+            </button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-label="Flight Instruction Dialog">
             <DialogHeader>
