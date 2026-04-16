@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 import {
   Card,
   CardContent,
@@ -63,6 +62,7 @@ interface MaintenanceItem {
 export function MaintenanceCRUD() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MaintenanceItem | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);

@@ -23,10 +23,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, User, Plane, Pencil, Plus, Eye, DollarSign, FileText, Clock, Send, Trash2 } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 import { apiJson } from "@/lib/api-client";
 import type { Client } from "@/hooks/useClients";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -46,6 +45,7 @@ interface EditableLineItem {
 export function ClientsTable() {
   const { toast } = useToast();
   const { session } = useAuth();
+  const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
