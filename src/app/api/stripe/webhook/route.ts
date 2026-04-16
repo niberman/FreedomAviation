@@ -1,9 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminClient } from '@/lib/supabase-server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
+
+async function markBatchPaid(
+  supabase: SupabaseClient,
+  batchId: string,
+  paymentIntentId: string | null,
+): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const paidDate = nowIso.split('T')[0];
+
+  const { data: batch } = await supabase
+    .from('invoice_batches')
+    .select('id, status')
+    .eq('id', batchId)
+    .single();
+
+  if (!batch || batch.status === 'paid') return;
+
+  const batchUpdate: Record<string, string> = {
+    status: 'paid',
+    paid_at: nowIso,
+  };
+  if (paymentIntentId) batchUpdate.stripe_payment_intent_id = paymentIntentId;
+
+  await supabase.from('invoice_batches').update(batchUpdate).eq('id', batchId);
+
+  const invoiceUpdate: Record<string, string> = {
+    status: 'paid',
+    paid_date: paidDate,
+  };
+  if (paymentIntentId) invoiceUpdate.stripe_payment_intent_id = paymentIntentId;
+
+  await supabase
+    .from('invoices')
+    .update(invoiceUpdate)
+    .eq('batch_id', batchId)
+    .neq('status', 'paid');
+}
+
+async function markInvoicePaid(
+  supabase: SupabaseClient,
+  invoiceId: string,
+  paymentIntentId: string | null,
+): Promise<void> {
+  const { data: invoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('id, status, paid_date')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError || !invoice) return;
+  if (invoice.status === 'paid' || invoice.paid_date) return;
+
+  const updateData: Record<string, string> = {
+    status: 'paid',
+    paid_date: new Date().toISOString().split('T')[0],
+  };
+  if (paymentIntentId) updateData.stripe_payment_intent_id = paymentIntentId;
+
+  await supabase.from('invoices').update(updateData).eq('id', invoiceId);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,30 +101,14 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
+        const batchId = session.metadata?.batch_id;
         const invoiceId = session.metadata?.invoice_id;
+        const paymentIntentId = (session.payment_intent as string | null) ?? null;
 
-        if (invoiceId) {
-          const { data: invoice, error: fetchError } = await supabase
-            .from('invoices')
-            .select('id, status, paid_date')
-            .eq('id', invoiceId)
-            .single();
-
-          if (!fetchError && invoice && invoice.status !== 'paid' && !invoice.paid_date) {
-            const updateData: Record<string, string> = {
-              status: 'paid',
-              paid_date: new Date().toISOString().split('T')[0],
-            };
-
-            if (session.payment_intent) {
-              updateData.stripe_payment_intent_id = session.payment_intent as string;
-            }
-
-            await supabase
-              .from('invoices')
-              .update(updateData)
-              .eq('id', invoiceId);
-          }
+        if (batchId) {
+          await markBatchPaid(supabase, batchId, paymentIntentId);
+        } else if (invoiceId) {
+          await markInvoicePaid(supabase, invoiceId, paymentIntentId);
         }
         break;
       }
@@ -79,25 +124,13 @@ export async function POST(request: NextRequest) {
 
           if (sessions.data.length > 0) {
             const session = sessions.data[0];
+            const batchId = session.metadata?.batch_id;
             const invoiceId = session.metadata?.invoice_id;
 
-            if (invoiceId) {
-              const { data: invoice } = await supabase
-                .from('invoices')
-                .select('id, status, paid_date')
-                .eq('id', invoiceId)
-                .single();
-
-              if (invoice && invoice.status !== 'paid' && !invoice.paid_date) {
-                await supabase
-                  .from('invoices')
-                  .update({
-                    status: 'paid',
-                    paid_date: new Date().toISOString().split('T')[0],
-                    stripe_payment_intent_id: paymentIntent.id,
-                  })
-                  .eq('id', invoiceId);
-              }
+            if (batchId) {
+              await markBatchPaid(supabase, batchId, paymentIntent.id);
+            } else if (invoiceId) {
+              await markInvoicePaid(supabase, invoiceId, paymentIntent.id);
             }
           }
         }
