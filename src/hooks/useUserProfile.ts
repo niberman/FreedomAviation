@@ -81,18 +81,3 @@ export function useUserProfile() {
     updateUserProfile,
   };
 }
-
-/** Lightweight role-only query when you only need role flags (same data, same cache key) */
-export function useUserRole() {
-  const profile = useUserProfile();
-  return {
-    role: profile.role,
-    isAdmin: profile.isAdmin,
-    isStaff: profile.isStaff,
-    isCfi: profile.isCfi,
-    canSeeAllInvoices: profile.canSeeAllInvoices,
-    isLoading: profile.isLoading,
-    isError: profile.isError,
-    error: profile.error,
-  };
-}
