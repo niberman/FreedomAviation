@@ -41,10 +41,19 @@ interface WithAuthOptions {
  * });
  * ```
  */
-export function withAuth(options: WithAuthOptions, handler: RouteHandler) {
-  return async (
+type RouteContext = { params: Promise<Record<string, string>> };
+type WrappedHandler = {
+  (request: NextRequest): Promise<NextResponse>;
+  (request: NextRequest, context: RouteContext): Promise<NextResponse>;
+};
+
+export function withAuth(
+  options: WithAuthOptions,
+  handler: RouteHandler,
+): WrappedHandler {
+  const wrapped = async (
     request: NextRequest,
-    context?: { params?: Promise<Record<string, string>> },
+    context?: RouteContext,
   ): Promise<NextResponse> => {
     // 1. Auth check
     const result = await requireRole(request, [...options.roles]);
@@ -91,4 +100,5 @@ export function withAuth(options: WithAuthOptions, handler: RouteHandler) {
       );
     }
   };
+  return wrapped as WrappedHandler;
 }

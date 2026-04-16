@@ -45,3 +45,22 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
  */
 export const serverEnv: ServerEnv | null =
   typeof window === 'undefined' ? serverEnvSchema.parse(process.env) : null;
+
+// ── URL helpers ─────────────────────────────────────────────────────────────
+
+const DEFAULT_APP_URL = 'https://www.freedomaviationco.com';
+
+/**
+ * The canonical app base URL for building absolute links (emails,
+ * Stripe success/cancel URLs, OAuth redirects).
+ * Precedence: SITE_URL → FRONTEND_URL → NEXT_PUBLIC_APP_URL → production default.
+ * Never returns an empty string.
+ */
+export function getAppBaseUrl(): string {
+  return (
+    serverEnv?.SITE_URL ||
+    serverEnv?.FRONTEND_URL ||
+    clientEnv.NEXT_PUBLIC_APP_URL ||
+    DEFAULT_APP_URL
+  );
+}

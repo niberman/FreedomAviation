@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -29,12 +31,13 @@ import {
   Send,
   Plus,
   Trash2,
+  Layers,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { format, subDays, startOfMonth } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -46,7 +49,7 @@ import { StaffManagement } from '@/components/staff/staff-management';
 import { MaintenanceCRUD } from '@/components/staff/maintenance-crud';
 import { useClients } from '@/hooks/useClients';
 import { useAircraftTable } from '@/hooks/useAircraft';
-import { useUpdateInvoice } from '@/hooks/useInvoices';
+import { useCombineInvoices, useUpdateInvoice } from '@/hooks/useInvoices';
 import { useResendInvoice } from '@/hooks/useResendInvoice';
 import { apiJson } from '@/lib/api-client';
 
@@ -55,6 +58,24 @@ interface EditableLineItem {
   description: string;
   quantity: string;
   rate: string;
+}
+
+const COMBINE_STATUSES = new Set(['draft', 'finalized', 'sent']);
+
+function isLedgerInvoiceEligible(inv: { status?: string; paid_date?: string | null; batch_id?: string | null }) {
+  if (inv.status === 'paid' || inv.paid_date) return false;
+  if (!inv.status || !COMBINE_STATUSES.has(inv.status)) return false;
+  if (inv.batch_id) return false;
+  return true;
+}
+
+function canSelectLedgerRow(
+  inv: { owner_id?: string | null; status?: string; paid_date?: string | null; batch_id?: string | null },
+  selectedOwnerId: string | null,
+) {
+  if (!isLedgerInvoiceEligible(inv)) return false;
+  if (selectedOwnerId && inv.owner_id !== selectedOwnerId) return false;
+  return true;
 }
 
 export function StaffHomePage() {
@@ -79,10 +100,15 @@ export function StaffHomePage() {
     { id: '1', description: '', quantity: '1', rate: '0' },
   ]);
 
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
+
   const updateInvoiceMutation = useUpdateInvoice();
+  const combineInvoicesMutation = useCombineInvoices();
   const resendInvoiceMutation = useResendInvoice({
     invalidateQueryKeys: [['cockpit-ledger'], ['cockpit-stats']],
   });
+
+  const clearInvoiceSelection = useCallback(() => setSelectedInvoiceIds(new Set()), []);
 
   const unsendInvoiceMutation = useMutation({
     mutationFn: async (invoiceId: string) => {
@@ -211,6 +237,8 @@ export function StaffHomePage() {
           invoice_number,
           owner_id,
           aircraft_id,
+          batch_id,
+          paid_date,
           owner:owner_id(full_name, email),
           invoice_lines(description, quantity, unit_cents)
         `)
@@ -222,7 +250,7 @@ export function StaffHomePage() {
       // Fallback: fetch invoices + owners separately
       const fallback = await supabase
         .from('invoices')
-        .select('id, created_at, amount, status, category, invoice_number, owner_id, aircraft_id')
+        .select('id, created_at, amount, status, category, invoice_number, owner_id, aircraft_id, batch_id, paid_date')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -263,6 +291,56 @@ export function StaffHomePage() {
     },
     enabled: !!user,
   });
+
+  const selectedInvoices = useMemo(
+    () => (ledger ?? []).filter((inv: { id: string }) => selectedInvoiceIds.has(inv.id)),
+    [ledger, selectedInvoiceIds],
+  );
+
+  const selectedOwnerId =
+    selectedInvoices.length > 0 ? (selectedInvoices[0] as { owner_id?: string | null }).owner_id ?? null : null;
+
+  const eligibleLedgerRows = useMemo(
+    () => (ledger ?? []).filter((inv: any) => isLedgerInvoiceEligible(inv)),
+    [ledger],
+  );
+
+  const rowsForBulkSelect = useMemo(() => {
+    if (eligibleLedgerRows.length === 0) return [];
+    const anchorOwner =
+      selectedOwnerId ??
+      (eligibleLedgerRows[0] as { owner_id?: string | null }).owner_id ??
+      null;
+    if (!anchorOwner) return [];
+    return eligibleLedgerRows.filter((inv: any) => inv.owner_id === anchorOwner);
+  }, [eligibleLedgerRows, selectedOwnerId]);
+
+  const allBulkSelected =
+    rowsForBulkSelect.length > 0 && rowsForBulkSelect.every((inv: any) => selectedInvoiceIds.has(inv.id));
+  const someBulkSelected = rowsForBulkSelect.some((inv: any) => selectedInvoiceIds.has(inv.id));
+
+  const selectedInvoicesTotal = useMemo(
+    () => selectedInvoices.reduce((acc: number, inv: any) => acc + (Number(inv.amount) || 0), 0),
+    [selectedInvoices],
+  );
+
+  const combineBlockReason = useMemo(() => {
+    if (selectedInvoices.length < 2) return 'Select at least 2 invoices for the same client.';
+    const owner = (selectedInvoices[0] as { owner_id?: string }).owner_id;
+    if (!selectedInvoices.every((inv: any) => inv.owner_id === owner)) {
+      return 'All selected invoices must belong to the same client.';
+    }
+    for (const inv of selectedInvoices as any[]) {
+      if (inv.status === 'paid' || inv.paid_date) return 'Paid invoices cannot be combined.';
+      if (!inv.status || !COMBINE_STATUSES.has(inv.status)) {
+        return `Invoice ${inv.invoice_number ?? inv.id} cannot be combined (status ${inv.status ?? 'unknown'}).`;
+      }
+      if (inv.batch_id) return `Invoice ${inv.invoice_number ?? inv.id} is already part of a batch.`;
+    }
+    return null;
+  }, [selectedInvoices]);
+
+  const combineDisabled = combineInvoicesMutation.isPending || combineBlockReason !== null;
 
   const { data: owners = [], error: ownersError } = useClients();
   const { aircraftFull, error: aircraftError, isLoading: isLoadingAircraft } = useAircraftTable();
@@ -699,10 +777,84 @@ export function StaffHomePage() {
                   <CardHeader className="py-4 px-6 border-b bg-muted/10">
                     <CardTitle className="text-base">Recent Ledger (Last 20)</CardTitle>
                   </CardHeader>
+                  <div className="flex flex-wrap items-center gap-2 px-6 py-3 border-b bg-muted/5 text-sm">
+                    <span className="text-muted-foreground">
+                      {selectedInvoiceIds.size} selected
+                      {selectedInvoiceIds.size > 0 ? ` · $${selectedInvoicesTotal.toFixed(2)}` : ''}
+                    </span>
+                    <div className="flex-1 min-w-[8px]" />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearInvoiceSelection}
+                      disabled={selectedInvoiceIds.size === 0}
+                    >
+                      Clear
+                    </Button>
+                    {combineBlockReason !== null || combineInvoicesMutation.isPending ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="gap-1"
+                              disabled={combineDisabled}
+                              onClick={() => {
+                                combineInvoicesMutation.mutate(Array.from(selectedInvoiceIds), {
+                                  onSuccess: () => clearInvoiceSelection(),
+                                });
+                              }}
+                            >
+                              <Layers className="h-3.5 w-3.5" />
+                              {combineInvoicesMutation.isPending ? 'Sending…' : 'Combine & Send'}
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          {combineInvoicesMutation.isPending ? 'Creating combined payment…' : combineBlockReason}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="gap-1"
+                        disabled={combineDisabled}
+                        onClick={() => {
+                          combineInvoicesMutation.mutate(Array.from(selectedInvoiceIds), {
+                            onSuccess: () => clearInvoiceSelection(),
+                          });
+                        }}
+                      >
+                        <Layers className="h-3.5 w-3.5" />
+                        Combine & Send
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex-1 overflow-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-muted/30 sticky top-0 z-10">
                         <tr className="border-b">
+                          <th className="h-10 w-10 pl-4 pr-1 text-left align-middle">
+                            <Checkbox
+                              checked={allBulkSelected ? true : someBulkSelected ? 'indeterminate' : false}
+                              disabled={rowsForBulkSelect.length === 0}
+                              onCheckedChange={(checked) => {
+                                if (checked === true) {
+                                  setSelectedInvoiceIds(new Set(rowsForBulkSelect.map((i: { id: string }) => i.id)));
+                                } else {
+                                  setSelectedInvoiceIds((prev) => {
+                                    const next = new Set(prev);
+                                    rowsForBulkSelect.forEach((i: { id: string }) => next.delete(i.id));
+                                    return next;
+                                  });
+                                }
+                              }}
+                              aria-label="Select all invoices for bulk combine"
+                            />
+                          </th>
                           <th className="h-10 px-6 text-left font-medium text-muted-foreground w-[120px]">Date</th>
                           <th className="h-10 px-6 text-left font-medium text-muted-foreground">Client</th>
                           <th className="h-10 px-6 text-left font-medium text-muted-foreground">Description</th>
@@ -717,8 +869,25 @@ export function StaffHomePage() {
                           const isPaid = inv.status === 'paid';
                           const canUnsend = !isPaid && (inv.status === 'sent' || inv.status === 'finalized' || inv.status === 'overdue');
                           const canDelete = !isPaid && inv.status === 'draft';
+                          const rowSelectable = canSelectLedgerRow(inv, selectedOwnerId);
                           return (
                             <tr key={inv.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors group">
+                              <td className="p-2 pl-4 align-middle">
+                                <Checkbox
+                                  checked={selectedInvoiceIds.has(inv.id)}
+                                  disabled={!rowSelectable}
+                                  onCheckedChange={(checked) => {
+                                    if (!rowSelectable) return;
+                                    setSelectedInvoiceIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (checked === true) next.add(inv.id);
+                                      else next.delete(inv.id);
+                                      return next;
+                                    });
+                                  }}
+                                  aria-label={`Select invoice ${inv.invoice_number ?? inv.id}`}
+                                />
+                              </td>
                               <td className="p-4 px-6 font-mono text-xs text-muted-foreground">
                                 {format(new Date(inv.created_at), 'MMM dd')}
                               </td>
@@ -732,17 +901,24 @@ export function StaffHomePage() {
                                 ${inv.amount?.toFixed(2)}
                               </td>
                               <td className="p-4 px-6 text-right">
-                                <Badge
-                                  variant="outline"
-                                  className={`
+                                <div className="flex flex-wrap items-center justify-end gap-1">
+                                  <Badge
+                                    variant="outline"
+                                    className={`
                                     ${inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : ''}
                                     ${inv.status === 'sent' || inv.status === 'finalized' ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}
                                     ${inv.status === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' : ''}
                                     ${inv.status === 'draft' ? 'bg-slate-50 text-slate-600 border-slate-200' : ''}
                                   `}
-                                >
-                                  {inv.status}
-                                </Badge>
+                                  >
+                                    {inv.status}
+                                  </Badge>
+                                  {inv.batch_id ? (
+                                    <Badge variant="secondary" className="text-[10px] font-normal uppercase tracking-wide">
+                                      Batched
+                                    </Badge>
+                                  ) : null}
+                                </div>
                               </td>
                               <td className="p-4 px-4 text-right">
                                 <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
@@ -808,7 +984,7 @@ export function StaffHomePage() {
                         })}
                         {!ledger?.length && (
                           <tr>
-                            <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                            <td colSpan={7} className="p-8 text-center text-muted-foreground">
                               No recent invoices found.
                             </td>
                           </tr>

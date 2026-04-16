@@ -235,8 +235,3 @@ export function useOwnerServiceRequests(aircraftId?: string) {
     cancelServiceRequest,
   };
 }
-
-/** Staff: all service requests via API + updateStatus. Use useOwnerServiceRequests(aircraftId?) for owner list + CRUD. */
-export function useServiceRequests() {
-  return useStaffServiceRequests();
-}

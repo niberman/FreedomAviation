@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser } from '@/lib/api-auth';
 
 /**
  * POST /api/onboarding/send-quote-email
  * Sends the membership quote to the client's email via Resend.
  * Called when the user completes the quote step in onboarding.
+ * Requires a valid session (any authenticated user) to prevent open email relay.
  */
 export async function POST(request: NextRequest) {
   try {
+    const auth = await getAuthenticatedUser(request);
+    if (!auth) {
+      return NextResponse.json(
+        { error: 'Missing or invalid authorization. Please log in.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       toEmail,

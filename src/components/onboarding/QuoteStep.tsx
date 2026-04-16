@@ -7,6 +7,7 @@ import { Check, FileText, Download, Mail } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/api-client";
 
 interface QuoteStepProps {
   membershipSelection?: MembershipSelection;
@@ -69,9 +70,8 @@ export function QuoteStep({
       }
 
       // Send quote copy to client's email (fire-and-forget)
-      fetch('/api/onboarding/send-quote-email', {
+      apiFetch('/api/onboarding/send-quote-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           toEmail: user?.email,
           memberName: personalInfo?.full_name || user?.email,

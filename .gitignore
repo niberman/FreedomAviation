@@ -6,7 +6,18 @@ vite.config.ts.*
 .env
 .env.local
 .env.*.local
+env.local
 .vercel
+
+# Next.js / TypeScript build artifacts
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Claude Code worktrees (ephemeral per-session)
+.claude/worktrees/
+
+# Supabase CLI local state
+supabase/.temp/
 
 # iOS / Capacitor
 ios/App/Pods/

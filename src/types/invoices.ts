@@ -18,22 +18,3 @@ export interface InstructionInvoice {
     unit_cents: number;
   }>;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
